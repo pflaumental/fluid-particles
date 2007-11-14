@@ -34,6 +34,10 @@ fp_GUI::fp_GUI()
 
     WCHAR sz[100];
     iY += 24;
+    m_SampleUI.AddButton( IDC_RESET_SIM, L"Reset simulation (R)", 35, iY += 24,
+            125, 22, 'R' );
+
+    iY += 24;
     StringCchPrintf( sz, 100, L"Particle size: %0.2f", 1.0f ); 
     m_SampleUI.AddStatic( IDC_PARTICLE_SCALE_STATIC, sz, 35, iY += 24, 125, 22 );
     m_SampleUI.AddSlider( IDC_PARTICLE_SCALE, 50, iY += 24, 100, 22, 1, 100,
@@ -120,13 +124,19 @@ void fp_GUI::OnGUIEvent(
         int& ActiveLight,
         int& NumActiveLights,
         float& LightScale,
-        float& ParticleScale) {   
+        float& ParticleScale,
+        bool& ResetSim) {   
     WCHAR sz[100];
+    ResetSim = false;
     switch( ControlID ) {
         case IDC_TOGGLEFULLSCREEN: DXUTToggleFullScreen(); break;
         case IDC_TOGGLEREF:        DXUTToggleREF(); break;
         case IDC_CHANGEDEVICE:     m_D3DSettingsDlg.SetActive(
                 !m_D3DSettingsDlg.IsActive() ); break;
+
+        case IDC_RESET_SIM:
+            ResetSim = true;
+            break;
 
         case IDC_PARTICLE_SCALE: 
             ParticleScale = (float) (m_SampleUI.GetSlider(
@@ -222,8 +232,8 @@ HRESULT fp_GUI::OnD3D10ResizedSwapChain(
     m_HUD.SetLocation( BackBufferSurfaceDesc->Width-170, 0 );
     m_HUD.SetSize( 170, 170 );
     m_SampleUI.SetLocation( BackBufferSurfaceDesc->Width-170,
-            BackBufferSurfaceDesc->Height-330 );
-    m_SampleUI.SetSize( 170, 330 );
+            BackBufferSurfaceDesc->Height-360 );
+    m_SampleUI.SetSize( 170, 360 );
 
     return S_OK;
 }
@@ -346,8 +356,8 @@ HRESULT fp_GUI::OnD3D9ResetDevice(
     m_HUD.SetLocation( BackBufferSurfaceDesc->Width-170, 0 );
     m_HUD.SetSize( 170, 170 );
     m_SampleUI.SetLocation( BackBufferSurfaceDesc->Width-170,
-            BackBufferSurfaceDesc->Height-330 );
-    m_SampleUI.SetSize( 170, 330 );
+            BackBufferSurfaceDesc->Height-360 );
+    m_SampleUI.SetSize( 170, 360 );
 
     return S_OK;
 }

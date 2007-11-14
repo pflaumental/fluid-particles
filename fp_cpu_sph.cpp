@@ -328,13 +328,19 @@ inline void fp_Fluid::ProcessParticlePair(
     D3DXVECTOR3 commonPressureTerm1 = - m_ParticleMass * PressureSum / 2.0f
             * gradWSpikyValue1;
     D3DXVECTOR3 pressureForce1 = commonPressureTerm1 / Particle2->m_Density;
-    float pressureTest = D3DXVec3LengthSq(&pressureForce1);
-    //assert(pressureTest >= 0.01f);
     D3DXVECTOR3 pressureForce2 = - commonPressureTerm1 / Particle1->m_Density;
+    
+    #if defined(DEBUG) || defined(_DEBUG)
 
-    float testDot = D3DXVec3Dot(&pressureForce1, &r1);
-    assert(testDot >= 0.0f);
+    float pressureTest = D3DXVec3LengthSq(&pressureForce1);
+    D3DXVECTOR3 pressureForce1Normalized, r1Normalized;
+    D3DXVec3Normalize(&pressureForce1Normalized, &pressureForce1);
+    D3DXVec3Normalize(&r1Normalized, &r1);
+    float testDot = D3DXVec3Dot(&pressureForce1Normalized, &r1Normalized);
+    assert(pressureTest < 0.001f || pressureTest > -0.001f || testDot > 0.99f);
     assert(Particle2->m_Density > 0.0f);
+
+    #endif
 
     // Viscosity forces
     D3DXVECTOR3 velocityDifference1 = Particle2->m_Velocity - Particle1->m_Velocity;
