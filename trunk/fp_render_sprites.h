@@ -7,6 +7,8 @@
 #include "fp_global.h"
 #include "fp_cpu_sph.h"
 
+#define FP_RENDER_DEFAULT_SPRITE_SIZE 1.0f
+
 //--------------------------------------------------------------------------------------
 // Fluid particles render technique: Point Sprites
 //--------------------------------------------------------------------------------------
@@ -24,21 +26,23 @@ struct fp_SpriteVertex
 
 class fp_RenderSprites {
 public:
-    fp_RenderSprites(int NumParticles, fp_FluidParticle* pParticles);
+    float m_SpriteSize;
+
+    fp_RenderSprites(int NumParticles, fp_FluidParticle* Particles);
     ~fp_RenderSprites();
 
     HRESULT OnCreateDevice(
-            IDirect3DDevice9* pd3dDevice,
+            IDirect3DDevice9* d3dDevice,
             const D3DSURFACE_DESC* pBackBufferSurfaceDesc );
 
     HRESULT OnResetDevice(
-            IDirect3DDevice9* pd3dDevice,
-            const D3DSURFACE_DESC* pBackBufferSurfaceDesc );
+            IDirect3DDevice9* d3dDevice,
+            const D3DSURFACE_DESC* BackBufferSurfaceDesc );
 
     void OnFrameRender(
-            IDirect3DDevice9* pd3dDevice,
-            double fTime,
-            float fElapsedTime );
+            IDirect3DDevice9* d3dDevice,
+            double Time,
+            float ElapsedTime );
 
     void OnDetroyDevice();
 
