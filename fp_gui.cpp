@@ -11,7 +11,7 @@ extern void CALLBACK FP_OnGUIEvent(
 // Constructor
 //--------------------------------------------------------------------------------------
 fp_GUI::fp_GUI()
-        : m_bShowHelp(false), m_Font10(NULL), m_Font9(NULL), m_Sprite10(NULL),
+        : m_ShowHelp(false), m_Font10(NULL), m_Font9(NULL), m_Sprite10(NULL),
         m_Sprite9(NULL), m_TxtHelper(NULL) {
     
     for( int i=0; i<FP_MAX_LIGHTS; i++ )
@@ -34,6 +34,12 @@ fp_GUI::fp_GUI()
 
     WCHAR sz[100];
     iY += 24;
+    StringCchPrintf( sz, 100, L"Particle size: %0.2f", 1.0f ); 
+    m_SampleUI.AddStatic( IDC_PARTICLE_SCALE_STATIC, sz, 35, iY += 24, 125, 22 );
+    m_SampleUI.AddSlider( IDC_PARTICLE_SCALE, 50, iY += 24, 100, 22, 1, 100,
+            (int) (1.0f * 50.0f) );
+
+    iY += 24;
     StringCchPrintf( sz, 100, L"# Lights: %d", 1 ); 
     m_SampleUI.AddStatic( IDC_NUM_LIGHTS_STATIC, sz, 35, iY += 24, 125, 22 );
     m_SampleUI.AddSlider( IDC_NUM_LIGHTS, 50, iY += 24, 100, 22, 1, FP_MAX_LIGHTS, 1 );
@@ -49,10 +55,10 @@ fp_GUI::fp_GUI()
             125, 22, 'K' );
 }
 
-bool fp_GUI::RenderSettingsDialog(float fElapsedTime) {
+bool fp_GUI::RenderSettingsDialog(float ElapsedTime) {
     if( !m_D3DSettingsDlg.IsActive() )
         return false;
-    m_D3DSettingsDlg.OnRender( fElapsedTime );
+    m_D3DSettingsDlg.OnRender( ElapsedTime );
     return true;   
 }
 
@@ -60,33 +66,33 @@ bool fp_GUI::RenderSettingsDialog(float fElapsedTime) {
 // Handle messages to the application
 //--------------------------------------------------------------------------------------
 bool fp_GUI::MsgProc(
-        HWND hWnd,
-        UINT uMsg,
+        HWND Wnd,
+        UINT Msg,
         WPARAM wParam,
         LPARAM lParam,
-        bool* pbNoFurtherProcessing,
-        int nActiveLight) {
+        bool* NoFurtherProcessing,
+        int ActiveLight) {
     // Pass messages to dialog resource manager calls so GUI state is updated correctly
-    *pbNoFurtherProcessing = m_DialogResourceManager.MsgProc( hWnd, uMsg, wParam,
+    *NoFurtherProcessing = m_DialogResourceManager.MsgProc( Wnd, Msg, wParam,
             lParam );
-    if( *pbNoFurtherProcessing )
+    if( *NoFurtherProcessing )
         return true;
 
     // Pass messages to settings dialog if its active
     if( m_D3DSettingsDlg.IsActive() ) {
-        m_D3DSettingsDlg.MsgProc( hWnd, uMsg, wParam, lParam );
+        m_D3DSettingsDlg.MsgProc( Wnd, Msg, wParam, lParam );
         return true;
     }
 
     // Give the dialogs a chance to handle the message first
-    *pbNoFurtherProcessing = m_HUD.MsgProc( hWnd, uMsg, wParam, lParam );
-    if( *pbNoFurtherProcessing )
+    *NoFurtherProcessing = m_HUD.MsgProc( Wnd, Msg, wParam, lParam );
+    if( *NoFurtherProcessing )
         return true;
-    *pbNoFurtherProcessing = m_SampleUI.MsgProc( hWnd, uMsg, wParam, lParam );
-    if( *pbNoFurtherProcessing )
+    *NoFurtherProcessing = m_SampleUI.MsgProc( Wnd, Msg, wParam, lParam );
+    if( *NoFurtherProcessing )
         return true;
 
-    m_LightControl[nActiveLight].HandleMessages( hWnd, uMsg, wParam, lParam );
+    m_LightControl[ActiveLight].HandleMessages( Wnd, Msg, wParam, lParam );
 
     return false;
 }
@@ -95,10 +101,10 @@ bool fp_GUI::MsgProc(
 //--------------------------------------------------------------------------------------
 // Handle key presses
 //--------------------------------------------------------------------------------------
-void fp_GUI::OnKeyboard( UINT nChar, bool bKeyDown, bool bAltDown, void* pUserContext ){
-    if( bKeyDown ) {
-        switch( nChar ) {
-            case VK_F1: m_bShowHelp = !m_bShowHelp; break;
+void fp_GUI::OnKeyboard( UINT Char, bool KeyDown, bool AltDown, void* UserContext ){
+    if( KeyDown ) {
+        switch( Char ) {
+            case VK_F1: m_ShowHelp = !m_ShowHelp; break;
         }
     }
 }
@@ -108,44 +114,52 @@ void fp_GUI::OnKeyboard( UINT nChar, bool bKeyDown, bool bAltDown, void* pUserCo
 // Handles the GUI events
 //--------------------------------------------------------------------------------------
 void fp_GUI::OnGUIEvent(
-        UINT nEvent,
-        int nControlID,
-        CDXUTControl* pControl,
-        int& rnActiveLight,
+        UINT Event,
+        int ControlID,
+        CDXUTControl* Control,
+        int& ActiveLight,
         int& NumActiveLights,
-        float& rfLightScale) {   
-    switch( nControlID ) {
+        float& LightScale,
+        float& ParticleScale) {   
+    WCHAR sz[100];
+    switch( ControlID ) {
         case IDC_TOGGLEFULLSCREEN: DXUTToggleFullScreen(); break;
         case IDC_TOGGLEREF:        DXUTToggleREF(); break;
         case IDC_CHANGEDEVICE:     m_D3DSettingsDlg.SetActive(
                 !m_D3DSettingsDlg.IsActive() ); break;
 
+        case IDC_PARTICLE_SCALE: 
+            ParticleScale = (float) (m_SampleUI.GetSlider(
+                    IDC_PARTICLE_SCALE )->GetValue() * 0.02f);
+
+            StringCchPrintf( sz, 100, L"Particle scale: %0.2f", ParticleScale ); 
+            m_SampleUI.GetStatic( IDC_PARTICLE_SCALE_STATIC )->SetText( sz );
+            break;
+
         case IDC_ACTIVE_LIGHT:
-            if( !m_LightControl[rnActiveLight].IsBeingDragged() ) {
-                rnActiveLight++;
-                rnActiveLight %= NumActiveLights;
+            if( !m_LightControl[ActiveLight].IsBeingDragged() ) {
+                ActiveLight++;
+                ActiveLight %= NumActiveLights;
             }
             break;
 
         case IDC_NUM_LIGHTS:
-            if( !m_LightControl[rnActiveLight].IsBeingDragged() ) {
-                WCHAR sz[100];
+            if( !m_LightControl[ActiveLight].IsBeingDragged() ) {
                 StringCchPrintf( sz, 100, L"# Lights: %d", m_SampleUI.GetSlider(
                         IDC_NUM_LIGHTS )->GetValue() ); 
                 m_SampleUI.GetStatic( IDC_NUM_LIGHTS_STATIC )->SetText( sz );
 
                 NumActiveLights = m_SampleUI.GetSlider(
                         IDC_NUM_LIGHTS )->GetValue();
-                rnActiveLight %= NumActiveLights;
+                ActiveLight %= NumActiveLights;
             }
             break;
 
         case IDC_LIGHT_SCALE: 
-            rfLightScale = (float) (m_SampleUI.GetSlider(
+            LightScale = (float) (m_SampleUI.GetSlider(
                     IDC_LIGHT_SCALE )->GetValue() * 0.10f);
 
-            WCHAR sz[100];
-            StringCchPrintf( sz, 100, L"Light scale: %0.2f", rfLightScale ); 
+            StringCchPrintf( sz, 100, L"Light scale: %0.2f", LightScale ); 
             m_SampleUI.GetStatic( IDC_LIGHT_SCALE_STATIC )->SetText( sz );
             break;
     }
@@ -164,17 +178,17 @@ void fp_GUI::OnGUIEvent(
 // Create any D3D10 GUI resources that aren't dependant on the back buffer
 //--------------------------------------------------------------------------------------
 HRESULT fp_GUI::OnD3D10CreateDevice(
-        ID3D10Device* pd3dDevice,
-        const DXGI_SURFACE_DESC *pBackBufferSurfaceDesc,
-        void* pUserContext ) {
+        ID3D10Device* d3dDevice,
+        const DXGI_SURFACE_DESC *BackBufferSurfaceDesc,
+        void* UserContext ) {
     HRESULT hr;
 
-    V_RETURN( m_DialogResourceManager.OnD3D10CreateDevice( pd3dDevice ) );
-    V_RETURN( m_D3DSettingsDlg.OnD3D10CreateDevice( pd3dDevice ) );
-    V_RETURN( D3DX10CreateFont( pd3dDevice, 15, 0, FW_BOLD, 1, FALSE, DEFAULT_CHARSET, 
+    V_RETURN( m_DialogResourceManager.OnD3D10CreateDevice( d3dDevice ) );
+    V_RETURN( m_D3DSettingsDlg.OnD3D10CreateDevice( d3dDevice ) );
+    V_RETURN( D3DX10CreateFont( d3dDevice, 15, 0, FW_BOLD, 1, FALSE, DEFAULT_CHARSET, 
             OUT_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Arial",
             &m_Font10 ) );
-    V_RETURN( D3DX10CreateSprite( pd3dDevice, 512, &m_Sprite10 ) );
+    V_RETURN( D3DX10CreateSprite( d3dDevice, 512, &m_Sprite10 ) );
     m_TxtHelper = new CDXUTTextHelper( m_Font9, m_Sprite9, m_Font10, m_Sprite10,
             15 );
 
@@ -182,7 +196,7 @@ HRESULT fp_GUI::OnD3D10CreateDevice(
     m_SampleUI.GetSlider( IDC_NUM_LIGHTS )->SetVisible( false );
     m_SampleUI.GetButton( IDC_ACTIVE_LIGHT )->SetVisible( false );
     
-    V_RETURN( CDXUTDirectionWidget::StaticOnD3D10CreateDevice( pd3dDevice ) );
+    V_RETURN( CDXUTDirectionWidget::StaticOnD3D10CreateDevice( d3dDevice ) );
     for( int i=0; i<FP_MAX_LIGHTS; i++ )
         m_LightControl[i].SetRadius( FP_OBJECT_RADIUS );
 
@@ -194,22 +208,22 @@ HRESULT fp_GUI::OnD3D10CreateDevice(
 // Create any D3D10 GUI resources that depend on the back buffer
 //--------------------------------------------------------------------------------------
 HRESULT fp_GUI::OnD3D10ResizedSwapChain(
-        ID3D10Device* pd3dDevice,
-        IDXGISwapChain *pSwapChain,
-        const DXGI_SURFACE_DESC* pBackBufferSurfaceDesc,
-        void* pUserContext ) {
+        ID3D10Device* d3dDevice,
+        IDXGISwapChain *SwapChain,
+        const DXGI_SURFACE_DESC* BackBufferSurfaceDesc,
+        void* UserContext ) {
     HRESULT hr;
 
-    V_RETURN( m_DialogResourceManager.OnD3D10ResizedSwapChain( pd3dDevice,
-            pBackBufferSurfaceDesc ) );
-    V_RETURN( m_D3DSettingsDlg.OnD3D10ResizedSwapChain( pd3dDevice,
-            pBackBufferSurfaceDesc ) );
+    V_RETURN( m_DialogResourceManager.OnD3D10ResizedSwapChain( d3dDevice,
+            BackBufferSurfaceDesc ) );
+    V_RETURN( m_D3DSettingsDlg.OnD3D10ResizedSwapChain( d3dDevice,
+            BackBufferSurfaceDesc ) );
 
-    m_HUD.SetLocation( pBackBufferSurfaceDesc->Width-170, 0 );
+    m_HUD.SetLocation( BackBufferSurfaceDesc->Width-170, 0 );
     m_HUD.SetSize( 170, 170 );
-    m_SampleUI.SetLocation( pBackBufferSurfaceDesc->Width-170,
-            pBackBufferSurfaceDesc->Height-300 );
-    m_SampleUI.SetSize( 170, 300 );
+    m_SampleUI.SetLocation( BackBufferSurfaceDesc->Width-170,
+            BackBufferSurfaceDesc->Height-330 );
+    m_SampleUI.SetSize( 170, 330 );
 
     return S_OK;
 }
@@ -218,32 +232,32 @@ HRESULT fp_GUI::OnD3D10ResizedSwapChain(
 // Render the GUI using the D3D10 device
 //--------------------------------------------------------------------------------------
 void fp_GUI::OnD3D10FrameRender(
-        ID3D10Device* pd3dDevice,
+        ID3D10Device* d3dDevice,
         double fTime,
-        float fElapsedTime,
-        const D3DXVECTOR3* vEyePt,
-        const D3DXMATRIX*  mWorldViewProjection,
-        const D3DXMATRIX*  mWorld,
-        const D3DXMATRIX*  mView,
-        const D3DXMATRIX*  mProj,
+        float ElapsedTime,
+        const D3DXVECTOR3* EyePt,
+        const D3DXMATRIX*  WorldViewProjection,
+        const D3DXMATRIX*  World,
+        const D3DXMATRIX*  View,
+        const D3DXMATRIX*  Proj,
         int NumActiveLights,
-        int nActiveLight,
-        float fLightScale) {
+        int ActiveLight,
+        float LightScale) {
     HRESULT hr;
    
     // Render the light arrow so the user can visually see the light dir
     for( int i=0; i<NumActiveLights; i++ ) {
-        D3DXCOLOR arrowColor = ( i == nActiveLight )
+        D3DXCOLOR arrowColor = ( i == ActiveLight )
                 ? D3DXVECTOR4(1,1,0,1)
                 : D3DXVECTOR4(1,1,1,1);
-        V( m_LightControl[i].OnRender10( arrowColor, mView, mProj, vEyePt ) );
+        V( m_LightControl[i].OnRender10( arrowColor, View, Proj, EyePt ) );
         m_LightDir[i] = m_LightControl[i].GetLightDirection();
-        m_LightDiffuse[i] = fLightScale * D3DXVECTOR4(1,1,1,1);
+        m_LightDiffuse[i] = LightScale * D3DXVECTOR4(1,1,1,1);
     }
 
     DXUT_BeginPerfEvent( DXUT_PERFEVENTCOLOR, L"HUD / Stats" );
-    m_HUD.OnRender( fElapsedTime ); 
-    m_SampleUI.OnRender( fElapsedTime );
+    m_HUD.OnRender( ElapsedTime ); 
+    m_SampleUI.OnRender( ElapsedTime );
     RenderText();
     DXUT_EndPerfEvent();
 }
@@ -252,7 +266,7 @@ void fp_GUI::OnD3D10FrameRender(
 //--------------------------------------------------------------------------------------
 // Release D3D10 GUI resources created in OnD3D10ResizedSwapChain 
 //--------------------------------------------------------------------------------------
-void fp_GUI::OnD3D10ReleasingSwapChain( void* pUserContext )
+void fp_GUI::OnD3D10ReleasingSwapChain( void* UserContext )
 {
     m_DialogResourceManager.OnD3D10ReleasingSwapChain();
 }
@@ -261,7 +275,7 @@ void fp_GUI::OnD3D10ReleasingSwapChain( void* pUserContext )
 //--------------------------------------------------------------------------------------
 // Release D3D10 GUI resources created in OnD3D10CreateDevice 
 //--------------------------------------------------------------------------------------
-void fp_GUI::OnD3D10DestroyDevice( void* pUserContext )
+void fp_GUI::OnD3D10DestroyDevice( void* UserContext )
 {
     m_DialogResourceManager.OnD3D10DestroyDevice();
     m_D3DSettingsDlg.OnD3D10DestroyDevice();
@@ -282,16 +296,16 @@ void fp_GUI::OnD3D10DestroyDevice( void* pUserContext )
 // and aren't tied to the back buffer size 
 //--------------------------------------------------------------------------------------
 HRESULT fp_GUI::OnD3D9CreateDevice(
-        IDirect3DDevice9* pd3dDevice,
-        const D3DSURFACE_DESC* pBackBufferSurfaceDesc,
-        void* pUserContext ) {
+        IDirect3DDevice9* d3dDevice,
+        const D3DSURFACE_DESC* BackBufferSurfaceDesc,
+        void* UserContext ) {
     HRESULT hr;
 
-    V_RETURN( m_DialogResourceManager.OnD3D9CreateDevice( pd3dDevice ) );
-    V_RETURN( m_D3DSettingsDlg.OnD3D9CreateDevice( pd3dDevice ) );
+    V_RETURN( m_DialogResourceManager.OnD3D9CreateDevice( d3dDevice ) );
+    V_RETURN( m_D3DSettingsDlg.OnD3D9CreateDevice( d3dDevice ) );
 
     // Initialize the font
-    V_RETURN( D3DXCreateFont( pd3dDevice, 15, 0, FW_BOLD, 1, FALSE, DEFAULT_CHARSET, 
+    V_RETURN( D3DXCreateFont( d3dDevice, 15, 0, FW_BOLD, 1, FALSE, DEFAULT_CHARSET, 
             OUT_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE,
             L"Arial", &m_Font9 ) );
 
@@ -299,7 +313,7 @@ HRESULT fp_GUI::OnD3D9CreateDevice(
     m_SampleUI.GetSlider( IDC_NUM_LIGHTS )->SetVisible( true );
     m_SampleUI.GetButton( IDC_ACTIVE_LIGHT )->SetVisible( true );
 
-    V_RETURN( CDXUTDirectionWidget::StaticOnD3D9CreateDevice( pd3dDevice ) );
+    V_RETURN( CDXUTDirectionWidget::StaticOnD3D9CreateDevice( d3dDevice ) );
     for( int i=0; i<FP_MAX_LIGHTS; i++ )
         m_LightControl[i].SetRadius( 10.0f );
 
@@ -312,9 +326,9 @@ HRESULT fp_GUI::OnD3D9CreateDevice(
 // (D3DPOOL_DEFAULT) or that are tied to the back buffer size 
 //--------------------------------------------------------------------------------------
 HRESULT fp_GUI::OnD3D9ResetDevice(
-        IDirect3DDevice9* pd3dDevice, 
-        const D3DSURFACE_DESC* pBackBufferSurfaceDesc,
-        void* pUserContext ) {
+        IDirect3DDevice9* d3dDevice, 
+        const D3DSURFACE_DESC* BackBufferSurfaceDesc,
+        void* UserContext ) {
     HRESULT hr;
 
     V_RETURN( m_DialogResourceManager.OnD3D9ResetDevice() );
@@ -323,16 +337,17 @@ HRESULT fp_GUI::OnD3D9ResetDevice(
     if( m_Font9 ) V_RETURN( m_Font9->OnResetDevice() );
 
     // Create a sprite to help batch calls when drawing many lines of text
-    V_RETURN( D3DXCreateSprite( pd3dDevice, &m_Sprite9 ) );
+    V_RETURN( D3DXCreateSprite( d3dDevice, &m_Sprite9 ) );
     m_TxtHelper = new CDXUTTextHelper( m_Font9, m_Sprite9, NULL, NULL, 15 );
 
     for( int i=0; i<FP_MAX_LIGHTS; i++ )
-        m_LightControl[i].OnD3D9ResetDevice( pBackBufferSurfaceDesc  );
+        m_LightControl[i].OnD3D9ResetDevice( BackBufferSurfaceDesc  );
 
-    m_HUD.SetLocation( pBackBufferSurfaceDesc->Width-170, 0 );
+    m_HUD.SetLocation( BackBufferSurfaceDesc->Width-170, 0 );
     m_HUD.SetSize( 170, 170 );
-    m_SampleUI.SetLocation( pBackBufferSurfaceDesc->Width-170, pBackBufferSurfaceDesc->Height-300 );
-    m_SampleUI.SetSize( 170, 300 );
+    m_SampleUI.SetLocation( BackBufferSurfaceDesc->Width-170,
+            BackBufferSurfaceDesc->Height-330 );
+    m_SampleUI.SetSize( 170, 330 );
 
     return S_OK;
 }
@@ -342,7 +357,7 @@ HRESULT fp_GUI::OnD3D9ResetDevice(
 // Render the GUI using the D3D9 device
 //--------------------------------------------------------------------------------------
 void fp_GUI::OnD3D9FrameRender(
-        IDirect3DDevice9* pd3dDevice,
+        IDirect3DDevice9* d3dDevice,
         double fTime,
         float fElapsedTime,
         const D3DXVECTOR3* vEyePt,
@@ -362,7 +377,7 @@ void fp_GUI::OnD3D9FrameRender(
         D3DXCOLOR arrowColor = ( i == nActiveLight ) ? D3DXCOLOR(1,1,0,1) : D3DXCOLOR(1,1,1,1);
         V( m_LightControl[i].OnRender9( arrowColor, mView, mProj, vEyePt ) );
         m_LightDir[i] = m_LightControl[i].GetLightDirection();
-        m_cLightDiffuse[i] = fLightScale * D3DXCOLOR(1,1,1,1);
+        m_LightDiffuseColor[i] = fLightScale * D3DXCOLOR(1,1,1,1);
     }
 
     m_HUD.OnRender( fElapsedTime );
@@ -375,7 +390,7 @@ void fp_GUI::OnD3D9FrameRender(
 //--------------------------------------------------------------------------------------
 // Release D3D9 resources created in the OnD3D9ResetDevice callback 
 //--------------------------------------------------------------------------------------
-void fp_GUI::OnD3D9LostDevice( void* pUserContext )
+void fp_GUI::OnD3D9LostDevice( void* UserContext )
 {
     m_DialogResourceManager.OnD3D9LostDevice();
     m_D3DSettingsDlg.OnD3D9LostDevice();
@@ -390,7 +405,7 @@ void fp_GUI::OnD3D9LostDevice( void* pUserContext )
 //--------------------------------------------------------------------------------------
 // Release D3D9 GUI resources created in the OnD3D9CreateDevice callback 
 //--------------------------------------------------------------------------------------
-void fp_GUI::OnD3D9DestroyDevice( void* pUserContext )
+void fp_GUI::OnD3D9DestroyDevice( void* UserContext )
 {
     m_DialogResourceManager.OnD3D9DestroyDevice();
     m_D3DSettingsDlg.OnD3D9DestroyDevice();
@@ -409,7 +424,7 @@ void fp_GUI::RenderText() {
     m_TxtHelper->DrawTextLine( DXUTGetDeviceStats() );    
   
     // Draw help
-    if( m_bShowHelp ) {
+    if( m_ShowHelp ) {
         UINT nBackBufferHeight = ( DXUTIsAppRenderingWithD3D9() )
                 ? DXUTGetD3D9BackBufferSurfaceDesc()->Height
                 : DXUTGetDXGIBackBufferSurfaceDesc()->Height;

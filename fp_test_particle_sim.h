@@ -7,7 +7,7 @@
 struct fp_Particle {
     D3DXVECTOR3 m_Position;
     D3DXVECTOR3 m_Velocity;
-	D3DCOLOR    m_cColor;
+	D3DCOLOR    m_Color;
 };
 
 class fp_TestSim {

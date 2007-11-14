@@ -10,7 +10,7 @@ fp_TestSim::fp_TestSim(int NumParticles)
     {
         m_Particles[i].m_Position = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
 		m_Particles[i].m_Velocity = fp_Util::GetRandomVector() * fp_Util::GetRandomMinMax( 0.5f, 5.0f );
-        m_Particles[i].m_cColor = D3DCOLOR_COLORVALUE( fp_Util::GetRandomMinMax( 0.0f, 1.0f ), 
+        m_Particles[i].m_Color = D3DCOLOR_COLORVALUE( fp_Util::GetRandomMinMax( 0.0f, 1.0f ), 
                                                        fp_Util::GetRandomMinMax( 0.0f, 1.0f ), 
                                                        fp_Util::GetRandomMinMax( 0.0f, 1.0f ), 
                                                        1.0f );
