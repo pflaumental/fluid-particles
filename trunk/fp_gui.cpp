@@ -451,3 +451,4 @@ void fp_GUI::RenderText() {
 
     m_TxtHelper->End();
 }
+
