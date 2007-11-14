@@ -257,8 +257,16 @@ void CALLBACK FP_OnKeyboard( UINT Char, bool KeyDown, bool AltDown, void* UserCo
 //--------------------------------------------------------------------------------------
 void CALLBACK FP_OnGUIEvent( UINT Event, int ControlID, CDXUTControl* Control, void* UserContext )
 {   
+    bool resetSim;
     g_GUI.OnGUIEvent(Event, ControlID, Control, g_ActiveLight, g_NumActiveLights,
-            g_LightScale, g_RenderSprites->m_SpriteSize);   
+            g_LightScale, g_RenderSprites->m_SpriteSize, resetSim);
+    if(resetSim) {
+        delete g_Sim;
+        D3DXVECTOR3 center(0.0f, 0.0f, 0.0f);
+        g_Sim = new fp_Fluid(NUM_PARTICLES_X, NUM_PARTICLES_Y, NUM_PARTICLES_Z,
+            PARTICLE_SPACING_X, PARTICLE_SPACING_Y, PARTICLE_SPACING_Z, center);
+        g_RenderSprites->m_Particles = g_Sim->m_Particles;
+    }
 }
 
 

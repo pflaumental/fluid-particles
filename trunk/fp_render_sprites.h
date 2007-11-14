@@ -27,6 +27,7 @@ struct fp_SpriteVertex
 class fp_RenderSprites {
 public:
     float m_SpriteSize;
+    fp_FluidParticle* m_Particles;
 
     fp_RenderSprites(int NumParticles, fp_FluidParticle* Particles);
     ~fp_RenderSprites();
@@ -49,8 +50,7 @@ public:
     void OnLostDevice();
 
 private:
-    int m_NumParticles;
-    fp_FluidParticle* m_Particles;
+    int m_NumParticles;    
     LPDIRECT3DVERTEXBUFFER9 m_VertexBuffer;
     LPDIRECT3DTEXTURE9 m_Texture;    
 };

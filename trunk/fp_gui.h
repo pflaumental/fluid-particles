@@ -24,6 +24,7 @@
 #define IDC_LIGHT_SCALE_STATIC      10
 #define IDC_PARTICLE_SCALE          11
 #define IDC_PARTICLE_SCALE_STATIC   12
+#define IDC_RESET_SIM               13
 
 //--------------------------------------------------------------------------------------
 // Fluid particles GUI
@@ -54,7 +55,8 @@ public:
             int& ActiveLight,
             int& NumActiveLights,
             float& LightScale,
-            float& ParticeScale);
+            float& ParticeScale,
+            bool& ResetSim);
 
     // DX9 specific
     HRESULT OnD3D9CreateDevice(
