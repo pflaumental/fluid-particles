@@ -177,9 +177,10 @@ fp_Fluid::fp_Fluid(
         //m_GradientWPoly6Coefficient(0.0f),
         //m_LaplaceWPoly6Coefficient(0.0f),
         m_GradientWSpikyCoefficient(-45.0f / (D3DX_PI * pow(SmoothingLenght, 6))),
-        m_LaplacianWViscosityCoefficient(45.0f / (4.0f * D3DX_PI
-                * pow(SmoothingLenght, 3))) {
+        m_LaplacianWViscosityCoefficient(90.0f / (2.0f * D3DX_PI
+                * pow(SmoothingLenght, 5))) {
     m_SmoothingLengthPow3Inv = 1.0f / (m_SmoothingLengthSq * SmoothingLenght);
+    m_SmoothingLengthSqInv = 1.0f / m_SmoothingLengthSq;
     m_RestDensity = RestDensityCoefficient * ParticleMass * WPoly6(0.0f);
     float startX = Center.x - 0.5f * (NumParticlesX - 1) * SpacingX;
     float startY = Center.y - 0.5f * (NumParticlesY - 1) * SpacingY;
@@ -347,8 +348,8 @@ inline void fp_Fluid::ProcessParticlePair(
     float laplacianWViskosityValue1 = LaplacianWViscosity(r1, dist);
     D3DXVECTOR3 commonViscosityTerm1 = m_Viscosity * velocityDifference1
             * laplacianWViskosityValue1;
-    D3DXVECTOR3 viscosityForce1 = D3DXVECTOR3(0.0f, 0.0f, 0.0f); //commonViscosityTerm1 / Particle2->m_Density;
-    D3DXVECTOR3 viscosityForce2 = D3DXVECTOR3(0.0f, 0.0f, 0.0f); //-commonViscosityTerm1 / Particle1->m_Density;
+    D3DXVECTOR3 viscosityForce1 = commonViscosityTerm1 / Particle2->m_Density;
+    D3DXVECTOR3 viscosityForce2 = -commonViscosityTerm1 / Particle1->m_Density;
 
     // Total forces
     D3DXVECTOR3 totalForce1 = pressureForce1 + viscosityForce1;
@@ -380,8 +381,7 @@ inline D3DXVECTOR3 fp_Fluid::GradientWSpiky(D3DXVECTOR3 R, float LenR) {
 
 
 inline float fp_Fluid::LaplacianWViscosity(D3DXVECTOR3 R, float LenR) {
-    return (R.x + R.y + R.z) * (m_LaplacianWViscosityCoefficient / LenR)
-            * (m_SmoothingLengthPow3Inv + m_SmoothingLength / pow(LenR, 4));
+    return m_LaplacianWViscosityCoefficient * (1.0f - LenR / m_SmoothingLength);
 }
 
 fp_Fluid::~fp_Fluid() {
