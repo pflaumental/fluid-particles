@@ -144,8 +144,8 @@ fp_Fluid::fp_Fluid(
         //m_Stiffness(fStiffness),
         m_SearchRadius(SearchRadius),
         m_WPoly6Coefficient(315.0f / (64.0f * D3DX_PI * pow(SmoothingLenght, 9))),
-        //m_GradientWPoly6Coefficient(0.0f),
-        //m_LaplaceWPoly6Coefficient(0.0f),
+        m_GradientWPoly6Coefficient(-945.0f / (32.0f * D3DX_PI * pow(SmoothingLenght,9))),
+        m_LaplacianWPoly6Coefficient(-945.0f / (8.0f * D3DX_PI * pow(SmoothingLenght,6))),
         m_GradientWSpikyCoefficient(-45.0f / (D3DX_PI * pow(SmoothingLenght, 6))),
         m_LaplacianWViscosityCoefficient(90.0f / (2.0f * D3DX_PI
                 * pow(SmoothingLenght, 5))) {                    
@@ -354,6 +354,16 @@ inline void fp_Fluid::ProcessParticlePair(
 
 inline float fp_Fluid::WPoly6(float LenRSq) {
     return m_WPoly6Coefficient * pow(m_SmoothingLengthSq - LenRSq, 3);
+}
+
+inline D3DXVECTOR3 fp_Fluid::GradientWPoly6(D3DXVECTOR3 R, float LenRSq) {
+    return R * m_GradientWPoly6Coefficient * pow(m_SmoothingLengthSq - LenRSq, 2);
+}
+
+
+inline float fp_Fluid::LaplacianWPoly6(D3DXVECTOR3 R, float LenRSq) {
+    return m_LaplacianWPoly6Coefficient * (0.75f * pow(m_SmoothingLengthSq - LenRSq, 2)
+            + LenRSq * m_SmoothingLengthPow3Inv);
 }
 
 inline D3DXVECTOR3 fp_Fluid::GradientWSpiky(D3DXVECTOR3 R, float LenR) {

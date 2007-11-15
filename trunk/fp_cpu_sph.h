@@ -84,8 +84,8 @@ public:
     float m_SearchRadius;
     float m_ParticleMass;
     float m_WPoly6Coefficient;
-    //float m_GradientWPoly6Coefficient;
-    //float m_LaplaceWPoly6Coefficient;
+    float m_GradientWPoly6Coefficient;
+    float m_LaplacianWPoly6Coefficient;
     float m_GradientWSpikyCoefficient;
     float m_LaplacianWViscosityCoefficient;    
     
@@ -111,13 +111,17 @@ private:
     fp_Grid* m_Grid;
     float* m_OldDensities;
     float* m_NewDensities;
-    D3DXVECTOR3* m_Forces;
+    D3DXVECTOR3* m_Forces; // TODO TODO TODO
+    D3DXVECTOR3* m_GradientField;
+
 
     inline void ProcessParticlePair(
             fp_FluidParticle* Particle1, 
             fp_FluidParticle* Particle2,
             float DistanceSq);
     inline float WPoly6(float LenRSq);
+    inline D3DXVECTOR3 GradientWPoly6(D3DXVECTOR3 R, float LenRSq);
+    inline float LaplacianWPoly6(D3DXVECTOR3 R, float LenRSq);
     inline D3DXVECTOR3 GradientWSpiky(D3DXVECTOR3 R, float LenR);
     inline float LaplacianWViscosity(D3DXVECTOR3 R, float LenR);
 };
