@@ -430,7 +430,7 @@ void fp_GUI::RenderText() {
     m_TxtHelper->Begin();
     m_TxtHelper->SetInsertionPos( 2, 0 );
     m_TxtHelper->SetForegroundColor( D3DXCOLOR( 1.0f, 1.0f, 0.0f, 1.0f ) );
-    m_TxtHelper->DrawTextLine( DXUTGetFrameStats( DXUTIsVsyncEnabled() ) );  
+    m_TxtHelper->DrawTextLine( DXUTGetFrameStats( true/*DXUTIsVsyncEnabled()*/ ) );  
     m_TxtHelper->DrawTextLine( DXUTGetDeviceStats() );    
   
     // Draw help

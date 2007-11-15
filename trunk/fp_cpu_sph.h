@@ -9,7 +9,7 @@
 
 #include "fp_global.h"
 
-#define FP_DEFAULT_FLUID_SMOOTHING_LENGTH 5.0f//0.01f
+#define FP_DEFAULT_FLUID_SMOOTHING_LENGTH 4.0f//0.01f
 #define FP_DEFAULT_FLUID_SMOOTHING_LENGTH_SQ FP_DEFAULT_FLUID_SMOOTHING_LENGTH\
         * FP_DEFAULT_FLUID_SMOOTHING_LENGTH
 #define FP_DEFAULT_FLUID_VISCOSITY 0.2f
@@ -72,6 +72,7 @@ public:
     float m_Viscosity;
     float m_SmoothingLength;
     float m_SmoothingLengthSq;
+    float m_SmoothingLengthSqInv;
     float m_SmoothingLengthPow3Inv;
     float m_RestDensity;
     //float m_Stiffness;
