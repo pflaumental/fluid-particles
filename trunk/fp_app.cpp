@@ -63,6 +63,7 @@ ID3D10EffectScalarVariable* g_NumLights = NULL;
 //--------------------------------------------------------------------------------------
 bool    CALLBACK FP_ModifyDeviceSettings( DXUTDeviceSettings* DeviceSettings, void* UserContext );
 void    CALLBACK FP_OnFrameMove( double Time, float ElapsedTime, void* UserContext );
+void    CALLBACK FP_OnFrameMoveInitial( double Time, float ElapsedTime, void* UserContext );
 LRESULT CALLBACK FP_MsgProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, bool* NoFurtherProcessing, void* UserContext );
 void    CALLBACK FP_OnKeyboard( UINT Char, bool KeyDown, bool AltDown, void* UserContext );
 void    CALLBACK FP_OnGUIEvent( UINT Event, int ControlID, CDXUTControl* Control, void* UserContext );
@@ -102,7 +103,7 @@ int WINAPI wWinMain( HINSTANCE Instance, HINSTANCE PrevInstance, LPWSTR CmdLine,
     DXUTSetCallbackDeviceChanging( FP_ModifyDeviceSettings );
     DXUTSetCallbackMsgProc( FP_MsgProc );
     DXUTSetCallbackKeyboard( FP_OnKeyboard );
-    DXUTSetCallbackFrameMove( FP_OnFrameMove );
+    DXUTSetCallbackFrameMove( FP_OnFrameMoveInitial );
 
     DXUTSetCallbackD3D9DeviceAcceptable( FP_IsD3D9DeviceAcceptable );
     DXUTSetCallbackD3D9DeviceCreated( FP_OnD3D9CreateDevice );
@@ -213,13 +214,20 @@ bool CALLBACK FP_ModifyDeviceSettings( DXUTDeviceSettings* DeviceSettings, void*
 //--------------------------------------------------------------------------------------
 // Handle updates to the scene.  This is called regardless of which D3D API is used
 //--------------------------------------------------------------------------------------
+void CALLBACK FP_OnFrameMoveInitial( double Time, float ElapsedTime, void* UserContext )
+{
+    // Update the camera's position based on user input 
+    g_Camera.FrameMove( ElapsedTime );
+    if(Time > 0.2)
+        DXUTSetCallbackFrameMove( FP_OnFrameMove );
+}
+
 void CALLBACK FP_OnFrameMove( double Time, float ElapsedTime, void* UserContext )
 {
     // Update the camera's position based on user input 
     g_Camera.FrameMove( ElapsedTime );
-    g_Sim->Update(Time, ElapsedTime);
+    g_Sim->Update(ElapsedTime);
 }
-
 
 //--------------------------------------------------------------------------------------
 // Handle messages to the application
