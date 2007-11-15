@@ -14,21 +14,28 @@
         * FP_DEFAULT_FLUID_SMOOTHING_LENGTH
 #define FP_DEFAULT_FLUID_VISCOSITY 0.2f
 #define FP_DEFAULT_FLUID_PARTICLE_MASS 0.00020543f
-#define FP_DEFAULT_FLUID_REST_DENSITY_COEFFICIENT 0.1f // TODO: tune
-#define FP_DEFAULT_FLUID_STIFFNESS 1.5f
+#define FP_DEFAULT_FLUID_REST_DENSITY_COEFFICIENT 10.0f // TODO: tune
+#define FP_DEFAULT_FLUID_DAMPING_COEFFICIENT 0.85f // TODO: tune
+#define FP_DEFAULT_FLUID_STIFFNESS 1.5f // TODO: what todo with it?
 #define FP_DEFAULT_FLUID_SEARCHRADIUS FP_DEFAULT_FLUID_SMOOTHING_LENGTH
 #define FP_DEFAULT_INITIAL_GRID_SIDELENGTH 50
 #define FP_DEFAULT_INITIAL_GRID_CAPACITY FP_DEFAULT_INITIAL_GRID_SIDELENGTH * \
         FP_DEFAULT_INITIAL_GRID_SIDELENGTH * FP_DEFAULT_INITIAL_GRID_SIDELENGTH
 #define FP_DEFAULT_INITIAL_CELL_CAPACITY 10
 
+// For Debug:
+#define FP_DEBUG_MAX_POS 5000.0f
+#define FP_DEBUG_MAX_FORCE 2.0f
+#define FP_DEBUG_MAX_FORCE_SQ FP_DEBUG_MAX_FORCE * FP_DEBUG_MAX_FORCE
+
 typedef struct {
     D3DXVECTOR3 m_Position;
     D3DXVECTOR3 m_Velocity;
-    float m_Density;    
+    int m_Index;
 } fp_FluidParticle;
 
 typedef std::vector<fp_FluidParticle> fp_GridCell;
+typedef fp_GridCell::size_type fp_GridCellSize;
 
 class fp_Grid {
 public:
@@ -56,10 +63,6 @@ public:
 
     void FillAndPrepare(fp_FluidParticle* Particles, int NumParticles);
 
-    void Extract(fp_FluidParticle* OutParticles);
-
-    void SetDensities(float Density);
-
 private:
     void SetBounds(fp_FluidParticle* Particles, int NumParticles);
 };
@@ -74,7 +77,9 @@ public:
     float m_SmoothingLengthSq;
     float m_SmoothingLengthSqInv;
     float m_SmoothingLengthPow3Inv;
+    float m_InitialDensity;
     float m_RestDensity;
+    float m_DampingCoefficient;
     //float m_Stiffness;
     float m_SearchRadius;
     float m_ParticleMass;
@@ -96,22 +101,22 @@ public:
         float Viscosity = FP_DEFAULT_FLUID_VISCOSITY,
         float ParticleMass = FP_DEFAULT_FLUID_PARTICLE_MASS,
         float RestDensityCoefficient = FP_DEFAULT_FLUID_REST_DENSITY_COEFFICIENT, 
+        float DampingCoefficient = FP_DEFAULT_FLUID_DAMPING_COEFFICIENT,
         float Stiffness = FP_DEFAULT_FLUID_STIFFNESS,
         float SearchRadius = FP_DEFAULT_FLUID_SEARCHRADIUS,
         int InitialGridCapacity = FP_DEFAULT_INITIAL_GRID_CAPACITY);
     ~fp_Fluid();
-    void Update(double Time, float ElapsedTime);
+    void Update(float ElapsedTime);
 private:
     fp_Grid* m_Grid;
-    fp_Grid* m_NewGrid;
+    float* m_OldDensities;
+    float* m_NewDensities;
+    D3DXVECTOR3* m_Forces;
 
     inline void ProcessParticlePair(
             fp_FluidParticle* Particle1, 
             fp_FluidParticle* Particle2,
-            fp_FluidParticle* OutNewParticle1, 
-            fp_FluidParticle* OutNewParticle2,
-            float DistanceSq,
-            float ElapsedTime);
+            float DistanceSq);
     inline float WPoly6(float LenRSq);
     inline D3DXVECTOR3 GradientWSpiky(D3DXVECTOR3 R, float LenR);
     inline float LaplacianWViscosity(D3DXVECTOR3 R, float LenR);
