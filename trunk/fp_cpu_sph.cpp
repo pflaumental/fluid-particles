@@ -72,8 +72,14 @@ void fp_Grid::FillAndPrepare(fp_FluidParticle *Particles, int NumParticles) {
     for (int i = 0; i < NumParticles; i++) {
         D3DXVECTOR3 pos = Particles[i].m_Position;
         int cellIndexX = (int)((pos.x - m_MinX) / m_CellWidth);
+        if(cellIndexX < 0 || cellIndexX >= m_NumCellsX)
+            continue;
         int cellIndexY = (int)((pos.y - m_MinY) / m_CellWidth);
+        if(cellIndexY < 0 || cellIndexY >= m_NumCellsY)
+            continue;
         int cellIndexZ = (int)((pos.z - m_MinZ) / m_CellWidth);
+        if(cellIndexZ < 0 || cellIndexZ >= m_NumCellsZ)
+            continue;
         int cellIndex = cellIndexX + cellIndexY * m_NumCellsX
                 + cellIndexZ * m_NumCellsX * m_NumCellsY;
         fp_GridCell* cell = m_Cells[cellIndex];
@@ -91,14 +97,12 @@ void fp_Grid::SetBounds(fp_FluidParticle *Particles, int NumParticles){
     for (int i = 0; i < NumParticles; i++)
     {
         D3DXVECTOR3 pos = Particles[i].m_Position;
-        #if defined(DEBUG) || defined(_DEBUG)
-        assert(pos.x > -FP_DEBUG_MAX_POS);
-        assert(pos.x < FP_DEBUG_MAX_POS);
-        assert(pos.y > -FP_DEBUG_MAX_POS);
-        assert(pos.y < FP_DEBUG_MAX_POS);
-        assert(pos.z > -FP_DEBUG_MAX_POS);
-        assert(pos.z < FP_DEBUG_MAX_POS);
-        #endif
+        if(pos.x < -FP_FLUID_MAX_POS) continue;
+        if(pos.x > FP_FLUID_MAX_POS) continue;
+        if(pos.y < -FP_FLUID_MAX_POS) continue;
+        if(pos.y > FP_FLUID_MAX_POS) continue;
+        if(pos.z < -FP_FLUID_MAX_POS) continue;
+        if(pos.z > FP_FLUID_MAX_POS) continue;
         if(pos.x < m_MinX)
             m_MinX = pos.x;
         if(pos.y < m_MinY)
