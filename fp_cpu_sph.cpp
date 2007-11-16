@@ -289,21 +289,18 @@ inline void fp_Fluid::ProcessParticlePair(
         fp_FluidParticle* Particle1, 
         fp_FluidParticle* Particle2,
         float DistanceSq){
-    // Calculate 
-
-    // TODO: schauen was man aus den Schleifen rausziehen kann
     float dist = sqrt(DistanceSq);    
     D3DXVECTOR3 r1 = Particle1->m_Position - Particle2->m_Position;
     int particle1Index = Particle1->m_Index;
     int particle2Index = Particle2->m_Index;
-
-    assert(dist <= m_SmoothingLength);
 
     // Density
     float particle1Density = m_OldDensities[particle1Index];
     float particle2Density = m_OldDensities[particle2Index];
     float wPoly6Value = WPoly6(DistanceSq);
     float AdditionalDensity = m_ParticleMass * wPoly6Value;
+    m_NewDensities[particle1Index] += AdditionalDensity;
+    m_NewDensities[particle2Index] += AdditionalDensity;
 
     // Pressure forces
     float PressureAt1 = m_GasConstantK * (particle1Density - m_RestDensity);
@@ -342,15 +339,10 @@ inline void fp_Fluid::ProcessParticlePair(
     assert(viscosityForce1LenSq < FP_DEBUG_MAX_FORCE_SQ);
     #endif
 
-    // Write out
-
     // Total forces
     m_Forces[particle1Index] += pressureForce1 + viscosityForce1;
     m_Forces[particle2Index] += pressureForce2 + viscosityForce2;
 
-    // Densities
-    m_NewDensities[particle1Index] += AdditionalDensity;
-    m_NewDensities[particle2Index] += AdditionalDensity;
 }
 
 inline float fp_Fluid::WPoly6(float LenRSq) {
