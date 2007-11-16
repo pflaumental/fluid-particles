@@ -123,6 +123,7 @@ fp_Fluid::fp_Fluid(
         float SpacingZ,
         D3DXVECTOR3 Center,
         float SmoothingLenght,
+        float GasConstantK,
         float Viscosity,
         float ParticleMass,
         float RestDensityCoefficient,
@@ -135,7 +136,7 @@ fp_Fluid::fp_Fluid(
         m_Grid(new fp_Grid(InitialGridCapacity, SearchRadius, ParticleMass 
                 * WPoly6(0.0f))),
         m_Particles(new fp_FluidParticle[NumParticlesX * NumParticlesY * NumParticlesZ]),
-        m_GasConstantK(1.0f),
+        m_GasConstantK(GasConstantK),
         m_SmoothingLength(SmoothingLenght),
         m_SmoothingLengthSq(SmoothingLenght * SmoothingLenght),        
         m_Viscosity(Viscosity),
