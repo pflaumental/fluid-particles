@@ -323,7 +323,7 @@ inline void fp_Fluid::ProcessParticlePair(
     float testDot = D3DXVec3Dot(&pressureForce1Normalized, &r1Normalized);
     assert(pressureForce1LenSq < 0.001f || pressureForce1LenSq > -0.001f
             || testDot > 0.99f);
-    assert(m_OldDensities[particle1Index] >= m_RestDensity);
+    assert(m_OldDensities[particle1Index] >= m_InitialDensity);
     assert(pressureForce1LenSq < FP_DEBUG_MAX_FORCE_SQ);
 
     #endif
@@ -331,7 +331,7 @@ inline void fp_Fluid::ProcessParticlePair(
     // Viscosity forces
     D3DXVECTOR3 velocityDifference1 = Particle2->m_Velocity - Particle1->m_Velocity;
     float laplacianWViskosityValue1 = LaplacianWViscosity(r1, dist);
-    D3DXVECTOR3 commonViscosityTerm1 = m_Viscosity * velocityDifference1
+    D3DXVECTOR3 commonViscosityTerm1 = m_ParticleMass * m_Viscosity * velocityDifference1
             * laplacianWViskosityValue1;
     D3DXVECTOR3 viscosityForce1 = commonViscosityTerm1 / particle2Density;
     D3DXVECTOR3 viscosityForce2 = -commonViscosityTerm1 / particle1Density;
@@ -344,8 +344,8 @@ inline void fp_Fluid::ProcessParticlePair(
     // Write out
 
     // Total forces
-    m_Forces[particle1Index] += pressureForce1;// + viscosityForce1;
-    m_Forces[particle2Index] += pressureForce2;// + viscosityForce2;
+    m_Forces[particle1Index] += pressureForce1 + viscosityForce1;
+    m_Forces[particle2Index] += pressureForce2 + viscosityForce2;
 
     // Densities
     m_NewDensities[particle1Index] += AdditionalDensity;
