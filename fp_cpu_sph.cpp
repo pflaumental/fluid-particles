@@ -129,6 +129,8 @@ fp_Fluid::fp_Fluid(
         float SmoothingLenght,
         float GasConstantK,
         float Viscosity,
+        float SurfaceTension,
+        float GradientColorFieldThreshold,
         float ParticleMass,
         float RestDensityCoefficient,
         float DampingCoefficient,
@@ -136,29 +138,33 @@ fp_Fluid::fp_Fluid(
         float SearchRadius,
         int InitialGridCapacity)
         :
-        m_NumParticles(NumParticlesX * NumParticlesY * NumParticlesZ),
-        m_Grid(new fp_Grid(InitialGridCapacity, SearchRadius, ParticleMass 
-                * WPoly6(0.0f))),
+        m_NumParticles(NumParticlesX * NumParticlesY * NumParticlesZ),        
         m_Particles(new fp_FluidParticle[NumParticlesX * NumParticlesY * NumParticlesZ]),
         m_GasConstantK(GasConstantK),
         m_SmoothingLength(SmoothingLenght),
         m_SmoothingLengthSq(SmoothingLenght * SmoothingLenght),        
         m_Viscosity(Viscosity),
+        m_SurfaceTension(SurfaceTension),
+        m_GradientColorFieldThresholdSq(GradientColorFieldThreshold
+                * GradientColorFieldThreshold),
         m_ParticleMass(ParticleMass),
         m_DampingCoefficient(DampingCoefficient),
         //m_Stiffness(fStiffness),
         m_SearchRadius(SearchRadius),
         m_WPoly6Coefficient(315.0f / (64.0f * D3DX_PI * pow(SmoothingLenght, 9))),
         m_GradientWPoly6Coefficient(-945.0f / (32.0f * D3DX_PI * pow(SmoothingLenght,9))),
-        m_LaplacianWPoly6Coefficient(-945.0f / (8.0f * D3DX_PI * pow(SmoothingLenght,6))),
+        m_LaplacianWPoly6Coefficient(945.0f / (8.0f * D3DX_PI * pow(SmoothingLenght,9))),
         m_GradientWSpikyCoefficient(-45.0f / (D3DX_PI * pow(SmoothingLenght, 6))),
-        m_LaplacianWViscosityCoefficient(90.0f / (2.0f * D3DX_PI
-                * pow(SmoothingLenght, 5))) {                    
+        m_LaplacianWViscosityCoefficient(45.0f / (D3DX_PI * pow(SmoothingLenght, 5))) {
+    m_Grid = new fp_Grid(InitialGridCapacity, SearchRadius, ParticleMass 
+                * WPoly6(m_SmoothingLengthSq));
     m_SmoothingLengthPow3Inv = 1.0f / (m_SmoothingLengthSq * SmoothingLenght);
     m_SmoothingLengthSqInv = 1.0f / m_SmoothingLengthSq;
-    m_InitialDensity = ParticleMass * WPoly6(0.0f);
+    m_InitialDensity = ParticleMass * WPoly6(m_SmoothingLengthSq);
     m_RestDensity = RestDensityCoefficient * m_InitialDensity;
-    m_Forces = new D3DXVECTOR3[m_NumParticles];
+    m_PressureAndViscosityForces = new D3DXVECTOR3[m_NumParticles];
+    m_GradientColorField = new D3DXVECTOR3[m_NumParticles];
+    m_LaplacianColorField = new float[m_NumParticles];
     m_OldDensities = new float[m_NumParticles];
     m_NewDensities = new float[m_NumParticles];
     float startX = Center.x - 0.5f * (NumParticlesX - 1) * SpacingX;
@@ -173,7 +179,9 @@ fp_Fluid::fp_Fluid(
                         iY * SpacingY + startY, iZ * SpacingZ + startZ);
                 m_Particles[i].m_Velocity = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
                 m_Particles[i].m_Index = i;
-                m_Forces[i] = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
+                m_PressureAndViscosityForces[i] = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
+                m_GradientColorField[i] = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
+                m_LaplacianColorField[i] = 0.0f;
                 m_OldDensities[i] = m_InitialDensity;
                 m_NewDensities[i] = m_InitialDensity;
                 i++;
@@ -264,17 +272,27 @@ void fp_Fluid::Update(float ElapsedTime) {
         }        
     }
 
-    // TODO: Calculate surface tension forces
-
-    // Move particles and clear forces
+    // Move particles and clear fields
     for (int i = 0; i < m_NumParticles; i++) {
         D3DXVECTOR3 oldVelocity = m_Particles[i].m_Velocity;
-        oldVelocity = oldVelocity * pow(m_DampingCoefficient, ElapsedTime);                
+        oldVelocity = oldVelocity * pow(m_DampingCoefficient, ElapsedTime);
+        D3DXVECTOR3 totalForce = m_PressureAndViscosityForces[i];
+        D3DXVECTOR3 gradColorField = m_GradientColorField[i];
+        float gradColorFieldLenSq = D3DXVec3LengthSq(&gradColorField);
+        if(gradColorFieldLenSq >= m_GradientColorFieldThresholdSq) {
+            D3DXVECTOR3 surfaceTensionForce = (-m_SurfaceTension *
+                    m_LaplacianColorField[i]/sqrt(gradColorFieldLenSq)) * gradColorField;
+            totalForce += surfaceTensionForce;
+        }
         D3DXVECTOR3 newVelocity = oldVelocity 
-                + m_Forces[i] * ElapsedTime / m_OldDensities[i];
-        m_Forces[i] = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
+                + totalForce * ElapsedTime / m_OldDensities[i];        
         m_Particles[i].m_Velocity = newVelocity;
-        m_Particles[i].m_Position += 0.5f * ElapsedTime * (oldVelocity + newVelocity);        
+        m_Particles[i].m_Position += 0.5f * ElapsedTime * (oldVelocity + newVelocity);
+
+        m_PressureAndViscosityForces[i] = D3DXVECTOR3(0.0f, 0.0f, 0.0f);        
+        m_GradientColorField[i] = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
+        m_LaplacianColorField[i] = 0.0f;
+        m_OldDensities[i] = m_RestDensity;
     }
 
     // Update Grid
@@ -283,9 +301,6 @@ void fp_Fluid::Update(float ElapsedTime) {
     // Prepare densities
     float* tmpDensities = m_OldDensities;
     m_OldDensities = m_NewDensities;
-    for(int i=0; i<m_NumParticles; i++) {
-        tmpDensities[i] = m_RestDensity;
-    }
     m_NewDensities = tmpDensities;
 }
 
@@ -293,7 +308,8 @@ inline void fp_Fluid::ProcessParticlePair(
         fp_FluidParticle* Particle1, 
         fp_FluidParticle* Particle2,
         float DistanceSq){
-    float dist = sqrt(DistanceSq);    
+    float dist = sqrt(DistanceSq);
+    float hSq_lenRSq = m_SmoothingLengthSq - DistanceSq;
     D3DXVECTOR3 r1 = Particle1->m_Position - Particle2->m_Position;
     int particle1Index = Particle1->m_Index;
     int particle2Index = Particle2->m_Index;
@@ -301,7 +317,7 @@ inline void fp_Fluid::ProcessParticlePair(
     // Density
     float particle1Density = m_OldDensities[particle1Index];
     float particle2Density = m_OldDensities[particle2Index];
-    float wPoly6Value = WPoly6(DistanceSq);
+    float wPoly6Value = WPoly6(hSq_lenRSq);
     float AdditionalDensity = m_ParticleMass * wPoly6Value;
     m_NewDensities[particle1Index] += AdditionalDensity;
     m_NewDensities[particle2Index] += AdditionalDensity;
@@ -343,24 +359,36 @@ inline void fp_Fluid::ProcessParticlePair(
     assert(viscosityForce1LenSq < FP_DEBUG_MAX_FORCE_SQ);
     #endif
 
+    // Surface tension
+    D3DXVECTOR3 gradWPoly6Value1 = GradientWPoly6(r1, hSq_lenRSq);
+    D3DXVECTOR3 commonGradientColorFieldTerm1 = m_ParticleMass * gradWPoly6Value1;
+    m_GradientColorField[particle1Index] += commonGradientColorFieldTerm1
+            / particle2Density;
+    m_GradientColorField[particle2Index] -= commonGradientColorFieldTerm1
+            / particle1Density;
+    float laplacianWPoly6Value1 = LaplacianWPoly6(r1, DistanceSq, hSq_lenRSq);
+    float commonLaplacianColorFieldTerm1 = m_ParticleMass * laplacianWPoly6Value1;
+    m_LaplacianColorField[particle1Index] = commonLaplacianColorFieldTerm1
+            / particle2Density;
+    m_LaplacianColorField[particle2Index] = commonLaplacianColorFieldTerm1
+            / particle1Density;
+
     // Total forces
-    m_Forces[particle1Index] += pressureForce1 + viscosityForce1;
-    m_Forces[particle2Index] += pressureForce2 + viscosityForce2;
+    m_PressureAndViscosityForces[particle1Index] += pressureForce1 + viscosityForce1;
+    m_PressureAndViscosityForces[particle2Index] += pressureForce2 + viscosityForce2;
 
 }
 
-inline float fp_Fluid::WPoly6(float LenRSq) {
-    return m_WPoly6Coefficient * pow(m_SmoothingLengthSq - LenRSq, 3);
+inline float fp_Fluid::WPoly6(float HSq_LenRSq) {
+    return m_WPoly6Coefficient * pow(HSq_LenRSq, 3);
 }
 
-inline D3DXVECTOR3 fp_Fluid::GradientWPoly6(D3DXVECTOR3 R, float LenRSq) {
-    return R * m_GradientWPoly6Coefficient * pow(m_SmoothingLengthSq - LenRSq, 2);
+inline D3DXVECTOR3 fp_Fluid::GradientWPoly6(D3DXVECTOR3 R, float HSq_LenRSq) {
+    return R * m_GradientWPoly6Coefficient * pow(HSq_LenRSq, 2);
 }
 
-
-inline float fp_Fluid::LaplacianWPoly6(D3DXVECTOR3 R, float LenRSq) {
-    return m_LaplacianWPoly6Coefficient * (0.75f * pow(m_SmoothingLengthSq - LenRSq, 2)
-            + LenRSq * m_SmoothingLengthPow3Inv);
+inline float fp_Fluid::LaplacianWPoly6(D3DXVECTOR3 R, float LenRSq, float HSq_LenRSq) {
+    return m_LaplacianWPoly6Coefficient * HSq_LenRSq * (LenRSq - 0.75f * HSq_LenRSq);
 }
 
 inline D3DXVECTOR3 fp_Fluid::GradientWSpiky(D3DXVECTOR3 R, float LenR) {
