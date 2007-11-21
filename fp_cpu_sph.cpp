@@ -275,7 +275,8 @@ void fp_Fluid::Update(float ElapsedTime) {
     // Move particles and clear fields
     for (int i = 0; i < m_NumParticles; i++) {
         D3DXVECTOR3 oldVelocity = m_Particles[i].m_Velocity;
-        oldVelocity = oldVelocity * pow(m_DampingCoefficient, ElapsedTime);
+        D3DXVECTOR3 oldVelocityContribution = oldVelocity
+                * pow(m_DampingCoefficient, ElapsedTime);
         D3DXVECTOR3 totalForce = m_PressureAndViscosityForces[i];
         D3DXVECTOR3 gradColorField = m_GradientColorField[i];
         float gradColorFieldLenSq = D3DXVec3LengthSq(&gradColorField);
@@ -284,10 +285,11 @@ void fp_Fluid::Update(float ElapsedTime) {
                     m_LaplacianColorField[i]/sqrt(gradColorFieldLenSq)) * gradColorField;
             totalForce += surfaceTensionForce;
         }
-        D3DXVECTOR3 newVelocity = oldVelocity 
+        D3DXVECTOR3 newVelocity = oldVelocityContribution 
                 + totalForce * ElapsedTime / m_OldDensities[i];        
         m_Particles[i].m_Velocity = newVelocity;
-        m_Particles[i].m_Position += 0.5f * ElapsedTime * (oldVelocity + newVelocity);
+        m_Particles[i].m_Position += 0.5f * ElapsedTime
+                * (oldVelocityContribution + newVelocity);
 
         m_PressureAndViscosityForces[i] = D3DXVECTOR3(0.0f, 0.0f, 0.0f);        
         m_GradientColorField[i] = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
