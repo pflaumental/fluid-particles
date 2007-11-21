@@ -12,11 +12,13 @@
 #define FP_DEFAULT_FLUID_SMOOTHING_LENGTH 4.0f//0.01f
 #define FP_DEFAULT_FLUID_SMOOTHING_LENGTH_SQ FP_DEFAULT_FLUID_SMOOTHING_LENGTH\
         * FP_DEFAULT_FLUID_SMOOTHING_LENGTH
-#define FP_DEFAULT_FLUID_GAS_CONSTANT_K 15.0f
+#define FP_DEFAULT_FLUID_GAS_CONSTANT_K 5.0f
+#define FP_DEFAULT_FLUID_SURFACE_TENSION 0.0003f
+#define FP_DEFAULT_FLUID_GRADIENT_COLORFIELD_THRESHOLD 0.4f
 #define FP_DEFAULT_FLUID_VISCOSITY 0.001f
 #define FP_DEFAULT_FLUID_PARTICLE_MASS 0.00020543f
-#define FP_DEFAULT_FLUID_REST_DENSITY_COEFFICIENT 35.0f // TODO: tune
-#define FP_DEFAULT_FLUID_DAMPING_COEFFICIENT 0.85f // TODO: tune
+#define FP_DEFAULT_FLUID_REST_DENSITY_COEFFICIENT 20.0f // TODO: tune
+#define FP_DEFAULT_FLUID_DAMPING_COEFFICIENT 0.90f // TODO: tune
 #define FP_DEFAULT_FLUID_STIFFNESS 1.5f // TODO: what todo with it?
 #define FP_DEFAULT_FLUID_SEARCHRADIUS FP_DEFAULT_FLUID_SMOOTHING_LENGTH
 #define FP_DEFAULT_INITIAL_GRID_SIDELENGTH 50
@@ -74,6 +76,8 @@ public:
     int m_NumParticles;
     float m_GasConstantK; // TODO: is this viscosity or stiffness?
     float m_Viscosity;
+    float m_SurfaceTension;
+    float m_GradientColorFieldThresholdSq;
     float m_SmoothingLength;
     float m_SmoothingLengthSq;
     float m_SmoothingLengthSqInv;
@@ -99,8 +103,10 @@ public:
         float SpacingZ,
         D3DXVECTOR3 Center,
         float SmoothingLenght = FP_DEFAULT_FLUID_SMOOTHING_LENGTH,
-        float GasConstantK = FP_DEFAULT_FLUID_GAS_CONSTANT_K,
+        float GasConstantK = FP_DEFAULT_FLUID_GAS_CONSTANT_K,        
         float Viscosity = FP_DEFAULT_FLUID_VISCOSITY,
+        float SurfaceTension = FP_DEFAULT_FLUID_SURFACE_TENSION,
+        float GradientColorFieldThreshold = FP_DEFAULT_FLUID_GRADIENT_COLORFIELD_THRESHOLD,
         float ParticleMass = FP_DEFAULT_FLUID_PARTICLE_MASS,
         float RestDensityCoefficient = FP_DEFAULT_FLUID_REST_DENSITY_COEFFICIENT, 
         float DampingCoefficient = FP_DEFAULT_FLUID_DAMPING_COEFFICIENT,
@@ -113,17 +119,18 @@ private:
     fp_Grid* m_Grid;
     float* m_OldDensities;
     float* m_NewDensities;
-    D3DXVECTOR3* m_Forces; // TODO TODO TODO
-    D3DXVECTOR3* m_GradientField;
+    D3DXVECTOR3* m_PressureAndViscosityForces;
+    D3DXVECTOR3* m_GradientColorField;
+    float* m_LaplacianColorField;
 
 
     inline void ProcessParticlePair(
             fp_FluidParticle* Particle1, 
             fp_FluidParticle* Particle2,
             float DistanceSq);
-    inline float WPoly6(float LenRSq);
-    inline D3DXVECTOR3 GradientWPoly6(D3DXVECTOR3 R, float LenRSq);
-    inline float LaplacianWPoly6(D3DXVECTOR3 R, float LenRSq);
+    inline float WPoly6(float HSq_LenRSq);
+    inline D3DXVECTOR3 GradientWPoly6(D3DXVECTOR3 R, float HSq_LenRSq);
+    inline float LaplacianWPoly6(D3DXVECTOR3 R, float LenRSq, float HSq_LenRSq);
     inline D3DXVECTOR3 GradientWSpiky(D3DXVECTOR3 R, float LenR);
     inline float LaplacianWViscosity(D3DXVECTOR3 R, float LenR);
 };
