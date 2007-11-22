@@ -466,19 +466,19 @@
 			>
 		</File>
 		<File
+			RelativePath=".\fp_render_iso_volume.cpp"
+			>
+		</File>
+		<File
+			RelativePath=".\fp_render_iso_volume.h"
+			>
+		</File>
+		<File
 			RelativePath=".\fp_render_sprites.cpp"
 			>
 		</File>
 		<File
 			RelativePath=".\fp_render_sprites.h"
-			>
-		</File>
-		<File
-			RelativePath=".\fp_test_particle_sim.cpp"
-			>
-		</File>
-		<File
-			RelativePath=".\fp_test_particle_sim.h"
 			>
 		</File>
 		<File
