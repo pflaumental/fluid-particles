@@ -19,12 +19,10 @@
 #define FP_DEFAULT_FLUID_PARTICLE_MASS 0.00020543f
 #define FP_DEFAULT_FLUID_REST_DENSITY_COEFFICIENT 20.0f // TODO: tune
 #define FP_DEFAULT_FLUID_DAMPING_COEFFICIENT 0.90f // TODO: tune
-#define FP_DEFAULT_FLUID_STIFFNESS 1.5f // TODO: what todo with it?
-#define FP_DEFAULT_FLUID_SEARCHRADIUS FP_DEFAULT_FLUID_SMOOTHING_LENGTH
-#define FP_DEFAULT_INITIAL_GRID_SIDELENGTH 50
-#define FP_DEFAULT_INITIAL_GRID_CAPACITY FP_DEFAULT_INITIAL_GRID_SIDELENGTH * \
-        FP_DEFAULT_INITIAL_GRID_SIDELENGTH * FP_DEFAULT_INITIAL_GRID_SIDELENGTH
 #define FP_DEFAULT_INITIAL_CELL_CAPACITY 10
+#define FP_INITIAL_GRID_SIDELENGTH 50
+#define FP_INITIAL_GRID_CAPACITY FP_INITIAL_GRID_SIDELENGTH \
+        * FP_INITIAL_GRID_SIDELENGTH * FP_INITIAL_GRID_SIDELENGTH
 #define FP_FLUID_MAX_POS 150.0f
 
 // For Debug:
@@ -58,8 +56,7 @@ public:
 
     fp_Grid(
             int InitialCapacity,
-            float CellWidth,
-            float InitialParticleDensity);
+            float CellWidth);
     // Copy constructor
     fp_Grid(const fp_Grid& Other);
     ~fp_Grid();
@@ -84,8 +81,8 @@ public:
     float m_SmoothingLengthPow3Inv;
     float m_InitialDensity;
     float m_RestDensity;
+    float m_RestDensityCoefficient;
     float m_DampingCoefficient;
-    //float m_Stiffness;
     float m_SearchRadius;
     float m_ParticleMass;
     float m_WPoly6Coefficient;
@@ -109,12 +106,11 @@ public:
         float GradientColorFieldThreshold = FP_DEFAULT_FLUID_GRADIENT_COLORFIELD_THRESHOLD,
         float ParticleMass = FP_DEFAULT_FLUID_PARTICLE_MASS,
         float RestDensityCoefficient = FP_DEFAULT_FLUID_REST_DENSITY_COEFFICIENT, 
-        float DampingCoefficient = FP_DEFAULT_FLUID_DAMPING_COEFFICIENT,
-        float Stiffness = FP_DEFAULT_FLUID_STIFFNESS,
-        float SearchRadius = FP_DEFAULT_FLUID_SEARCHRADIUS,
-        int InitialGridCapacity = FP_DEFAULT_INITIAL_GRID_CAPACITY);
+        float DampingCoefficient = FP_DEFAULT_FLUID_DAMPING_COEFFICIENT);
     ~fp_Fluid();
     void Update(float ElapsedTime);
+    void SetSmoothingLength(float SmoothingLength);
+    void SetParticleMass(float ParticleMass);
 private:
     fp_Grid* m_Grid;
     float* m_OldDensities;

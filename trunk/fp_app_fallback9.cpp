@@ -8,7 +8,6 @@
 
 #include "fp_gui.h"
 #include "fp_global.h"
-#include "fp_test_particle_sim.h"
 #include "fp_render_sprites.h"
 
 //#define DEBUG_VS   // Uncomment this line to debug D3D9 vertex shaders 
