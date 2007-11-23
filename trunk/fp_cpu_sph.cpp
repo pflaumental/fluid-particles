@@ -90,7 +90,7 @@ void fp_Grid::FillAndPrepare(fp_FluidParticle *Particles, int NumParticles) {
     }
 }
 
-void fp_Grid::SetBounds(fp_FluidParticle *Particles, int NumParticles){
+inline void fp_Grid::SetBounds(fp_FluidParticle *Particles, int NumParticles){
     m_MinX = m_MinY = m_MinZ = FLT_MAX;
     m_MaxX = m_MaxY = m_MaxZ = FLT_MIN;    
     for (int i = 0; i < NumParticles; i++)
@@ -207,6 +207,10 @@ void fp_Fluid::SetParticleMass(float ParticleMass) {
     m_ParticleMass = ParticleMass;
     m_InitialDensity = ParticleMass * WPoly6(m_SmoothingLengthSq);
     m_RestDensity = m_RestDensityCoefficient * m_InitialDensity;
+}
+
+float* fp_Fluid::GetDensities() {
+    return m_OldDensities;
 }
 
 void fp_Fluid::Update(float ElapsedTime) {

@@ -64,7 +64,7 @@ public:
     void FillAndPrepare(fp_FluidParticle* Particles, int NumParticles);
 
 private:
-    void SetBounds(fp_FluidParticle* Particles, int NumParticles);
+    inline void SetBounds(fp_FluidParticle* Particles, int NumParticles);
 };
 
 class fp_Fluid {
@@ -111,6 +111,7 @@ public:
     void Update(float ElapsedTime);
     void SetSmoothingLength(float SmoothingLength);
     void SetParticleMass(float ParticleMass);
+    float* GetDensities();
 private:
     fp_Grid* m_Grid;
     float* m_OldDensities;
