@@ -17,6 +17,14 @@
 // Fluid particles render technique: Iso volume via marching cubes
 //--------------------------------------------------------------------------------------
 
+typedef struct {
+    int X;
+    int Y;
+    int Z;    
+} fp_VolumeIndex;
+
+fp_VolumeIndex operator+(const fp_VolumeIndex& A, const fp_VolumeIndex& B);
+
 class fp_IsoVolume {
 public:
     std::vector<float> m_IsoValues;
@@ -25,24 +33,43 @@ public:
     int m_NumValuesZ;
     int m_NumValues;
     float m_VoxelSize;
+    float m_HalfVoxelSize;
     float m_SmoothingLength;
-    float m_PaticleMass;
+    float m_ParticleMass;
     
     fp_IsoVolume(
             fp_FluidParticle* Particles,
             int NumParticles,
-            float VoxelSize = FP_DEFAULT_ISOVOLUME_VOXELSIZE);
+            float VoxelSize = FP_DEFAULT_ISOVOLUME_VOXELSIZE,
+            float SmoothingLength = FP_DEFAULT_FLUID_SMOOTHING_LENGTH,
+            float ParticleMass = FP_DEFAULT_FLUID_PARTICLE_MASS);
+    void SetSmoothingLength(float SmoothingLength);
+    void SetParticleMass(float ParticleMass);
+    void SetVoxelSize(float VoxelSize);
     void ConstructFromParticles(
             float MinX, 
             float MaxX, 
             float MinY, 
             float MaxY, 
             float MinZ, 
-            float MaxZ);
+            float MaxZ,
+            float* Densities);
+    inline void DistributeParticle(
+            D3DXVECTOR3 ParticlePosition, 
+            float ParticleDensity,
+            float MinX,
+            float MinY,
+            float MinZ);
 
 private:
     fp_FluidParticle* m_Particles;
     int m_NumParticles;
+    fp_VolumeIndex* m_StampStarts;
+    int* m_StampZRowLengths;  
+    float* m_StampValues;
+    int m_NumStamp;
+
+    void CreateStamp();
 };
 
 class fp_RenderIsoVolume {
