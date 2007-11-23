@@ -3,7 +3,7 @@
 #include "fp_util.h"
 #include <float.h>
 
-fp_Grid::fp_Grid(int InitialCapacity, float CellWidth, float InitialParticleDensity)
+fp_Grid::fp_Grid(int InitialCapacity, float CellWidth)
         :
         m_Cells(),
         m_NumParticles(0),
@@ -18,12 +18,11 @@ fp_Grid::fp_Grid(int InitialCapacity, float CellWidth, float InitialParticleDens
         m_MaxX(FLT_MIN),
         m_MaxY(FLT_MIN),
         m_MaxZ(FLT_MIN) {
-    m_Cells.reserve(FP_DEFAULT_INITIAL_GRID_CAPACITY);
+    m_Cells.reserve(FP_INITIAL_GRID_CAPACITY);
 }
 
 fp_Grid::fp_Grid(const fp_Grid& Other)
         :
-        m_Cells(Other.m_Cells),
         m_NumParticles(Other.m_NumParticles),
         m_NumCells(Other.m_NumCells),
         m_NumCellsX(Other.m_NumCellsX),
@@ -133,35 +132,22 @@ fp_Fluid::fp_Fluid(
         float GradientColorFieldThreshold,
         float ParticleMass,
         float RestDensityCoefficient,
-        float DampingCoefficient,
-        float Stiffness,
-        float SearchRadius,
-        int InitialGridCapacity)
+        float DampingCoefficient)
         :
         m_NumParticles(NumParticlesX * NumParticlesY * NumParticlesZ),        
         m_Particles(new fp_FluidParticle[NumParticlesX * NumParticlesY * NumParticlesZ]),
         m_GasConstantK(GasConstantK),
-        m_SmoothingLength(SmoothingLenght),
-        m_SmoothingLengthSq(SmoothingLenght * SmoothingLenght),        
         m_Viscosity(Viscosity),
         m_SurfaceTension(SurfaceTension),
+        m_RestDensityCoefficient(RestDensityCoefficient),
         m_GradientColorFieldThresholdSq(GradientColorFieldThreshold
                 * GradientColorFieldThreshold),
-        m_ParticleMass(ParticleMass),
-        m_DampingCoefficient(DampingCoefficient),
-        //m_Stiffness(fStiffness),
-        m_SearchRadius(SearchRadius),
-        m_WPoly6Coefficient(315.0f / (64.0f * D3DX_PI * pow(SmoothingLenght, 9))),
-        m_GradientWPoly6Coefficient(-945.0f / (32.0f * D3DX_PI * pow(SmoothingLenght,9))),
-        m_LaplacianWPoly6Coefficient(945.0f / (8.0f * D3DX_PI * pow(SmoothingLenght,9))),
-        m_GradientWSpikyCoefficient(-45.0f / (D3DX_PI * pow(SmoothingLenght, 6))),
-        m_LaplacianWViscosityCoefficient(45.0f / (D3DX_PI * pow(SmoothingLenght, 5))) {
-    m_Grid = new fp_Grid(InitialGridCapacity, SearchRadius, ParticleMass 
-                * WPoly6(m_SmoothingLengthSq));
-    m_SmoothingLengthPow3Inv = 1.0f / (m_SmoothingLengthSq * SmoothingLenght);
-    m_SmoothingLengthSqInv = 1.0f / m_SmoothingLengthSq;
-    m_InitialDensity = ParticleMass * WPoly6(m_SmoothingLengthSq);
-    m_RestDensity = RestDensityCoefficient * m_InitialDensity;
+        m_DampingCoefficient(DampingCoefficient) {
+    m_ParticleMass = ParticleMass; // Needed in SetSmoothingLength(...)
+    m_Grid = NULL;
+    SetSmoothingLength(SmoothingLenght);
+    SetParticleMass(ParticleMass);
+    m_Grid = new fp_Grid(FP_INITIAL_GRID_CAPACITY, SmoothingLenght);
     m_PressureAndViscosityForces = new D3DXVECTOR3[m_NumParticles];
     m_GradientColorField = new D3DXVECTOR3[m_NumParticles];
     m_LaplacianColorField = new float[m_NumParticles];
@@ -197,6 +183,30 @@ fp_Fluid::fp_Fluid(
         tmpDensities[i] = m_InitialDensity;
     }
     m_NewDensities = tmpDensities;
+}
+
+void fp_Fluid::SetSmoothingLength(float SmoothingLength) {
+    m_SmoothingLength = SmoothingLength;
+    m_SearchRadius = SmoothingLength;
+    m_SmoothingLengthPow3Inv = 1.0f / pow(SmoothingLength, 3);
+    m_SmoothingLengthSq = SmoothingLength * SmoothingLength;
+    m_SmoothingLengthSqInv = 1.0f / m_SmoothingLengthSq;
+    m_WPoly6Coefficient = 315.0f / (64.0f * D3DX_PI * pow(SmoothingLength, 9));
+    m_GradientWPoly6Coefficient = -945.0f / (32.0f * D3DX_PI * pow(SmoothingLength,9));
+    m_LaplacianWPoly6Coefficient = 945.0f / (8.0f * D3DX_PI * pow(SmoothingLength,9));
+    m_GradientWSpikyCoefficient = -45.0f / (D3DX_PI * pow(SmoothingLength, 6));
+    m_LaplacianWViscosityCoefficient = 45.0f / (D3DX_PI * pow(SmoothingLength, 5));
+    m_InitialDensity = m_ParticleMass * WPoly6(m_SmoothingLengthSq);
+    m_RestDensity = m_RestDensityCoefficient * m_InitialDensity;
+    if(m_Grid != NULL) {
+        m_Grid->m_CellWidth = SmoothingLength;
+    }
+}
+
+void fp_Fluid::SetParticleMass(float ParticleMass) {
+    m_ParticleMass = ParticleMass;
+    m_InitialDensity = ParticleMass * WPoly6(m_SmoothingLengthSq);
+    m_RestDensity = m_RestDensityCoefficient * m_InitialDensity;
 }
 
 void fp_Fluid::Update(float ElapsedTime) {
