@@ -213,6 +213,21 @@ float* fp_Fluid::GetDensities() {
     return m_OldDensities;
 }
 
+void fp_Fluid::GetParticleMinsAndMaxs(
+        float& MinX, 
+        float& MaxX, 
+        float& MinY, 
+        float& MaxY, 
+        float& MinZ, 
+        float& MaxZ) {
+    MinX = m_Grid->m_MinX;
+    MaxX = m_Grid->m_MaxX;    
+    MinY = m_Grid->m_MinY;
+    MaxY = m_Grid->m_MaxY;    
+    MinZ = m_Grid->m_MinZ;
+    MaxZ = m_Grid->m_MaxZ;        
+}
+
 void fp_Fluid::Update(float ElapsedTime) {
     // Calculate new densities, pressure forces and viscosity forces
 
