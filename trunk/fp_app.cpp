@@ -11,6 +11,7 @@
 #include "fp_util.h"
 #include "fp_cpu_sph.h"
 #include "fp_render_sprites.h"
+#include "fp_render_iso_volume.h"
 
 //#define DEBUG_VS   // Uncomment this line to debug D3D9 vertex shaders 
 //#define DEBUG_PS   // Uncomment this line to debug D3D9 pixel shaders 
@@ -33,6 +34,7 @@ fp_GUI                  g_GUI;
 
 fp_Fluid* g_Sim = NULL;
 fp_RenderSprites* g_RenderSprites = NULL;
+fp_IsoVolume* g_IsoVolume = NULL;
 
 D3DXMATRIXA16           g_CenterMesh;
 float                   g_LightScale;
@@ -145,6 +147,7 @@ void FP_InitApp()
     g_Sim = new fp_Fluid(NUM_PARTICLES_X, NUM_PARTICLES_Y, NUM_PARTICLES_Z,
             PARTICLE_SPACING_X, PARTICLE_SPACING_Y, PARTICLE_SPACING_Z, center);
     g_RenderSprites = new fp_RenderSprites(NUM_PARTICLES, g_Sim->m_Particles);
+    g_IsoVolume = new fp_IsoVolume(g_Sim);
 }
 
 //--------------------------------------------------------------------------------------
@@ -156,6 +159,8 @@ void FP_FinishApp()
     g_Sim = NULL;
     delete g_RenderSprites;
     g_RenderSprites = NULL;
+    delete g_IsoVolume;
+    g_IsoVolume = NULL;
 }
 
 //--------------------------------------------------------------------------------------
@@ -227,6 +232,7 @@ void CALLBACK FP_OnFrameMove( double Time, float ElapsedTime, void* UserContext 
     // Update the camera's position based on user input 
     g_Camera.FrameMove( ElapsedTime );
     g_Sim->Update(ElapsedTime);
+    g_IsoVolume->ConstructFromFluid();
 }
 
 //--------------------------------------------------------------------------------------

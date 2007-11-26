@@ -102,7 +102,7 @@ inline void fp_IsoVolume::DistributeParticle(
 }
 
 void fp_IsoVolume::CreateStamp() {
-    int stampRadius = 2 * (int)((m_Fluid->m_SmoothingLength - m_HalfVoxelSize) 
+    int stampRadius = (int)ceil((m_Fluid->m_SmoothingLength - m_HalfVoxelSize) 
             / m_VoxelSize);
     int stampSideLength = 1 + 2 * stampRadius;
     int stampSideLengthSq = stampSideLength * stampSideLength;    
@@ -114,8 +114,8 @@ void fp_IsoVolume::CreateStamp() {
             * stampSideLength];
     fp_VolumeIndex* cubeStampRowStarts = new fp_VolumeIndex[stampSideLengthSq];
     int* cubeStampRowLengths = new int[stampSideLengthSq];
-    int m_NumStampValues = 0;
-    int m_NumStampRows = 0;
+    m_NumStampValues = 0;
+    m_NumStampRows = 0;
 
     for (int stampX = 0; stampX < stampSideLength; stampX++) {
         for (int stampY = 0; stampY < stampSideLength; stampY++) {
