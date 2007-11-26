@@ -44,6 +44,7 @@ public:
     inline void DistributeParticle(
             D3DXVECTOR3 ParticlePosition, 
             float ParticleDensity,
+            float ParticleMass,
             float MinX,
             float MinY,
             float MinZ);

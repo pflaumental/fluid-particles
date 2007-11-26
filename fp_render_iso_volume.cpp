@@ -61,16 +61,19 @@ void fp_IsoVolume::ConstructFromFluid() {
     int NumParticles = m_Fluid->m_NumParticles;
     fp_FluidParticle* Particles = m_Fluid->m_Particles;
     float* Densities = m_Fluid->GetDensities();
+    float ParticleMass = m_Fluid->m_ParticleMass;
     for (int i = 0; i < NumParticles; i++) {
         D3DXVECTOR3 particlePosition = Particles[i].m_Position;
         float particleDensity = Densities[i];
-        DistributeParticle(particlePosition, particleDensity, MinX, MinY, MinZ);
+        DistributeParticle(particlePosition, particleDensity, ParticleMass, MinX, MinY,
+                MinZ);
     }
 }
 
 inline void fp_IsoVolume::DistributeParticle(
         D3DXVECTOR3 ParticlePosition,
         float ParticleDensity,
+        float ParticleMass,
         float MinX,
         float MinY,
         float MinZ) {
@@ -96,7 +99,9 @@ inline void fp_IsoVolume::DistributeParticle(
         int stampValueIndex = m_StampRowValueStarts[stampRowIndex];
 
         for(; destIndex < destEndIndex; destIndex++) {
-            m_IsoValues[destIndex] += m_StampValues[stampValueIndex++] * ParticleDensity;
+            float additionalIsoValue = ParticleMass * m_StampValues[stampValueIndex++]
+                    / ParticleDensity;
+            m_IsoValues[destIndex] += additionalIsoValue;
         }
     }
 }
