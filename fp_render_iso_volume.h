@@ -27,33 +27,20 @@ fp_VolumeIndex operator+(const fp_VolumeIndex& A, const fp_VolumeIndex& B);
 
 class fp_IsoVolume {
 public:
+    fp_Fluid* m_Fluid;
     std::vector<float> m_IsoValues;
     int m_NumValuesX;
     int m_NumValuesY;
     int m_NumValuesZ;
+    int m_NumValuesXY;
     int m_NumValues;
     float m_VoxelSize;
     float m_HalfVoxelSize;
-    float m_SmoothingLength;
-    float m_ParticleMass;
     
-    fp_IsoVolume(
-            fp_FluidParticle* Particles,
-            int NumParticles,
-            float VoxelSize = FP_DEFAULT_ISOVOLUME_VOXELSIZE,
-            float SmoothingLength = FP_DEFAULT_FLUID_SMOOTHING_LENGTH,
-            float ParticleMass = FP_DEFAULT_FLUID_PARTICLE_MASS);
-    void SetSmoothingLength(float SmoothingLength);
-    void SetParticleMass(float ParticleMass);
+    fp_IsoVolume(fp_Fluid* Fluid, float VoxelSize = FP_DEFAULT_ISOVOLUME_VOXELSIZE);
+    void UpdateSmoothingLength();
     void SetVoxelSize(float VoxelSize);
-    void ConstructFromParticles(
-            float MinX, 
-            float MaxX, 
-            float MinY, 
-            float MaxY, 
-            float MinZ, 
-            float MaxZ,
-            float* Densities);
+    void ConstructFromFluid();
     inline void DistributeParticle(
             D3DXVECTOR3 ParticlePosition, 
             float ParticleDensity,
@@ -62,14 +49,16 @@ public:
             float MinZ);
 
 private:
-    fp_FluidParticle* m_Particles;
-    int m_NumParticles;
-    fp_VolumeIndex* m_StampStarts;
-    int* m_StampZRowLengths;  
-    float* m_StampValues;
-    int m_NumStamp;
+    int m_NumStampRows;
+    int* m_StampRowLengths;
+    fp_VolumeIndex* m_StampRowStartOffsets;    
+    int* m_StampRowValueStarts;
+
+    int m_NumStampValues;
+    float* m_StampValues;    
 
     void CreateStamp();
+    void DestroyStamp();
 };
 
 class fp_RenderIsoVolume {
