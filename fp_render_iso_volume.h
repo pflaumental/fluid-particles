@@ -32,7 +32,7 @@ public:
     int m_NumValuesX;
     int m_NumValuesY;
     int m_NumValuesZ;
-    int m_NumValuesXY;
+    int m_NumValuesYZ;
     int m_NumValues;
     float m_VoxelSize;
     float m_HalfVoxelSize;
