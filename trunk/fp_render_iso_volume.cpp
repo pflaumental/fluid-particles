@@ -17,7 +17,7 @@ fp_IsoVolume::fp_IsoVolume(fp_Fluid* Fluid, float VoxelSize)
         :
         m_Fluid(Fluid),
         m_NumValues(0),
-        m_NumValuesXY(0),
+        m_NumValuesYZ(0),
         m_NumValuesX(0),
         m_NumValuesY(0),
         m_NumValuesZ(0),        
@@ -54,8 +54,8 @@ void fp_IsoVolume::ConstructFromFluid() {
     m_NumValuesX = (int)((MaxX - MinX + m_VoxelSize) / m_VoxelSize);
     m_NumValuesY = (int)((MaxY - MinY + m_VoxelSize) / m_VoxelSize);
     m_NumValuesZ = (int)((MaxZ - MinZ + m_VoxelSize) / m_VoxelSize);
-    m_NumValuesXY = m_NumValuesX * m_NumValuesY;
-    m_NumValues = m_NumValuesXY * m_NumValuesZ;
+    m_NumValuesYZ = m_NumValuesY * m_NumValuesZ;
+    m_NumValues = m_NumValuesYZ * m_NumValuesX;
     m_IsoValues.clear();
     m_IsoValues.resize(m_NumValues, 0.0f);
     int NumParticles = m_Fluid->m_NumParticles;
@@ -81,6 +81,7 @@ inline void fp_IsoVolume::DistributeParticle(
     particleVolumeIndex.X = (int)((ParticlePosition.x - MinX) / m_VoxelSize);
     particleVolumeIndex.Y = (int)((ParticlePosition.y - MinY) / m_VoxelSize);
     particleVolumeIndex.Z = (int)((ParticlePosition.z - MinZ) / m_VoxelSize);
+
     for (int stampRowIndex = 0; stampRowIndex < m_NumStampRows; stampRowIndex++) {
         fp_VolumeIndex destStart = particleVolumeIndex
                 + m_StampRowStartOffsets[stampRowIndex];
@@ -88,8 +89,8 @@ inline void fp_IsoVolume::DistributeParticle(
                 || destStart.Y < 0 || destStart.Y >= m_NumValuesY)
             continue;
 
-        int destIndexXY = m_NumValuesXY * destStart.X
-            + m_NumValuesY * destStart.Y;
+        int destIndexXY = m_NumValuesYZ * destStart.X
+            + m_NumValuesZ * destStart.Y;
         int destIndex = destStart.Z < 0 ? destIndexXY : destIndexXY + destStart.Z;
         int zEnd = destStart.Z + m_StampRowLengths[stampRowIndex];
         if(zEnd > m_NumValuesZ)
