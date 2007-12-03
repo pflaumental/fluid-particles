@@ -8,7 +8,10 @@
 #include "fp_cpu_sph.h"
 
 #define FP_DEFAULT_ISOVOLUME_VOXELSIZE 1.0f
+#define FP_DEFAULT_ISO_VOLUME_BORDER 1.0f
 #define FP_INITIAL_ISOVOLUME_SIDELENGTH 200
+#define FP_MC_MAX_TRIANGLES 1000000
+#define FP_MC_MAX_VETICES FP_MC_MAX_TRIANGLES * 3
 #define FP_INITIAL_ISOVOLUME_CAPACITY FP_INITIAL_ISOVOLUME_SIDELENGTH \
         * FP_INITIAL_ISOVOLUME_SIDELENGTH * FP_INITIAL_ISOVOLUME_SIDELENGTH
 
@@ -16,6 +19,19 @@
 //--------------------------------------------------------------------------------------
 // Fluid particles render technique: Iso volume via marching cubes
 //--------------------------------------------------------------------------------------
+
+struct fp_MCVertex
+{
+    D3DXVECTOR3 m_Position;
+    //D3DXVECTOR3 m_Normal;
+
+	enum FVF
+	{
+		FVF_Flags = D3DFVF_XYZ//|D3DFVF_NORMAL
+	};
+    
+    fp_MCVertex(D3DXVECTOR3 Position) : m_Position(Position) {};
+};
 
 typedef struct {
     int X;
@@ -36,8 +52,14 @@ public:
     int m_NumValues;
     float m_VoxelSize;
     float m_HalfVoxelSize;
+    float m_IsoVolumeBorder;
+    D3DXVECTOR3 m_VolumeStart;
+    D3DXVECTOR3 m_VolumeCellOffset;
     
-    fp_IsoVolume(fp_Fluid* Fluid, float VoxelSize = FP_DEFAULT_ISOVOLUME_VOXELSIZE);
+    fp_IsoVolume(
+            fp_Fluid* Fluid, 
+            float VoxelSize = FP_DEFAULT_ISOVOLUME_VOXELSIZE, 
+            float IsoVolumeBorder = FP_DEFAULT_ISO_VOLUME_BORDER);
     void UpdateSmoothingLength();
     void SetVoxelSize(float VoxelSize);
     void ConstructFromFluid();
@@ -88,7 +110,10 @@ public:
 
 private:
     LPDIRECT3DVERTEXBUFFER9 m_VertexBuffer;
+    LPDIRECT3DINDEXBUFFER9 m_IndexBuffer;
     //LPDIRECT3DTEXTURE9 m_Texture;
+    static int s_EdgeTable[256];
+    static int s_TriTable[256][16];
 };
 
 #endif
