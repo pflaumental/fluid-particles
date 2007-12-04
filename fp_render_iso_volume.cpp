@@ -206,6 +206,9 @@ fp_RenderIsoVolume::fp_RenderIsoVolume(fp_IsoVolume* IsoVolume, float IsoLevel) 
         m_IsoLevel(IsoLevel) {
     m_Material.Diffuse.r = m_Material.Diffuse.g = m_Material.Diffuse.b = 0.8f;
     m_Material.Diffuse.a = 1.0f;
+    m_Material.Ambient = m_Material.Diffuse;
+    m_Material.Emissive = m_Material.Diffuse;
+    m_Material.Specular = m_Material.Diffuse;
 }
 
 fp_RenderIsoVolume::~fp_RenderIsoVolume() {
@@ -301,6 +304,12 @@ void fp_RenderIsoVolume::ConstructMesh() {
                 vertexIndizes[1] = vertexIndizes[5];
                 vertexIndizes[2] = vertexIndizes[6];
                 vertexIndizes[3] = vertexIndizes[7];
+
+                assert(!((edgeValue & 1) && (vertexIndizes[0] == -1)));
+                assert(!((edgeValue & 2) && (vertexIndizes[1] == -1)));
+                assert(!((edgeValue & 4) && (vertexIndizes[2] == -1)));
+                assert(!((edgeValue & 8) && (vertexIndizes[3] == -1)));
+
                 if(edgeValue & 16) // Edge 4 between corner 4 and 5
                     mcVertices[vertexIndizes[4] = m_NumVertices++] = D3DXVECTOR3(corner0.x
                             + (m_IsoLevel - isoValue4) / (isoValue5 - isoValue4)
@@ -364,6 +373,7 @@ void fp_RenderIsoVolume::OnFrameRender(
     d3dDevice->SetMaterial(&m_Material);
     d3dDevice->SetRenderState(D3DRS_LIGHTING, FALSE);
     d3dDevice->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, m_NumVertices, 0, m_NumTriangles);
+    d3dDevice->SetRenderState(D3DRS_LIGHTING, TRUE);
 }
 
 void fp_RenderIsoVolume::OnDetroyDevice() {

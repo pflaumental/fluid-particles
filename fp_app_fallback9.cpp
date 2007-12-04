@@ -32,6 +32,7 @@ extern fp_RenderIsoVolume*     g_RenderIsoVolume;
 extern float                   g_LightScale;
 extern int                     g_NumActiveLights;
 extern int                     g_ActiveLight;
+extern int                     g_RenderType;
 
 extern D3DXVECTOR3*            g_Particle;
 extern int                     g_Paticles;
@@ -334,8 +335,10 @@ void CALLBACK FP_OnD3D9FrameRender(
         d3dDevice->SetTransform( D3DTS_PROJECTION, &Proj );
         d3dDevice->SetTransform( D3DTS_VIEW, &View );        
        
-        //g_RenderSprites->OnFrameRender(d3dDevice, Time, ElapsedTime);
-        g_RenderIsoVolume->OnFrameRender(d3dDevice, Time, ElapsedTime);
+        if(g_RenderType == 0)
+            g_RenderSprites->OnFrameRender(d3dDevice, Time, ElapsedTime);
+        else
+            g_RenderIsoVolume->OnFrameRender(d3dDevice, Time, ElapsedTime);
 
         g_GUI.OnD3D9FrameRender(d3dDevice, Time, ElapsedTime, g_Camera.GetEyePt(),
                 &WorldViewProjection, &World, &View, &Proj, g_NumActiveLights,

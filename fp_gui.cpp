@@ -35,7 +35,15 @@ fp_GUI::fp_GUI()
     WCHAR sz[100];
     iY += 24;
     m_SampleUI.AddButton( IDC_RESET_SIM, L"Reset simulation (R)", 35, iY += 24,
-            125, 22, 'R' );
+        125, 22, 'R' );
+
+    CDXUTComboBox *comboBox;
+    m_SampleUI.AddComboBox( IDC_SELECT_RENDER_TYPE, 35, iY += 24, 125, 24, L'S', false, &comboBox );
+    if( comboBox ) {
+        comboBox->SetDropHeight( 100 );
+        comboBox->AddItem( L"Point sprites (S)", (LPVOID)0 );
+        comboBox->AddItem( L"Iso surface MC (S)", (LPVOID)1 );
+    }
 
     iY += 24;
     StringCchPrintf( sz, 100, L"Particle size: %0.2f", 1.0f ); 
@@ -125,7 +133,8 @@ void fp_GUI::OnGUIEvent(
         int& NumActiveLights,
         float& LightScale,
         float& ParticleScale,
-        bool& ResetSim) {   
+        bool& ResetSim,
+        int& RenderType) {   
     WCHAR sz[100];
     ResetSim = false;
     switch( ControlID ) {
@@ -137,6 +146,13 @@ void fp_GUI::OnGUIEvent(
         case IDC_RESET_SIM:
             ResetSim = true;
             break;
+
+        case IDC_SELECT_RENDER_TYPE: {
+            DXUTComboBoxItem *item = ((CDXUTComboBox*)Control)->GetSelectedItem();
+            if( item ) 
+                RenderType = (int) item->pData;            
+            break;
+        }
 
         case IDC_PARTICLE_SCALE: 
             ParticleScale = (float) (m_SampleUI.GetSlider(
@@ -232,8 +248,8 @@ HRESULT fp_GUI::OnD3D10ResizedSwapChain(
     m_HUD.SetLocation( BackBufferSurfaceDesc->Width-170, 0 );
     m_HUD.SetSize( 170, 170 );
     m_SampleUI.SetLocation( BackBufferSurfaceDesc->Width-170,
-            BackBufferSurfaceDesc->Height-360 );
-    m_SampleUI.SetSize( 170, 360 );
+            BackBufferSurfaceDesc->Height-385 );
+    m_SampleUI.SetSize( 170, 385 );
 
     return S_OK;
 }
@@ -356,8 +372,8 @@ HRESULT fp_GUI::OnD3D9ResetDevice(
     m_HUD.SetLocation( BackBufferSurfaceDesc->Width-170, 0 );
     m_HUD.SetSize( 170, 170 );
     m_SampleUI.SetLocation( BackBufferSurfaceDesc->Width-170,
-            BackBufferSurfaceDesc->Height-360 );
-    m_SampleUI.SetSize( 170, 360 );
+            BackBufferSurfaceDesc->Height-385 );
+    m_SampleUI.SetSize( 170, 385 );
 
     return S_OK;
 }
