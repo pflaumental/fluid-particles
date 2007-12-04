@@ -27,6 +27,9 @@
 #define IDC_RESET_SIM               13
 #define IDC_SELECT_RENDER_TYPE      14
 
+#define FP_GUI_RENDER_TYPE_ISO_SURFACE  0
+#define FP_GUI_RENDER_TYPE_POINT_SPRITE 1
+
 //--------------------------------------------------------------------------------------
 // Fluid particles GUI
 //--------------------------------------------------------------------------------------

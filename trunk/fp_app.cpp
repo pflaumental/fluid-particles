@@ -290,8 +290,10 @@ void CALLBACK FP_OnFrameMove( double Time, float ElapsedTime, void* UserContext 
     // Update the camera's position based on user input 
     g_Camera.FrameMove( ElapsedTime );
     g_Sim->Update(ElapsedTime);
-    g_IsoVolume->ConstructFromFluid();
-    g_RenderIsoVolume->ConstructMesh();
+    if(g_RenderType == FP_GUI_RENDER_TYPE_ISO_SURFACE) {
+        g_IsoVolume->ConstructFromFluid();
+        g_RenderIsoVolume->ConstructMesh();
+    }
 }
 
 //--------------------------------------------------------------------------------------
