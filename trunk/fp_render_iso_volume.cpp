@@ -79,12 +79,12 @@ void fp_IsoVolume::ConstructFromFluid() {
     for (int i = 0; i < NumParticles; i++) {
         D3DXVECTOR3 particlePosition = Particles[i].m_Position;
         float particleDensity = Densities[i];
-        DistributeParticle(particlePosition, particleDensity, ParticleMass, MinX, MinY,
+        DistributeParticleWithStamp(particlePosition, particleDensity, ParticleMass, MinX, MinY,
                 MinZ);
     }
 }
 
-inline void fp_IsoVolume::DistributeParticle(
+inline void fp_IsoVolume::DistributeParticleWithStamp(
         D3DXVECTOR3 ParticlePosition,
         float ParticleDensity,
         float ParticleMass,
@@ -430,12 +430,18 @@ void fp_RenderIsoVolume::OnFrameRender(
     d3dDevice->SetIndices(m_IndexBuffer);
     d3dDevice->SetFVF(fp_MCVertex.FVF_Flags);
     d3dDevice->SetMaterial(&m_Material);
-    for (int i=0; i < m_NumActiveLights; i++) {        
+    int i;
+    for (i=0; i < m_NumActiveLights; i++) {        
         d3dDevice->SetLight(i, &m_Lights[i]);
         d3dDevice->LightEnable(i, TRUE);
     }
+    d3dDevice->LightEnable(i, FALSE);
     d3dDevice->SetRenderState(D3DRS_LIGHTING, TRUE);
+
     d3dDevice->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, m_NumVertices, 0, m_NumTriangles);
+
+    d3dDevice->SetRenderState(D3DRS_LIGHTING, FALSE);
+    d3dDevice->LightEnable(0, FALSE);
 }
 
 void fp_RenderIsoVolume::OnDetroyDevice() {
