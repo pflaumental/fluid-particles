@@ -8,8 +8,8 @@
 #include "fp_cpu_sph.h"
 
 #define FP_DEFAULT_ISOVOLUME_VOXELSIZE 1.0f
-#define FP_DEFAULT_ISO_VOLUME_BORDER 10.0f
-#define FP_DEFAULT_MC_ISO_LEVEL 0.1f
+#define FP_DEFAULT_ISO_VOLUME_BORDER 5.0f
+#define FP_DEFAULT_MC_ISO_LEVEL 0.001f
 #define FP_INITIAL_ISOVOLUME_SIDELENGTH 200
 #define FP_MC_MAX_TRIANGLES 1000000
 #define FP_MC_MAX_VETICES FP_MC_MAX_TRIANGLES * 3
@@ -24,14 +24,17 @@
 struct fp_MCVertex
 {
     D3DXVECTOR3 m_Position;
-    //D3DXVECTOR3 m_Normal;
+    D3DXVECTOR3 m_Normal;
 
 	enum FVF
 	{
-		FVF_Flags = D3DFVF_XYZ//|D3DFVF_NORMAL
+		FVF_Flags = D3DFVF_XYZ|D3DFVF_NORMAL
 	};
     
-    fp_MCVertex(D3DXVECTOR3 Position) : m_Position(Position) {};
+    fp_MCVertex(D3DXVECTOR3 Position) :
+            m_Position(Position){
+        D3DXVec3Normalize(&m_Normal, &Position);
+    };
 };
 
 typedef struct {
@@ -91,9 +94,12 @@ public:
     float m_IsoLevel;
     int m_NumVertices;
     int m_NumTriangles;
+    int m_NumActiveLights;
+    D3DLIGHT9* m_Lights;
 
     fp_RenderIsoVolume(
-            fp_IsoVolume* IsoVolume, 
+            fp_IsoVolume* IsoVolume,
+            int NumLights,
             float IsoLevel = FP_DEFAULT_MC_ISO_LEVEL);
     ~fp_RenderIsoVolume();
 

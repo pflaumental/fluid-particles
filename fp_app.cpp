@@ -206,7 +206,20 @@ void FP_InitApp() {
             PARTICLE_SPACING_X, PARTICLE_SPACING_Y, PARTICLE_SPACING_Z, center);
     g_RenderSprites = new fp_RenderSprites(NUM_PARTICLES, g_Sim->m_Particles);
     g_IsoVolume = new fp_IsoVolume(g_Sim);
-    g_RenderIsoVolume = new fp_RenderIsoVolume(g_IsoVolume);
+    g_RenderIsoVolume = new fp_RenderIsoVolume(g_IsoVolume, 3);
+    g_RenderIsoVolume->m_NumActiveLights = g_NumActiveLights;
+    D3DCOLORVALUE diffuse  = { g_GUI.m_LightDiffuseColor->r,
+            g_GUI.m_LightDiffuseColor->g, g_GUI.m_LightDiffuseColor->b, 1.0f };
+    D3DCOLORVALUE ambient  = { 0.05f, 0.05f, 0.05f, 1.0f };
+    D3DCOLORVALUE specular = { 0.8f, 0.8f, 0.8f, 1.0f };
+    ZeroMemory( g_RenderIsoVolume->m_Lights, sizeof(D3DLIGHT9) * FP_MAX_LIGHTS );
+    for (int i=0; i < FP_MAX_LIGHTS; i++) {
+        g_RenderIsoVolume->m_Lights[i].Type = D3DLIGHT_DIRECTIONAL;
+        g_RenderIsoVolume->m_Lights[i].Direction = g_GUI.m_LightDir[i];
+        g_RenderIsoVolume->m_Lights[i].Diffuse = diffuse;
+        g_RenderIsoVolume->m_Lights[i].Ambient = ambient;
+        g_RenderIsoVolume->m_Lights[i].Specular = specular;
+    }
 }
 
 //--------------------------------------------------------------------------------------
@@ -340,6 +353,7 @@ void CALLBACK FP_OnGUIEvent(
     bool resetSim;
     g_GUI.OnGUIEvent(Event, ControlID, Control, g_ActiveLight, g_NumActiveLights,
             g_LightScale, g_RenderSprites->m_SpriteSize, resetSim, g_RenderType);
+    g_RenderIsoVolume->m_NumActiveLights = g_NumActiveLights;
     if(resetSim) {
         delete g_Sim;
         delete g_IsoVolume;
@@ -515,6 +529,12 @@ void CALLBACK FP_OnD3D10FrameRender(
             * FP_MAX_LIGHTS ) );
     V( g_LightDiffuse->SetFloatVectorArray( (float*)g_GUI.m_LightDiffuse, 0, 
             FP_MAX_LIGHTS ) );
+    for (int i=0; i < FP_MAX_LIGHTS; i++) {
+        g_RenderIsoVolume->m_Lights[i].Direction = g_GUI.m_LightDir[i];
+        D3DCOLORVALUE diffuse = { g_GUI.m_LightDiffuseColor->r,
+            g_GUI.m_LightDiffuseColor->g, g_GUI.m_LightDiffuseColor->b, 1.0f };
+        g_RenderIsoVolume->m_Lights[i].Diffuse = diffuse;
+    }
     V( g_WorldViewProjection->SetMatrix( (float*)&mWorldViewProjection ) );
     V( g_World->SetMatrix( (float*)&mWorld ) );
     V( g_Time->SetFloat( (float)Time ) );
