@@ -31,10 +31,9 @@ struct fp_MCVertex
 		FVF_Flags = D3DFVF_XYZ|D3DFVF_NORMAL
 	};
     
-    fp_MCVertex(D3DXVECTOR3 Position) :
-            m_Position(Position){
-        D3DXVec3Normalize(&m_Normal, &Position);
-    };
+    fp_MCVertex(D3DXVECTOR3 Position, D3DXVECTOR3 Normal) :
+            m_Position(Position),
+            m_Normal(Normal) {}
 };
 
 typedef struct {
@@ -49,6 +48,7 @@ class fp_IsoVolume {
 public:
     fp_Fluid* m_Fluid;
     std::vector<float> m_IsoValues;
+    std::vector<D3DXVECTOR3> m_GradientIsoValues;
     int m_NumValuesX;
     int m_NumValuesY;
     int m_NumValuesZ;
@@ -82,7 +82,8 @@ private:
     int* m_StampRowValueStarts;
 
     int m_NumStampValues;
-    float* m_StampValues;    
+    float* m_StampValues;
+    D3DXVECTOR3* m_GradientStampValues;
 
     void CreateStamp();
     void DestroyStamp();
@@ -130,6 +131,11 @@ private:
     //LPDIRECT3DTEXTURE9 m_Texture;
     static int s_EdgeTable[256];
     static int s_TriTable[256][16];
+
+    inline D3DXVECTOR3 CalcNormal(
+        D3DXVECTOR3* gradient1, 
+        D3DXVECTOR3* gradient2, 
+        float s);
 };
 
 #endif

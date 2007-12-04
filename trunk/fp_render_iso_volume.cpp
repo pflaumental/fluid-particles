@@ -22,15 +22,18 @@ fp_IsoVolume::fp_IsoVolume(fp_Fluid* Fluid, float VoxelSize, float IsoVolumeBord
         m_NumValuesY(0),
         m_NumValuesZ(0),        
         m_IsoValues(),
+        m_GradientIsoValues(),
         m_StampRowLengths(NULL),
         m_StampRowStartOffsets(NULL),
         m_StampRowValueStarts(NULL),
         m_StampValues(NULL),
+        m_GradientStampValues(NULL),
         m_IsoVolumeBorder(IsoVolumeBorder) {
     m_VoxelSize = -1.0f; // Needed in SetSmoothingLength()
     UpdateSmoothingLength();
     SetVoxelSize(VoxelSize);
     m_IsoValues.reserve(FP_INITIAL_ISOVOLUME_CAPACITY);
+    m_GradientIsoValues.reserve(FP_INITIAL_ISOVOLUME_CAPACITY);
 }
 
 void fp_IsoVolume::UpdateSmoothingLength() {
@@ -67,6 +70,8 @@ void fp_IsoVolume::ConstructFromFluid() {
     m_NumValues = m_NumValuesYZ * m_NumValuesX;
     m_IsoValues.clear();
     m_IsoValues.resize(m_NumValues, 0.0f);
+    m_GradientIsoValues.clear();
+    m_GradientIsoValues.resize(m_NumValues, D3DXVECTOR3(0.0f, 0.0f, 0.0f));
     int NumParticles = m_Fluid->m_NumParticles;
     fp_FluidParticle* Particles = m_Fluid->m_Particles;
     float* Densities = m_Fluid->GetDensities();
@@ -109,9 +114,12 @@ inline void fp_IsoVolume::DistributeParticle(
         int stampValueIndex = m_StampRowValueStarts[stampRowIndex];
 
         for(; destIndex < destEndIndex; destIndex++) {
-            float additionalIsoValue = ParticleMass * m_StampValues[stampValueIndex++]
+            float additionalIsoValue = ParticleMass * m_StampValues[stampValueIndex]
                     / ParticleDensity;
+            D3DXVECTOR3 additionalGradientIsoValue = (ParticleMass / ParticleDensity)
+                    * m_GradientStampValues[stampValueIndex++];
             m_IsoValues[destIndex] += additionalIsoValue;
+            m_GradientIsoValues[destIndex] += additionalGradientIsoValue;
         }
     }
 }
@@ -126,6 +134,8 @@ void fp_IsoVolume::CreateStamp() {
     D3DXVECTOR3 mid(halfLength, halfLength, halfLength);
     
     float* cubeStampDistancesSq = new float[stampSideLength * stampSideLength
+            * stampSideLength];
+    D3DXVECTOR3* cubeStampR = new D3DXVECTOR3[stampSideLength * stampSideLength
             * stampSideLength];
     fp_VolumeIndex* cubeStampRowStarts = new fp_VolumeIndex[stampSideLengthSq];
     int* cubeStampRowLengths = new int[stampSideLengthSq];
@@ -142,11 +152,12 @@ void fp_IsoVolume::CreateStamp() {
                         stampX * m_VoxelSize + m_HalfVoxelSize,
                         stampY * m_VoxelSize + m_HalfVoxelSize,
                         stampZ * m_VoxelSize + m_HalfVoxelSize);
-                D3DXVECTOR3 toMid = mid - coord;
-                float distSq = D3DXVec3LengthSq(&toMid);
+                D3DXVECTOR3 midToCoord = coord - mid;
+                float distSq = D3DXVec3LengthSq(&midToCoord);
                 if(distSq < m_Fluid->m_SmoothingLengthSq) {
                     int stampIndex = stampIndexXY + stampZ;
                     cubeStampDistancesSq[stampIndex] = distSq;
+                    cubeStampR[stampIndex] = midToCoord;
                     if(cubeStampRowLengths[cubeStampRowIndex] == 0) {
                         m_NumStampRows++;
                         fp_VolumeIndex rowStart;
@@ -159,6 +170,7 @@ void fp_IsoVolume::CreateStamp() {
                     cubeStampRowLengths[cubeStampRowIndex]++;
                 } else {
                     cubeStampDistancesSq[stampIndexXY + stampZ] = -1.0f;
+                    cubeStampR[stampIndexXY + stampZ] = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
                 }
             }
         }
@@ -167,6 +179,7 @@ void fp_IsoVolume::CreateStamp() {
     m_StampRowStartOffsets = new fp_VolumeIndex[m_NumStampRows];
     m_StampRowValueStarts = new int[m_NumStampRows];
     m_StampValues = new float[m_NumStampValues];
+    m_GradientStampValues = new D3DXVECTOR3[m_NumStampValues];
     int stampRowIndex = 0;
     int stampValueIndex = 0;
     for (int cubeRow = 0; cubeRow < stampSideLengthSq; cubeRow++) {
@@ -188,6 +201,9 @@ void fp_IsoVolume::CreateStamp() {
         for (; cubeStampIndex < cubeStampEnd; cubeStampIndex++) {            
             m_StampValues[stampValueIndex]
                     = m_Fluid->WPoly6(cubeStampDistancesSq[cubeStampIndex]);
+            m_GradientStampValues[stampValueIndex]
+                    = m_Fluid->GradientWPoly6(cubeStampR[cubeStampIndex],
+                    cubeStampDistancesSq[cubeStampIndex]);
             stampValueIndex++;
         }
         stampRowIndex++;
@@ -199,6 +215,7 @@ void fp_IsoVolume::DestroyStamp() {
     delete[] m_StampRowStartOffsets;
     delete[] m_StampRowValueStarts;
     delete[] m_StampValues;
+    delete[] m_GradientStampValues;
 }
 
 fp_RenderIsoVolume::fp_RenderIsoVolume(
@@ -263,6 +280,7 @@ void fp_RenderIsoVolume::ConstructMesh() {
     float voxelSize = m_IsoVolume->m_VoxelSize;
     D3DXVECTOR3 volumeOffset = D3DXVECTOR3(voxelSize, voxelSize, voxelSize);
     std::vector<float>* isoValues = &m_IsoVolume->m_IsoValues;
+    std::vector<D3DXVECTOR3>* gradientIsoValues = &m_IsoVolume->m_GradientIsoValues;
 
     fp_MCVertex *mcVertices;
     m_VertexBuffer->Lock( 0, FP_MC_MAX_VETICES * sizeof(fp_MCVertex),
@@ -277,10 +295,16 @@ void fp_RenderIsoVolume::ConstructMesh() {
             int isoVolumeIndex6 = isoVolumeIndex5 + NumValuesZ; // x+1,y+1,z
             int isoVolumeIndex7 = isoVolumeIndex4 + NumValuesZ; // x,y+1,z
             float isoValue0, isoValue1, isoValue2, isoValue3;
-            float isoValue4 = (*isoValues)[isoVolumeIndex4++];
-            float isoValue5 = (*isoValues)[isoVolumeIndex5++];
-            float isoValue6 = (*isoValues)[isoVolumeIndex6++];
-            float isoValue7 = (*isoValues)[isoVolumeIndex7++];
+            float isoValue4 = (*isoValues)[isoVolumeIndex4];            
+            float isoValue5 = (*isoValues)[isoVolumeIndex5];
+            float isoValue6 = (*isoValues)[isoVolumeIndex6];
+            float isoValue7 = (*isoValues)[isoVolumeIndex7];
+            D3DXVECTOR3 *gradientIsoValue0, *gradientIsoValue1, 
+                    *gradientIsoValue2, *gradientIsoValue3;
+            D3DXVECTOR3* gradientIsoValue4 = &(*gradientIsoValues)[isoVolumeIndex4++];
+            D3DXVECTOR3* gradientIsoValue5 = &(*gradientIsoValues)[isoVolumeIndex5++];
+            D3DXVECTOR3* gradientIsoValue6 = &(*gradientIsoValues)[isoVolumeIndex6++];
+            D3DXVECTOR3* gradientIsoValue7 = &(*gradientIsoValues)[isoVolumeIndex7++];
             int vertexIndizes[12] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
             D3DXVECTOR3 corner0(volumeStart + D3DXVECTOR3(volumeOffset.x * cubeX, 
                     volumeOffset.y * cubeY, 0.0f ));
@@ -289,11 +313,19 @@ void fp_RenderIsoVolume::ConstructMesh() {
                 isoValue1 = isoValue5;
                 isoValue2 = isoValue6;
                 isoValue3 = isoValue7;
+                gradientIsoValue0 = gradientIsoValue4;
+                gradientIsoValue1 = gradientIsoValue5;
+                gradientIsoValue2 = gradientIsoValue6;
+                gradientIsoValue3 = gradientIsoValue7;
 
-                isoValue4 = (*isoValues)[isoVolumeIndex4++];
-                isoValue5 = (*isoValues)[isoVolumeIndex5++];
-                isoValue6 = (*isoValues)[isoVolumeIndex6++];
-                isoValue7 = (*isoValues)[isoVolumeIndex7++];
+                isoValue4 = (*isoValues)[isoVolumeIndex4];
+                isoValue5 = (*isoValues)[isoVolumeIndex5];
+                isoValue6 = (*isoValues)[isoVolumeIndex6];
+                isoValue7 = (*isoValues)[isoVolumeIndex7];
+                gradientIsoValue4 = &(*gradientIsoValues)[isoVolumeIndex4++];
+                gradientIsoValue5 = &(*gradientIsoValues)[isoVolumeIndex5++];
+                gradientIsoValue6 = &(*gradientIsoValues)[isoVolumeIndex6++];
+                gradientIsoValue7 = &(*gradientIsoValues)[isoVolumeIndex7++];
 
                 byte cubeType=0;
                 if(isoValue0 < m_IsoLevel) cubeType |= 1;
@@ -322,41 +354,56 @@ void fp_RenderIsoVolume::ConstructMesh() {
                 assert(!((edgeValue & 4) && (vertexIndizes[2] == -1)));
                 assert(!((edgeValue & 8) && (vertexIndizes[3] == -1)));
 
+                float s;
+
                 if(edgeValue & 16) // Edge 4 between corner 4 and 5
-                    mcVertices[vertexIndizes[4] = m_NumVertices++] = D3DXVECTOR3(corner0.x
-                            + (m_IsoLevel - isoValue4) / (isoValue5 - isoValue4)
-                            * volumeOffset.x, corner0.y, corner0.z + volumeOffset.z);
+                    mcVertices[vertexIndizes[4] = m_NumVertices++] = fp_MCVertex(
+                            D3DXVECTOR3(corner0.x + (s = (m_IsoLevel - isoValue4)
+                            / (isoValue5 - isoValue4)) * volumeOffset.x, corner0.y,
+                            corner0.z + volumeOffset.z), CalcNormal(gradientIsoValue4,
+                            gradientIsoValue5, s));
                 if(edgeValue & 32) // Edge 5 between corner 5 and 6
-                    mcVertices[vertexIndizes[5] = m_NumVertices++] = D3DXVECTOR3(corner0.x
-                            + volumeOffset.x, corner0.y + (m_IsoLevel - isoValue5)
-                            / (isoValue6 - isoValue5) * volumeOffset.y, corner0.z
-                            + volumeOffset.z);
+                    mcVertices[vertexIndizes[5] = m_NumVertices++] = fp_MCVertex(
+                            D3DXVECTOR3(corner0.x + volumeOffset.x, corner0.y + (s
+                            = (m_IsoLevel - isoValue5) / (isoValue6 - isoValue5))
+                            * volumeOffset.y, corner0.z + volumeOffset.z), CalcNormal(
+                            gradientIsoValue5, gradientIsoValue6, s));
                 if(edgeValue & 64) // Edge 6 between corner 7 and 6
-                    mcVertices[vertexIndizes[6] = m_NumVertices++] = D3DXVECTOR3(corner0.x
-                            + (m_IsoLevel - isoValue7) / (isoValue6 - isoValue7)
-                            * volumeOffset.x, corner0.y + volumeOffset.y, corner0.z
-                            + volumeOffset.z);
+                    mcVertices[vertexIndizes[6] = m_NumVertices++] = fp_MCVertex(
+                            D3DXVECTOR3(corner0.x + (s = (m_IsoLevel - isoValue7)
+                            / (isoValue6 - isoValue7)) * volumeOffset.x, corner0.y 
+                            + volumeOffset.y, corner0.z+ volumeOffset.z), CalcNormal(
+                            gradientIsoValue7, gradientIsoValue6, s));
                 if(edgeValue & 128) // Edge 7 between corner 4 and 7
-                    mcVertices[vertexIndizes[7] = m_NumVertices++] = D3DXVECTOR3(corner0.x,
-                            corner0.y + (m_IsoLevel - isoValue4) / (isoValue7 - isoValue4)
-                            * volumeOffset.y, corner0.z + volumeOffset.z);
+                    mcVertices[vertexIndizes[7] = m_NumVertices++] = fp_MCVertex(
+                            D3DXVECTOR3(corner0.x, corner0.y + (s = (m_IsoLevel -
+                            isoValue4) / (isoValue7 - isoValue4)) * volumeOffset.y,
+                            corner0.z + volumeOffset.z), CalcNormal(gradientIsoValue4,
+                            gradientIsoValue7, s));
                 if(edgeValue & 256) // Edge 8 between corner 0 and 4
-                    mcVertices[vertexIndizes[8] = m_NumVertices++] = D3DXVECTOR3(corner0.x,
-                            corner0.y, corner0.z + (m_IsoLevel - isoValue0) / (isoValue4
-                            - isoValue0) * volumeOffset.z);
+                    mcVertices[vertexIndizes[8] = m_NumVertices++] = fp_MCVertex(
+                            D3DXVECTOR3(corner0.x, corner0.y, corner0.z + (s
+                            = (m_IsoLevel - isoValue0) / (isoValue4 - isoValue0))
+                            * volumeOffset.z), CalcNormal(gradientIsoValue0,
+                            gradientIsoValue4, s));
                 if(edgeValue & 512) // Edge 9 between corner 1 and 5
-                    mcVertices[vertexIndizes[9] = m_NumVertices++] = D3DXVECTOR3(corner0.x
-                            + volumeOffset.x, corner0.y, corner0.z + (m_IsoLevel
-                            - isoValue1) / (isoValue5 - isoValue1) * volumeOffset.z);
+                    mcVertices[vertexIndizes[9] = m_NumVertices++] = fp_MCVertex(
+                            D3DXVECTOR3(corner0.x + volumeOffset.x, corner0.y, corner0.z
+                            + (s = (m_IsoLevel - isoValue1) / (isoValue5 - isoValue1))
+                            * volumeOffset.z), CalcNormal(gradientIsoValue1, 
+                            gradientIsoValue5, s));
                 if(edgeValue & 1024) // Edge 10 between corner 2 and 6
-                    mcVertices[vertexIndizes[10] = m_NumVertices++] = D3DXVECTOR3(corner0.x
-                            + volumeOffset.x, corner0.y + volumeOffset.y, corner0.z
-                            + (m_IsoLevel - isoValue2) / (isoValue6 - isoValue2)
-                            * volumeOffset.z);
+                    mcVertices[vertexIndizes[10] = m_NumVertices++] = fp_MCVertex(
+                            D3DXVECTOR3(corner0.x + volumeOffset.x, corner0.y
+                            + volumeOffset.y, corner0.z + (s = (m_IsoLevel - isoValue2)
+                            / (isoValue6 - isoValue2)) * volumeOffset.z), CalcNormal(
+                            gradientIsoValue2, gradientIsoValue6, s));
                 if(edgeValue & 2048) // Edge 11 between corner 3 and 7
-                    mcVertices[vertexIndizes[11] = m_NumVertices++] = D3DXVECTOR3(corner0.x,
-                            corner0.y + volumeOffset.y, corner0.z + (m_IsoLevel
-                            - isoValue3) / (isoValue7 - isoValue3) * volumeOffset.z);
+                    mcVertices[vertexIndizes[11] = m_NumVertices++] = fp_MCVertex(
+                            D3DXVECTOR3(corner0.x, corner0.y + volumeOffset.y, corner0.z
+                            + (s = (m_IsoLevel - isoValue3) / (isoValue7 - isoValue3))
+                            * volumeOffset.z), CalcNormal(gradientIsoValue3,
+                            gradientIsoValue7, s));
 
                 // Triangles:
                 int* triTableEntry = s_TriTable[cubeType];
@@ -400,6 +447,16 @@ void fp_RenderIsoVolume::OnLostDevice() {
         m_VertexBuffer->Release();
     if( m_IndexBuffer != NULL )        
         m_IndexBuffer->Release();
+}
+
+inline D3DXVECTOR3 fp_RenderIsoVolume::CalcNormal(
+        D3DXVECTOR3* gradient1, 
+        D3DXVECTOR3* gradient2, 
+        float s) {
+    D3DXVECTOR3 result;
+    D3DXVec3Lerp(&result, gradient1, gradient2, s);
+    D3DXVec3Normalize(&result, &result);
+    return result;
 }
 
 int fp_RenderIsoVolume::s_EdgeTable[256] = {
