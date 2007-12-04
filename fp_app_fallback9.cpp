@@ -335,9 +335,9 @@ void CALLBACK FP_OnD3D9FrameRender(
         d3dDevice->SetTransform( D3DTS_PROJECTION, &Proj );
         d3dDevice->SetTransform( D3DTS_VIEW, &View );        
        
-        if(g_RenderType == 0)
+        if(g_RenderType == FP_GUI_RENDER_TYPE_POINT_SPRITE)
             g_RenderSprites->OnFrameRender(d3dDevice, Time, ElapsedTime);
-        else
+        else if(g_RenderType == FP_GUI_RENDER_TYPE_ISO_SURFACE)
             g_RenderIsoVolume->OnFrameRender(d3dDevice, Time, ElapsedTime);
 
         g_GUI.OnD3D9FrameRender(d3dDevice, Time, ElapsedTime, g_Camera.GetEyePt(),

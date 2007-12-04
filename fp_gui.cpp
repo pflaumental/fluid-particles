@@ -41,8 +41,8 @@ fp_GUI::fp_GUI()
     m_SampleUI.AddComboBox( IDC_SELECT_RENDER_TYPE, 35, iY += 24, 125, 24, L'S', false, &comboBox );
     if( comboBox ) {
         comboBox->SetDropHeight( 100 );
-        comboBox->AddItem( L"Point sprites (S)", (LPVOID)0 );
-        comboBox->AddItem( L"Iso surface MC (S)", (LPVOID)1 );
+        comboBox->AddItem( L"Iso surface MC (S)", (LPVOID)0 );
+        comboBox->AddItem( L"Point sprites (S)", (LPVOID)1 );        
     }
 
     iY += 24;

@@ -251,7 +251,8 @@ void fp_RenderIsoVolume::ConstructMesh() {
     int yEnd = NumValuesY - 1;
     int zEnd = NumValuesZ - 1;
     D3DXVECTOR3 volumeStart = m_IsoVolume->m_VolumeStart;
-    D3DXVECTOR3 volumeOffset = m_IsoVolume->m_VolumeStart;
+    float voxelSize = m_IsoVolume->m_VoxelSize;
+    D3DXVECTOR3 volumeOffset = D3DXVECTOR3(voxelSize, voxelSize, voxelSize);
     std::vector<float>* isoValues = &m_IsoVolume->m_IsoValues;
 
     fp_MCVertex *mcVertices;
