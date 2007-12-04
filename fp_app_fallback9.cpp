@@ -183,8 +183,7 @@ HRESULT CALLBACK FP_OnD3D9CreateDevice(
     D3DXVECTOR3 vecEye(0.0f, 0.0f, -15.0f);
     D3DXVECTOR3 vecAt (0.0f, 0.0f, -0.0f);
     g_Camera.SetViewParams( &vecEye, &vecAt );
-    //g_Camera.SetRadius( FP_OBJECT_RADIUS*3.0f, FP_OBJECT_RADIUS*0.5f, FP_OBJECT_RADIUS*10.0f );
-    g_Camera.SetRadius(30.0f, 1.0f, 500.0f);    
+    g_Camera.SetRadius( FP_OBJECT_RADIUS*3.0f, FP_OBJECT_RADIUS*0.5f, FP_OBJECT_RADIUS*10.0f );  
 
     return S_OK;
 }
@@ -298,6 +297,13 @@ void CALLBACK FP_OnD3D9FrameRender(
         View = *g_Camera.GetViewMatrix();
 
         WorldViewProjection = World * View * Proj;
+
+        for (int i=0; i < FP_MAX_LIGHTS; i++) {
+            g_RenderIsoVolume->m_Lights[i].Direction = g_GUI.m_LightDir[i];
+            D3DCOLORVALUE diffuse = { g_GUI.m_LightDiffuseColor->r,
+                g_GUI.m_LightDiffuseColor->g, g_GUI.m_LightDiffuseColor->b, 1.0f };
+            g_RenderIsoVolume->m_Lights[i].Diffuse = diffuse;
+        }
 
         //V( g_Effect9->SetValue( g_LightDir, g_GUI.m_LightDir, sizeof(D3DXVECTOR3)*FP_MAX_LIGHTS ) );
         //V( g_Effect9->SetValue( g_LightDiffuse, g_GUI.m_cLightDiffuse, sizeof(D3DXCOLOR)*FP_MAX_LIGHTS ) );

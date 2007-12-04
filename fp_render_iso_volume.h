@@ -67,7 +67,7 @@ public:
     void UpdateSmoothingLength();
     void SetVoxelSize(float VoxelSize);
     void ConstructFromFluid();
-    inline void DistributeParticle(
+    inline void DistributeParticleWithStamp(
             D3DXVECTOR3 ParticlePosition, 
             float ParticleDensity,
             float ParticleMass,

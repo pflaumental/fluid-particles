@@ -345,7 +345,7 @@ HRESULT fp_GUI::OnD3D9CreateDevice(
 
     V_RETURN( CDXUTDirectionWidget::StaticOnD3D9CreateDevice( d3dDevice ) );
     for( int i=0; i<FP_MAX_LIGHTS; i++ )
-        m_LightControl[i].SetRadius( 10.0f );
+        m_LightControl[i].SetRadius( FP_OBJECT_RADIUS );
 
     return S_OK;
 }
