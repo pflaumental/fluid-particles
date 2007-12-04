@@ -9,6 +9,7 @@
 #include "fp_gui.h"
 #include "fp_global.h"
 #include "fp_render_sprites.h"
+#include "fp_render_iso_volume.h"
 
 //#define DEBUG_VS   // Uncomment this line to debug D3D9 vertex shaders 
 //#define DEBUG_PS   // Uncomment this line to debug D3D9 pixel shaders 
@@ -22,10 +23,11 @@
 // Global variables
 //--------------------------------------------------------------------------------------
 extern CModelViewerCamera      g_Camera;               // A model viewing camera
-extern fp_GUI                  g_GUI;
 extern D3DXMATRIXA16           g_CenterMesh;
 
-extern fp_RenderSprites* g_RenderSprites;
+extern fp_GUI                  g_GUI;
+extern fp_RenderSprites*       g_RenderSprites;
+extern fp_RenderIsoVolume*     g_RenderIsoVolume;
 
 extern float                   g_LightScale;
 extern int                     g_NumActiveLights;
@@ -53,10 +55,25 @@ D3DXHANDLE g_RenderSceneWithTexture3Light;
 //--------------------------------------------------------------------------------------
 // Forward declarations 
 //--------------------------------------------------------------------------------------
-bool    CALLBACK FP_IsD3D9DeviceAcceptable( D3DCAPS9* Caps, D3DFORMAT AdapterFormat, D3DFORMAT BackBufferFormat, bool Windowed, void* UserContext );
-HRESULT CALLBACK FP_OnD3D9CreateDevice( IDirect3DDevice9* d3dDevice, const D3DSURFACE_DESC* BackBufferSurfaceDesc, void* UserContext );
-HRESULT CALLBACK FP_OnD3D9ResetDevice( IDirect3DDevice9* d3dDevice, const D3DSURFACE_DESC* BackBufferSurfaceDesc, void* UserContext );
-void    CALLBACK FP_OnD3D9FrameRender( IDirect3DDevice9* d3dDevice, double Time, float ElapsedTime, void* UserContext );
+bool    CALLBACK FP_IsD3D9DeviceAcceptable(
+        D3DCAPS9* Caps, 
+        D3DFORMAT AdapterFormat, 
+        D3DFORMAT BackBufferFormat, 
+        bool Windowed, 
+        void* UserContext);
+HRESULT CALLBACK FP_OnD3D9CreateDevice( 
+        IDirect3DDevice9* d3dDevice, 
+        const D3DSURFACE_DESC* BackBufferSurfaceDesc, 
+        void* UserContext);
+HRESULT CALLBACK FP_OnD3D9ResetDevice(
+        IDirect3DDevice9* d3dDevice, 
+        const D3DSURFACE_DESC* BackBufferSurfaceDesc, 
+        void* UserContext);
+void    CALLBACK FP_OnD3D9FrameRender(
+        IDirect3DDevice9* d3dDevice,
+        double Time,
+        float ElapsedTime,
+        void* UserContext );
 void    CALLBACK FP_OnD3D9LostDevice( void* UserContext );
 void    CALLBACK FP_OnD3D9DestroyDevice( void* UserContext );
 HRESULT FP_LoadMesh( IDirect3DDevice9* d3dDevice, WCHAR* FileName, ID3DXMesh** Mesh );
@@ -65,10 +82,14 @@ HRESULT FP_LoadMesh( IDirect3DDevice9* d3dDevice, WCHAR* FileName, ID3DXMesh** M
 //--------------------------------------------------------------------------------------
 // Rejects any D3D9 devices that aren't acceptable to the app by returning false
 //--------------------------------------------------------------------------------------
-bool CALLBACK FP_IsD3D9DeviceAcceptable( D3DCAPS9* Caps, D3DFORMAT AdapterFormat, 
-                                      D3DFORMAT BackBufferFormat, bool Windowed, void* UserContext )
-{
-    // No fallback defined by this app, so reject any device that doesn't support at least ps2.0
+bool CALLBACK FP_IsD3D9DeviceAcceptable(
+        D3DCAPS9* Caps,
+        D3DFORMAT AdapterFormat, 
+        D3DFORMAT BackBufferFormat,
+        bool Windowed,
+        void* UserContext ) {
+    // No fallback defined by this app, so reject any device that doesn't support at
+    //least ps2.0
     if( Caps->PixelShaderVersion < D3DPS_VERSION(2,0) )
         return false;
 
@@ -87,12 +108,15 @@ bool CALLBACK FP_IsD3D9DeviceAcceptable( D3DCAPS9* Caps, D3DFORMAT AdapterFormat
 // Create any D3D9 resources that will live through a device reset (D3DPOOL_MANAGED)
 // and aren't tied to the back buffer size 
 //--------------------------------------------------------------------------------------
-HRESULT CALLBACK FP_OnD3D9CreateDevice( IDirect3DDevice9* d3dDevice, const D3DSURFACE_DESC* BackBufferSurfaceDesc, void* UserContext )
-{    
+HRESULT CALLBACK FP_OnD3D9CreateDevice(
+        IDirect3DDevice9* d3dDevice,
+        const D3DSURFACE_DESC* BackBufferSurfaceDesc,
+        void* UserContext) {    
     //HRESULT hr;
 
     g_GUI.OnD3D9CreateDevice(d3dDevice, BackBufferSurfaceDesc, UserContext);
     g_RenderSprites->OnCreateDevice(d3dDevice, BackBufferSurfaceDesc);
+    g_RenderIsoVolume->OnCreateDevice(d3dDevice, BackBufferSurfaceDesc);
 
     //// Load the mesh
     //V_RETURN( FP_LoadMesh( d3dDevice, L"tiny\\tiny.x", &g_Mesh9 ) );
@@ -170,8 +194,7 @@ HRESULT CALLBACK FP_OnD3D9CreateDevice( IDirect3DDevice9* d3dDevice, const D3DSU
 // mesh for the graphics card's vertex cache, which improves performance by organizing 
 // the internal triangle list for less cache misses.
 //--------------------------------------------------------------------------------------
-HRESULT FP_LoadMesh( IDirect3DDevice9* d3dDevice, WCHAR* FileName, ID3DXMesh** Mesh )
-{
+HRESULT FP_LoadMesh( IDirect3DDevice9* d3dDevice, WCHAR* FileName, ID3DXMesh** Mesh ) {
     ID3DXMesh* pMesh = NULL;
     WCHAR str[MAX_PATH];
     HRESULT hr;
@@ -181,7 +204,8 @@ HRESULT FP_LoadMesh( IDirect3DDevice9* d3dDevice, WCHAR* FileName, ID3DXMesh** M
     // exactly the model we're loading.  See the mesh samples such as
     // "OptimizedMesh" for a more generic mesh loading example.
     V_RETURN( DXUTFindDXSDKMediaFileCch( str, MAX_PATH, FileName ) );
-    V_RETURN( D3DXLoadMeshFromX(str, D3DXMESH_MANAGED, d3dDevice, NULL, NULL, NULL, NULL, &pMesh) );
+    V_RETURN( D3DXLoadMeshFromX(str, D3DXMESH_MANAGED, d3dDevice, NULL, NULL, NULL,
+            NULL, &pMesh) );
 
     DWORD *rgdwAdjacency = NULL;
 
@@ -189,7 +213,8 @@ HRESULT FP_LoadMesh( IDirect3DDevice9* d3dDevice, WCHAR* FileName, ID3DXMesh** M
     if( !(pMesh->GetFVF() & D3DFVF_NORMAL) )
     {
         ID3DXMesh* pTempMesh;
-        V( pMesh->CloneMeshFVF( pMesh->GetOptions(), pMesh->GetFVF() | D3DFVF_NORMAL, d3dDevice, &pTempMesh ) );
+        V( pMesh->CloneMeshFVF( pMesh->GetOptions(), pMesh->GetFVF()
+                | D3DFVF_NORMAL, d3dDevice, &pTempMesh ) );
         V( D3DXComputeNormals( pTempMesh, NULL ) );
 
         SAFE_RELEASE( pMesh );
@@ -204,7 +229,8 @@ HRESULT FP_LoadMesh( IDirect3DDevice9* d3dDevice, WCHAR* FileName, ID3DXMesh** M
     if( rgdwAdjacency == NULL )
         return E_OUTOFMEMORY;
     V( pMesh->GenerateAdjacency(1e-6f,rgdwAdjacency) );
-    V( pMesh->OptimizeInplace(D3DXMESHOPT_VERTEXCACHE, rgdwAdjacency, NULL, NULL, NULL) );
+    V( pMesh->OptimizeInplace(D3DXMESHOPT_VERTEXCACHE, rgdwAdjacency, NULL, 
+            NULL, NULL) );
     delete []rgdwAdjacency;
 
     *Mesh = pMesh;
@@ -217,13 +243,15 @@ HRESULT FP_LoadMesh( IDirect3DDevice9* d3dDevice, WCHAR* FileName, ID3DXMesh** M
 // Create any D3D9 resources that won't live through a device reset (D3DPOOL_DEFAULT) 
 // or that are tied to the back buffer size 
 //--------------------------------------------------------------------------------------
-HRESULT CALLBACK FP_OnD3D9ResetDevice( IDirect3DDevice9* d3dDevice, 
-                                    const D3DSURFACE_DESC* BackBufferSurfaceDesc, void* UserContext )
-{
+HRESULT CALLBACK FP_OnD3D9ResetDevice(
+        IDirect3DDevice9* d3dDevice, 
+        const D3DSURFACE_DESC* BackBufferSurfaceDesc,
+        void* UserContext ) {
     HRESULT hr;
     //initPointSprites(d3dDevice);
     g_GUI.OnD3D9ResetDevice(d3dDevice, BackBufferSurfaceDesc, UserContext);
     g_RenderSprites->OnResetDevice(d3dDevice, BackBufferSurfaceDesc);
+    g_RenderIsoVolume->OnResetDevice(d3dDevice, BackBufferSurfaceDesc);
 
     if( g_Effect9 ) V_RETURN( g_Effect9->OnResetDevice() );
     // Setup the camera's projection parameters
@@ -239,9 +267,13 @@ HRESULT CALLBACK FP_OnD3D9ResetDevice( IDirect3DDevice9* d3dDevice,
 //--------------------------------------------------------------------------------------
 // Render the scene using the D3D9 device
 //--------------------------------------------------------------------------------------
-void CALLBACK FP_OnD3D9FrameRender( IDirect3DDevice9* d3dDevice, double Time, float ElapsedTime, void* UserContext )
-{
-    // If the settings dialog is being shown, then render it instead of rendering the app's scene
+void CALLBACK FP_OnD3D9FrameRender(
+        IDirect3DDevice9* d3dDevice, 
+        double Time, 
+        float ElapsedTime, 
+        void* UserContext) {
+    // If the settings dialog is being shown, then render it instead of rendering the
+    //app's scene
     if( g_GUI.RenderSettingsDialog(ElapsedTime) )
         return;    
 
@@ -253,7 +285,8 @@ void CALLBACK FP_OnD3D9FrameRender( IDirect3DDevice9* d3dDevice, double Time, fl
     D3DXMATRIXA16 Proj;
    
     // Clear the render target and the zbuffer 
-    V( d3dDevice->Clear(0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, D3DXCOLOR(0.0f,0.05f,0.15f,0.55f), 1.0f, 0) );
+    V( d3dDevice->Clear(0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, D3DXCOLOR(0.0f,
+            0.05f,0.15f,0.55f), 1.0f, 0) );
 
     // Render the scene
     if( SUCCEEDED( d3dDevice->BeginScene() ) )
@@ -301,7 +334,8 @@ void CALLBACK FP_OnD3D9FrameRender( IDirect3DDevice9* d3dDevice, double Time, fl
         d3dDevice->SetTransform( D3DTS_PROJECTION, &Proj );
         d3dDevice->SetTransform( D3DTS_VIEW, &View );        
        
-        g_RenderSprites->OnFrameRender(d3dDevice, Time, ElapsedTime);
+        //g_RenderSprites->OnFrameRender(d3dDevice, Time, ElapsedTime);
+        g_RenderIsoVolume->OnFrameRender(d3dDevice, Time, ElapsedTime);
 
         g_GUI.OnD3D9FrameRender(d3dDevice, Time, ElapsedTime, g_Camera.GetEyePt(),
                 &WorldViewProjection, &World, &View, &Proj, g_NumActiveLights,
@@ -317,10 +351,10 @@ void CALLBACK FP_OnD3D9FrameRender( IDirect3DDevice9* d3dDevice, double Time, fl
 //--------------------------------------------------------------------------------------
 // Release D3D9 resources created in the OnD3D9ResetDevice callback 
 //--------------------------------------------------------------------------------------
-void CALLBACK FP_OnD3D9LostDevice( void* UserContext )
-{
+void CALLBACK FP_OnD3D9LostDevice( void* UserContext ) {
     g_GUI.OnD3D9LostDevice(UserContext);
     if(g_RenderSprites) g_RenderSprites->OnLostDevice();
+    if(g_RenderIsoVolume) g_RenderIsoVolume->OnLostDevice();
     if(g_Effect9) g_Effect9->OnLostDevice();    
     //shutDownPointSprites();    
 }
@@ -333,6 +367,7 @@ void CALLBACK FP_OnD3D9DestroyDevice( void* UserContext )
 {
     g_GUI.OnD3D9DestroyDevice(UserContext);
     if(g_RenderSprites) g_RenderSprites->OnDetroyDevice();
+    if(g_RenderIsoVolume) g_RenderIsoVolume->OnDetroyDevice();
     SAFE_RELEASE(g_Effect9);
     SAFE_RELEASE(g_Mesh9);
     SAFE_RELEASE(g_MeshTexture9);

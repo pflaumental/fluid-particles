@@ -9,6 +9,7 @@
 
 #define FP_DEFAULT_ISOVOLUME_VOXELSIZE 1.0f
 #define FP_DEFAULT_ISO_VOLUME_BORDER 1.0f
+#define FP_DEFAULT_MC_ISO_LEVEL 0.5f
 #define FP_INITIAL_ISOVOLUME_SIDELENGTH 200
 #define FP_MC_MAX_TRIANGLES 1000000
 #define FP_MC_MAX_VETICES FP_MC_MAX_TRIANGLES * 3
@@ -86,9 +87,14 @@ private:
 
 class fp_RenderIsoVolume {
 public:
-    fp_IsoVolume* m_IsoVolume;
+    fp_IsoVolume* m_IsoVolume;    
+    float m_IsoLevel;
+    int m_NumVertices;
+    int m_NumTriangles;
 
-    fp_RenderIsoVolume(fp_IsoVolume* IsoVolume);
+    fp_RenderIsoVolume(
+            fp_IsoVolume* IsoVolume, 
+            float IsoLevel = FP_DEFAULT_MC_ISO_LEVEL);
     ~fp_RenderIsoVolume();
 
     HRESULT OnCreateDevice(
@@ -99,10 +105,13 @@ public:
             IDirect3DDevice9* d3dDevice,
             const D3DSURFACE_DESC* BackBufferSurfaceDesc );
 
+    void ConstructMesh();
+
     void OnFrameRender(
             IDirect3DDevice9* d3dDevice,
             double Time,
             float ElapsedTime );
+    
 
     void OnDetroyDevice();
 
@@ -111,6 +120,7 @@ public:
 private:
     LPDIRECT3DVERTEXBUFFER9 m_VertexBuffer;
     LPDIRECT3DINDEXBUFFER9 m_IndexBuffer;
+    D3DMATERIAL9 m_Material;
     //LPDIRECT3DTEXTURE9 m_Texture;
     static int s_EdgeTable[256];
     static int s_TriTable[256][16];
