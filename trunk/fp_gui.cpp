@@ -14,11 +14,15 @@ fp_GUI::fp_GUI()
         : m_ShowHelp(false), m_Font10(NULL), m_Font9(NULL), m_Sprite10(NULL),
         m_Sprite9(NULL), m_TxtHelper(NULL) {
     
-    for( int i=0; i<FP_MAX_LIGHTS; i++ )
-        m_LightControl[i].SetLightDirection( D3DXVECTOR3(
-                sinf(D3DX_PI*2*i/FP_MAX_LIGHTS-D3DX_PI/6),
-                0,
-                -cosf(D3DX_PI*2*i/FP_MAX_LIGHTS-D3DX_PI/6) ) );
+    for( int i=0; i<FP_MAX_LIGHTS; i++ ) {
+        D3DXVECTOR3 direction(
+            sinf(D3DX_PI*2*i/FP_MAX_LIGHTS-D3DX_PI/6),
+            0,
+            -cosf(D3DX_PI*2*i/FP_MAX_LIGHTS-D3DX_PI/6));
+        m_LightControl[i].SetLightDirection(direction);
+        m_LightDir[i] = direction;
+        m_LightDiffuseColor[i] = D3DXCOLOR(1,1,1,1);
+    }
 
     m_D3DSettingsDlg.Init( &m_DialogResourceManager );
     m_HUD.Init( &m_DialogResourceManager );

@@ -201,14 +201,23 @@ void fp_IsoVolume::DestroyStamp() {
     delete[] m_StampValues;
 }
 
-fp_RenderIsoVolume::fp_RenderIsoVolume(fp_IsoVolume* IsoVolume, float IsoLevel) :
+fp_RenderIsoVolume::fp_RenderIsoVolume(
+        fp_IsoVolume* IsoVolume, 
+        int NumLights, 
+        float IsoLevel)
+        :
         m_IsoVolume(IsoVolume),
-        m_IsoLevel(IsoLevel) {
-    m_Material.Diffuse.r = m_Material.Diffuse.g = m_Material.Diffuse.b = 0.8f;
-    m_Material.Diffuse.a = 1.0f;
-    m_Material.Ambient = m_Material.Diffuse;
-    m_Material.Emissive = m_Material.Diffuse;
-    m_Material.Specular = m_Material.Diffuse;
+        m_IsoLevel(IsoLevel) {    
+    D3DCOLORVALUE diffuse  = {0.8f, 0.8f, 0.8f, 1.0f};
+    D3DCOLORVALUE ambient  = {0.05f, 0.05f, 0.05f, 1.0f};
+    D3DCOLORVALUE emmisive = {0.0f, 0.0f, 0.0f, 1.0f};
+    D3DCOLORVALUE specular = {0.5f, 0.5f, 0.5f, 1.0f};
+    ZeroMemory( &m_Material, sizeof(D3DMATERIAL9) );
+    m_Material.Diffuse = diffuse;
+    m_Material.Ambient = ambient;
+    m_Material.Emissive = emmisive;
+    m_Material.Specular = specular;
+    m_Lights = new D3DLIGHT9[NumLights];
 }
 
 fp_RenderIsoVolume::~fp_RenderIsoVolume() {
@@ -297,8 +306,10 @@ void fp_RenderIsoVolume::ConstructMesh() {
                 if(isoValue7 < m_IsoLevel) cubeType |= 128;
 
                 int edgeValue = s_EdgeTable[cubeType];
-                if(edgeValue == 0)
+                if(edgeValue == 0) {
+                    corner0.z += volumeOffset.z;
                     continue;
+                }
 
                 // Vertices:                
                 vertexIndizes[0] = vertexIndizes[4];
@@ -372,9 +383,12 @@ void fp_RenderIsoVolume::OnFrameRender(
     d3dDevice->SetIndices(m_IndexBuffer);
     d3dDevice->SetFVF(fp_MCVertex.FVF_Flags);
     d3dDevice->SetMaterial(&m_Material);
-    d3dDevice->SetRenderState(D3DRS_LIGHTING, FALSE);
-    d3dDevice->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, m_NumVertices, 0, m_NumTriangles);
+    for (int i=0; i < m_NumActiveLights; i++) {        
+        d3dDevice->SetLight(i, &m_Lights[i]);
+        d3dDevice->LightEnable(i, TRUE);
+    }
     d3dDevice->SetRenderState(D3DRS_LIGHTING, TRUE);
+    d3dDevice->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, m_NumVertices, 0, m_NumTriangles);
 }
 
 void fp_RenderIsoVolume::OnDetroyDevice() {
