@@ -25,6 +25,7 @@
 #define IDC_PARTICLE_SCALE          11
 #define IDC_PARTICLE_SCALE_STATIC   12
 #define IDC_RESET_SIM               13
+#define IDC_SELECT_RENDER_TYPE      14
 
 //--------------------------------------------------------------------------------------
 // Fluid particles GUI
@@ -56,7 +57,8 @@ public:
             int& NumActiveLights,
             float& LightScale,
             float& ParticeScale,
-            bool& ResetSim);
+            bool& ResetSim,
+            int& RenderType);
 
     // DX9 specific
     HRESULT OnD3D9CreateDevice(

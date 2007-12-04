@@ -80,7 +80,11 @@ void fp_RenderSprites::OnFrameRender(
 	//
     // Reset render states...
 	//
+
+    d3dDevice->SetTexture(0, NULL);
 	
+    d3dDevice->SetRenderState( D3DRS_LIGHTING,  TRUE );
+
     d3dDevice->SetRenderState( D3DRS_POINTSPRITEENABLE, FALSE );
     d3dDevice->SetRenderState( D3DRS_POINTSCALEENABLE,  FALSE );
 
