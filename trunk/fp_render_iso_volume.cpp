@@ -16,6 +16,12 @@ fp_VolumeIndex operator+(
 fp_IsoVolume::fp_IsoVolume(fp_Fluid* Fluid, float VoxelSize, float IsoVolumeBorder) 
         :
         m_Fluid(Fluid),
+        m_LastMinX(0.0f),
+        m_LastMinY(0.0f),
+        m_LastMinZ(0.0f),
+        m_LastMaxX(0.0f),
+        m_LastMaxY(0.0f),
+        m_LastMaxZ(0.0f),
         m_NumValues(0),
         m_NumValuesYZ(0),
         m_NumValuesX(0),
@@ -53,19 +59,67 @@ void fp_IsoVolume::SetVoxelSize(float VoxelSize) {
 }
 
 void fp_IsoVolume::ConstructFromFluid() {
-    float MinX, MaxX, MinY, MaxY, MinZ, MaxZ;
-    m_Fluid->GetParticleMinsAndMaxs(MinX, MaxX, MinY, MaxY, MinZ, MaxZ);
-    MinX -= m_IsoVolumeBorder;
-    MinY -= m_IsoVolumeBorder;
-    MinZ -= m_IsoVolumeBorder;
-    MaxX += m_IsoVolumeBorder;
-    MaxY += m_IsoVolumeBorder;
-    MaxZ += m_IsoVolumeBorder;
-    m_VolumeStart = D3DXVECTOR3(MinX + m_HalfVoxelSize, MinY + m_HalfVoxelSize, MinZ + m_HalfVoxelSize);
+    float minX = m_LastMinX, minY = m_LastMinY, minZ = m_LastMinZ;
+    float maxX = m_LastMaxX, maxY = m_LastMaxY, maxZ = m_LastMaxZ;
+
+    float partMinX, partMaxX, partMinY, partMaxY, partMinZ, partMaxZ;
+    m_Fluid->GetParticleMinsAndMaxs(partMinX, partMaxX, partMinY, partMaxY, partMinZ,
+            partMaxZ);
+    partMinX -= m_IsoVolumeBorder;
+    partMinY -= m_IsoVolumeBorder;
+    partMinZ -= m_IsoVolumeBorder;
+    partMaxX += m_IsoVolumeBorder;
+    partMaxY += m_IsoVolumeBorder;
+    partMaxZ += m_IsoVolumeBorder;    
+    
+    if(partMinX < m_LastMinX) // Grow?
+        minX = partMinX - (partMaxX - partMinX) * FP_ISO_VOLUME_GROW_FACTOR;
+    else if (partMinX > m_LastMinX + 0.5 * (m_LastMaxX - m_LastMinX)
+            * FP_ISO_VOLUME_SHRINK_BORDER) // Shrink?
+        minX = partMinX - (partMaxX - partMinX) * FP_ISO_VOLUME_GROW_FACTOR;
+
+    if(partMinY < m_LastMinY) // Grow?
+        minY = partMinY - (partMaxY - partMinY) * FP_ISO_VOLUME_GROW_FACTOR;
+    else if (partMinY > m_LastMinY + 0.5 * (m_LastMaxY - m_LastMinY)
+            * FP_ISO_VOLUME_SHRINK_BORDER) // Shrink?
+        minY = partMinY - (partMaxY - partMinY) * FP_ISO_VOLUME_GROW_FACTOR;
+
+    if(partMinZ < m_LastMinZ) // Grow?
+        minZ = partMinZ - (partMaxZ - partMinZ) * FP_ISO_VOLUME_GROW_FACTOR;
+    else if (partMinZ > m_LastMinZ + 0.5 * (m_LastMaxZ - m_LastMinZ)
+            * FP_ISO_VOLUME_SHRINK_BORDER) // Shrink?
+        minZ = partMinZ - (partMaxZ - partMinZ) * FP_ISO_VOLUME_GROW_FACTOR;
+
+    if(partMaxX > m_LastMaxX) // Grow?
+        maxX = partMaxX + (partMaxX - partMinX) * FP_ISO_VOLUME_GROW_FACTOR;
+    else if (partMaxX < m_LastMaxX - 0.5 * (m_LastMaxX - m_LastMinX)
+            * FP_ISO_VOLUME_SHRINK_BORDER) // Shrink?
+        maxX = partMaxX + (partMaxX - partMinX) * FP_ISO_VOLUME_GROW_FACTOR;
+
+    if(partMaxY > m_LastMaxY) // Grow?
+        maxY = partMaxY + (partMaxY - partMinY) * FP_ISO_VOLUME_GROW_FACTOR;
+    else if (partMaxY < m_LastMaxY - 0.5 * (m_LastMaxY - m_LastMinY)
+            * FP_ISO_VOLUME_SHRINK_BORDER) // Shrink?
+        maxY = partMaxY + (partMaxY - partMinY) * FP_ISO_VOLUME_GROW_FACTOR;
+
+    if(partMaxZ > m_LastMaxZ) // Grow?
+        maxZ = partMaxZ + (partMaxZ - partMinZ) * FP_ISO_VOLUME_GROW_FACTOR;
+    else if (partMaxZ < m_LastMaxZ - 0.5 * (m_LastMaxZ - m_LastMinZ)
+            * FP_ISO_VOLUME_SHRINK_BORDER) // Shrink?
+        maxZ = partMaxZ + (partMaxZ - partMinZ) * FP_ISO_VOLUME_GROW_FACTOR;
+
+    m_LastMinX = minX;
+    m_LastMinY = minY;
+    m_LastMinZ = minZ;
+    m_LastMaxX = maxX;
+    m_LastMaxY = maxY;
+    m_LastMaxZ = maxZ;
+
+    m_VolumeStart = D3DXVECTOR3(minX + m_HalfVoxelSize, minY + m_HalfVoxelSize, minZ + m_HalfVoxelSize);
     m_VolumeCellOffset = D3DXVECTOR3(m_VoxelSize, m_VoxelSize, m_VoxelSize);
-    m_NumValuesX = (int)((MaxX - MinX + m_VoxelSize) / m_VoxelSize);
-    m_NumValuesY = (int)((MaxY - MinY + m_VoxelSize) / m_VoxelSize);
-    m_NumValuesZ = (int)((MaxZ - MinZ + m_VoxelSize) / m_VoxelSize);
+    m_NumValuesX = (int)((maxX - minX + m_VoxelSize) / m_VoxelSize);
+    m_NumValuesY = (int)((maxY - minY + m_VoxelSize) / m_VoxelSize);
+    m_NumValuesZ = (int)((maxZ - minZ + m_VoxelSize) / m_VoxelSize);
     m_NumValuesYZ = m_NumValuesY * m_NumValuesZ;
     m_NumValues = m_NumValuesYZ * m_NumValuesX;
     m_IsoValues.clear();
@@ -79,8 +133,8 @@ void fp_IsoVolume::ConstructFromFluid() {
     for (int i = 0; i < NumParticles; i++) {
         D3DXVECTOR3 particlePosition = Particles[i].m_Position;
         float particleDensity = Densities[i];
-        DistributeParticle(particlePosition, ParticleMass / particleDensity, MinX, MinY,
-                MinZ);
+        DistributeParticleWithStamp(particlePosition, ParticleMass / particleDensity, minX, minY,
+                minZ);
     }
 }
 

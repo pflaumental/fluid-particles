@@ -13,6 +13,8 @@
 #define FP_INITIAL_ISOVOLUME_SIDELENGTH 200
 #define FP_MC_MAX_TRIANGLES 1000000
 #define FP_MC_MAX_VETICES FP_MC_MAX_TRIANGLES * 3
+#define FP_ISO_VOLUME_GROW_FACTOR 0.2f
+#define FP_ISO_VOLUME_SHRINK_BORDER 0.8f
 #define FP_INITIAL_ISOVOLUME_CAPACITY FP_INITIAL_ISOVOLUME_SIDELENGTH \
         * FP_INITIAL_ISOVOLUME_SIDELENGTH * FP_INITIAL_ISOVOLUME_SIDELENGTH
 
@@ -53,6 +55,12 @@ public:
     fp_Fluid* m_Fluid;
     std::vector<float> m_IsoValues;
     std::vector<D3DXVECTOR3> m_GradientIsoValues;
+    float m_LastMinX;
+    float m_LastMinY;
+    float m_LastMinZ;
+    float m_LastMaxX;
+    float m_LastMaxY;
+    float m_LastMaxZ;
     int m_NumValuesX;
     int m_NumValuesY;
     int m_NumValuesZ;
