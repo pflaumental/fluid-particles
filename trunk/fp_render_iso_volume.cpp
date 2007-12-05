@@ -7,9 +7,9 @@ fp_VolumeIndex operator+(
         const fp_VolumeIndex& A,
         const fp_VolumeIndex& B) {
     fp_VolumeIndex result;
-    result.X = A.X + B.X;
-    result.Y = A.Y + B.Y;
-    result.Z = A.Z + B.Z;
+    result.x = A.x + B.x;
+    result.y = A.y + B.y;
+    result.z = A.z + B.z;
     return result;
 }
 
@@ -79,34 +79,98 @@ void fp_IsoVolume::ConstructFromFluid() {
     for (int i = 0; i < NumParticles; i++) {
         D3DXVECTOR3 particlePosition = Particles[i].m_Position;
         float particleDensity = Densities[i];
-        DistributeParticleWithStamp(particlePosition, particleDensity, ParticleMass, MinX, MinY,
+        DistributeParticle(particlePosition, ParticleMass / particleDensity, MinX, MinY,
                 MinZ);
+    }
+}
+
+inline void fp_IsoVolume::DistributeParticle(
+        D3DXVECTOR3 ParticlePosition,
+        float ParticleMassDensityQuotient,
+        float MinX,
+        float MinY,
+        float MinZ) {    
+    float smoothingLength = m_Fluid->m_SmoothingLength;
+    float smoothingLengthSq = m_Fluid->m_SmoothingLengthSq;
+
+    fp_VolumeIndex destinationStart;
+    destinationStart.x = (int)((ParticlePosition.x - MinX - smoothingLength) / m_VoxelSize);
+    destinationStart.y = (int)((ParticlePosition.y - MinY - smoothingLength) / m_VoxelSize);
+    destinationStart.z = (int)((ParticlePosition.z - MinZ - smoothingLength) / m_VoxelSize);
+    if (destinationStart.x < 0) destinationStart.x = 0;
+    if (destinationStart.y < 0) destinationStart.y = 0;
+    if (destinationStart.z < 0) destinationStart.z = 0;
+
+    fp_VolumeIndex destinationEnd;
+    destinationEnd.x = (int)((ParticlePosition.x - MinX + smoothingLength) / m_VoxelSize);
+    destinationEnd.y = (int)((ParticlePosition.y - MinY + smoothingLength) / m_VoxelSize);
+    destinationEnd.z = (int)((ParticlePosition.z - MinZ + smoothingLength) / m_VoxelSize);
+    if (destinationEnd.x >= m_NumValuesX) destinationEnd.x = m_NumValuesX - 1;
+    if (destinationEnd.y >= m_NumValuesY) destinationEnd.y = m_NumValuesY - 1;
+    if (destinationEnd.z >= m_NumValuesZ) destinationEnd.z = m_NumValuesZ - 1;
+
+    D3DXVECTOR3 startPos(MinX + m_HalfVoxelSize + destinationStart.x * m_VoxelSize,
+        MinY + m_HalfVoxelSize + destinationStart.y * m_VoxelSize,
+        MinZ + m_HalfVoxelSize + destinationStart.z * m_VoxelSize);   
+
+    int destinationIndexXY;
+    fp_VolumeIndex destination;
+    D3DXVECTOR3 cellPos = startPos;
+    for(destination.x = destinationStart.x; destination.x <= destinationEnd.x; 
+            destination.x++) {
+        cellPos.y = startPos.y;
+        destinationIndexXY = destination.x * m_NumValuesYZ + destinationStart.y
+                * m_NumValuesZ;
+        for(destination.y = destinationStart.y; destination.y <= destinationEnd.y;
+                destination.y++) {
+            cellPos.z = startPos.z;            
+            for(destination.z = destinationStart.z; destination.z <= destinationEnd.z;
+                    destination.z++) {
+                D3DXVECTOR3 particleToCell = cellPos - ParticlePosition;
+                float particleToCellLenSq = D3DXVec3LengthSq(&particleToCell);
+                if(particleToCellLenSq < smoothingLengthSq) {
+                    int destinationIndex = destinationIndexXY + destination.z;
+                    //int destinationIndex = destination.x * m_NumValuesYZ + destination.y * m_NumValuesZ
+                    //        + destination.z;
+                    float additionalIsoValue = ParticleMassDensityQuotient
+                            * m_Fluid->WPoly6(particleToCellLenSq);
+                    m_IsoValues[destinationIndex] += additionalIsoValue;
+                    D3DXVECTOR3 additionalGradientIsoValue = ParticleMassDensityQuotient
+                            * m_Fluid->GradientWPoly6(&particleToCell, 
+                            particleToCellLenSq);
+                    m_GradientIsoValues[destinationIndex] += additionalGradientIsoValue;
+                }
+                cellPos.z += m_VoxelSize;
+            }
+            destinationIndexXY += m_NumValuesZ;
+            cellPos.y += m_VoxelSize;
+        }
+        cellPos.x += m_VoxelSize;
     }
 }
 
 inline void fp_IsoVolume::DistributeParticleWithStamp(
         D3DXVECTOR3 ParticlePosition,
-        float ParticleDensity,
-        float ParticleMass,
+        float ParticleMassDensityQuotient,
         float MinX,
         float MinY,
         float MinZ) {
     fp_VolumeIndex particleVolumeIndex;
-    particleVolumeIndex.X = (int)((ParticlePosition.x - MinX) / m_VoxelSize);
-    particleVolumeIndex.Y = (int)((ParticlePosition.y - MinY) / m_VoxelSize);
-    particleVolumeIndex.Z = (int)((ParticlePosition.z - MinZ) / m_VoxelSize);
+    particleVolumeIndex.x = (int)((ParticlePosition.x - MinX) / m_VoxelSize);
+    particleVolumeIndex.y = (int)((ParticlePosition.y - MinY) / m_VoxelSize);
+    particleVolumeIndex.z = (int)((ParticlePosition.z - MinZ) / m_VoxelSize);
 
     for (int stampRowIndex = 0; stampRowIndex < m_NumStampRows; stampRowIndex++) {
         fp_VolumeIndex destStart = particleVolumeIndex
                 + m_StampRowStartOffsets[stampRowIndex];
-        if(destStart.X < 0 || destStart.X >= m_NumValuesX
-                || destStart.Y < 0 || destStart.Y >= m_NumValuesY)
+        if(destStart.x < 0 || destStart.x >= m_NumValuesX
+                || destStart.y < 0 || destStart.y >= m_NumValuesY)
             continue;
 
-        int destIndexXY = m_NumValuesYZ * destStart.X
-            + m_NumValuesZ * destStart.Y;
-        int destIndex = destStart.Z < 0 ? destIndexXY : destIndexXY + destStart.Z;
-        int zEnd = destStart.Z + m_StampRowLengths[stampRowIndex];
+        int destIndexXY = m_NumValuesYZ * destStart.x
+            + m_NumValuesZ * destStart.y;
+        int destIndex = destStart.z < 0 ? destIndexXY : destIndexXY + destStart.z;
+        int zEnd = destStart.z + m_StampRowLengths[stampRowIndex];
         if(zEnd > m_NumValuesZ)
             zEnd = m_NumValuesZ;
         int destEndIndex = destIndexXY + zEnd;
@@ -114,9 +178,9 @@ inline void fp_IsoVolume::DistributeParticleWithStamp(
         int stampValueIndex = m_StampRowValueStarts[stampRowIndex];
 
         for(; destIndex < destEndIndex; destIndex++) {
-            float additionalIsoValue = ParticleMass * m_StampValues[stampValueIndex]
-                    / ParticleDensity;
-            D3DXVECTOR3 additionalGradientIsoValue = (ParticleMass / ParticleDensity)
+            float additionalIsoValue = ParticleMassDensityQuotient 
+                    * m_StampValues[stampValueIndex];
+            D3DXVECTOR3 additionalGradientIsoValue = ParticleMassDensityQuotient
                     * m_GradientStampValues[stampValueIndex++];
             m_IsoValues[destIndex] += additionalIsoValue;
             m_GradientIsoValues[destIndex] += additionalGradientIsoValue;
@@ -161,9 +225,9 @@ void fp_IsoVolume::CreateStamp() {
                     if(cubeStampRowLengths[cubeStampRowIndex] == 0) {
                         m_NumStampRows++;
                         fp_VolumeIndex rowStart;
-                        rowStart.X = stampX;
-                        rowStart.Y = stampY;
-                        rowStart.Z = stampZ;
+                        rowStart.x = stampX;
+                        rowStart.y = stampY;
+                        rowStart.z = stampZ;
                         cubeStampRowStarts[cubeStampRowIndex] = rowStart;
                     }
                     m_NumStampValues++;
@@ -189,20 +253,20 @@ void fp_IsoVolume::CreateStamp() {
         m_StampRowLengths[stampRowIndex] = rowLength;
         fp_VolumeIndex cubeStampVolumeIndex = cubeStampRowStarts[cubeRow];
         fp_VolumeIndex rowStartOffset;
-        rowStartOffset.X = cubeStampVolumeIndex.X - stampRadius;
-        rowStartOffset.Y = cubeStampVolumeIndex.Y - stampRadius;
-        rowStartOffset.Z = cubeStampVolumeIndex.Z - stampRadius;
+        rowStartOffset.x = cubeStampVolumeIndex.x - stampRadius;
+        rowStartOffset.y = cubeStampVolumeIndex.y - stampRadius;
+        rowStartOffset.z = cubeStampVolumeIndex.z - stampRadius;
         m_StampRowStartOffsets[stampRowIndex] = rowStartOffset;
         m_StampRowValueStarts[stampRowIndex] = stampValueIndex;
-        int cubeStampIndex = cubeStampVolumeIndex.X * stampSideLengthSq
-                + cubeStampVolumeIndex.Y * stampSideLength
+        int cubeStampIndex = cubeStampVolumeIndex.x * stampSideLengthSq
+                + cubeStampVolumeIndex.y * stampSideLength
                 + stampRadius - (rowLength - 1) / 2;
         int cubeStampEnd = cubeStampIndex + rowLength;
         for (; cubeStampIndex < cubeStampEnd; cubeStampIndex++) {            
             m_StampValues[stampValueIndex]
                     = m_Fluid->WPoly6(cubeStampDistancesSq[cubeStampIndex]);
             m_GradientStampValues[stampValueIndex]
-                    = m_Fluid->GradientWPoly6(cubeStampR[cubeStampIndex],
+                    = m_Fluid->GradientWPoly6(&cubeStampR[cubeStampIndex],
                     cubeStampDistancesSq[cubeStampIndex]);
             stampValueIndex++;
         }
@@ -456,8 +520,8 @@ void fp_RenderIsoVolume::OnLostDevice() {
 }
 
 inline D3DXVECTOR3 fp_RenderIsoVolume::CalcNormal(
-        D3DXVECTOR3* gradient1, 
-        D3DXVECTOR3* gradient2, 
+        const D3DXVECTOR3* gradient1, 
+        const D3DXVECTOR3* gradient2, 
         float s) {
     D3DXVECTOR3 result;
     D3DXVec3Lerp(&result, gradient1, gradient2, s);
