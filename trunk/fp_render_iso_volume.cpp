@@ -381,7 +381,6 @@ HRESULT fp_RenderIsoVolume::OnResetDevice(
 }
 
 void fp_RenderIsoVolume::ConstructMesh() {
-    m_IsoLevel;
     m_NumVertices = 0;
     int indexIndex = 0;
     m_NumTriangles = 0;
