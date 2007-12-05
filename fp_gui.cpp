@@ -50,6 +50,18 @@ fp_GUI::fp_GUI()
     }
 
     iY += 24;
+    StringCchPrintf( sz, 100, L"MC voxel size: %0.1f", 2.0f ); 
+    m_SampleUI.AddStatic( IDC_MC_VOXEL_SIZE_STATIC, sz, 35, iY += 24, 125, 22 );
+    m_SampleUI.AddSlider( IDC_MC_VOXEL_SIZE, 50, iY += 24, 100, 22, 1, 100,
+        (int) (2.0f * 10.0f) );
+
+    iY += 24;
+    StringCchPrintf( sz, 100, L"MC iso level: %0.3f", 0.02f ); 
+    m_SampleUI.AddStatic( IDC_MC_ISO_LEVEL_STATIC, sz, 35, iY += 24, 125, 22 );
+    m_SampleUI.AddSlider( IDC_MC_ISO_LEVEL, 50, iY += 24, 100, 22, 1, 100,
+        (int) (0.02f * 500.0f) );
+
+    iY += 24;
     StringCchPrintf( sz, 100, L"Particle size: %0.2f", 1.0f ); 
     m_SampleUI.AddStatic( IDC_PARTICLE_SCALE_STATIC, sz, 35, iY += 24, 125, 22 );
     m_SampleUI.AddSlider( IDC_PARTICLE_SCALE, 50, iY += 24, 100, 22, 1, 100,
@@ -135,7 +147,9 @@ void fp_GUI::OnGUIEvent(
         CDXUTControl* Control,
         int& ActiveLight,
         int& NumActiveLights,
-        float& LightScale,
+        float& MCVoxelSize,
+        float& MCIsoLevel,
+        float& LightScale,        
         float& ParticleScale,
         bool& ResetSim,
         int& RenderType) {   
@@ -157,6 +171,22 @@ void fp_GUI::OnGUIEvent(
                 RenderType = (int) item->pData;            
             break;
         }
+
+        case IDC_MC_VOXEL_SIZE: 
+            MCVoxelSize = (float) (m_SampleUI.GetSlider(
+                IDC_MC_VOXEL_SIZE )->GetValue() * 0.1f);
+
+            StringCchPrintf( sz, 100, L"MC voxel size: %0.1f", MCVoxelSize ); 
+            m_SampleUI.GetStatic( IDC_MC_VOXEL_SIZE_STATIC )->SetText( sz );
+            break;
+
+        case IDC_MC_ISO_LEVEL: 
+            MCIsoLevel = (float) (m_SampleUI.GetSlider(
+                IDC_MC_ISO_LEVEL )->GetValue() * 0.002f);
+
+            StringCchPrintf( sz, 100, L"MC iso level: %0.3f", MCIsoLevel ); 
+            m_SampleUI.GetStatic( IDC_MC_ISO_LEVEL_STATIC )->SetText( sz );
+            break;
 
         case IDC_PARTICLE_SCALE: 
             ParticleScale = (float) (m_SampleUI.GetSlider(
@@ -252,8 +282,8 @@ HRESULT fp_GUI::OnD3D10ResizedSwapChain(
     m_HUD.SetLocation( BackBufferSurfaceDesc->Width-170, 0 );
     m_HUD.SetSize( 170, 170 );
     m_SampleUI.SetLocation( BackBufferSurfaceDesc->Width-170,
-            BackBufferSurfaceDesc->Height-385 );
-    m_SampleUI.SetSize( 170, 385 );
+            BackBufferSurfaceDesc->Height-FP_GUI_HEIGHT );
+    m_SampleUI.SetSize( 170, FP_GUI_HEIGHT );
 
     return S_OK;
 }
@@ -376,8 +406,8 @@ HRESULT fp_GUI::OnD3D9ResetDevice(
     m_HUD.SetLocation( BackBufferSurfaceDesc->Width-170, 0 );
     m_HUD.SetSize( 170, 170 );
     m_SampleUI.SetLocation( BackBufferSurfaceDesc->Width-170,
-            BackBufferSurfaceDesc->Height-385 );
-    m_SampleUI.SetSize( 170, 385 );
+            BackBufferSurfaceDesc->Height-FP_GUI_HEIGHT );
+    m_SampleUI.SetSize( 170, FP_GUI_HEIGHT );
 
     return S_OK;
 }

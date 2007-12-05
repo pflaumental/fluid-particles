@@ -351,8 +351,14 @@ void CALLBACK FP_OnGUIEvent(
         CDXUTControl* Control, 
         void* UserContext ) {   
     bool resetSim;
+    float mcVoxelSize = -1.0f, mcIsoLevel = -1.0f;
     g_GUI.OnGUIEvent(Event, ControlID, Control, g_ActiveLight, g_NumActiveLights,
-            g_LightScale, g_RenderSprites->m_SpriteSize, resetSim, g_RenderType);
+            mcVoxelSize, mcIsoLevel, g_LightScale, g_RenderSprites->m_SpriteSize,
+            resetSim, g_RenderType);
+    if(mcIsoLevel > 0.0f)
+        g_RenderIsoVolume->m_IsoLevel = mcIsoLevel;
+    if(mcVoxelSize > 0.0f && mcVoxelSize != g_IsoVolume->m_VoxelSize)
+        g_IsoVolume->SetVoxelSize(mcVoxelSize);
     g_RenderIsoVolume->m_NumActiveLights = g_NumActiveLights;
     if(resetSim) {
         delete g_Sim;
