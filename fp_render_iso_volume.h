@@ -36,11 +36,15 @@ struct fp_MCVertex
             m_Normal(Normal) {}
 };
 
-typedef struct {
-    int X;
-    int Y;
-    int Z;    
-} fp_VolumeIndex;
+struct fp_VolumeIndex {
+    int x;
+    int y;
+    int z;
+
+    fp_VolumeIndex() : x(0), y(0), z(0) {}
+    fp_VolumeIndex(int X, int Y, int Z) : x(X), y(Y), z(Z) {}
+    fp_VolumeIndex(const fp_VolumeIndex& Other) : x(Other.x), y(Other.y), z(Other.z) {}
+};
 
 fp_VolumeIndex operator+(const fp_VolumeIndex& A, const fp_VolumeIndex& B);
 
@@ -67,10 +71,15 @@ public:
     void UpdateSmoothingLength();
     void SetVoxelSize(float VoxelSize);
     void ConstructFromFluid();
+    inline void DistributeParticle(
+        D3DXVECTOR3 ParticlePosition, 
+        float ParticleMassDensityQuotient,
+        float MinX,
+        float MinY,
+        float MinZ);
     inline void DistributeParticleWithStamp(
             D3DXVECTOR3 ParticlePosition, 
-            float ParticleDensity,
-            float ParticleMass,
+            float ParticleMassDensityQuotient,
             float MinX,
             float MinY,
             float MinZ);
@@ -133,8 +142,8 @@ private:
     static int s_TriTable[256][16];
 
     inline D3DXVECTOR3 CalcNormal(
-        D3DXVECTOR3* gradient1, 
-        D3DXVECTOR3* gradient2, 
+        const D3DXVECTOR3* gradient1, 
+        const D3DXVECTOR3* gradient2, 
         float s);
 };
 

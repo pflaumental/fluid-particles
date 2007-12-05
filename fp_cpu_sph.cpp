@@ -357,7 +357,7 @@ inline void fp_Fluid::ProcessParticlePair(
     float PressureAt1 = m_GasConstantK * (particle1Density - m_RestDensity);
     float PressureAt2 = m_GasConstantK * (particle2Density - m_RestDensity);
     float PressureSum = PressureAt1 + PressureAt2;
-    D3DXVECTOR3 gradWSpikyValue1 = GradientWSpiky(r1, dist);
+    D3DXVECTOR3 gradWSpikyValue1 = GradientWSpiky(&r1, dist);
     D3DXVECTOR3 commonPressureTerm1 = - m_ParticleMass * PressureSum / 2.0f
             * gradWSpikyValue1;
     D3DXVECTOR3 pressureForce1 = commonPressureTerm1 / particle2Density;
@@ -379,7 +379,7 @@ inline void fp_Fluid::ProcessParticlePair(
 
     // Viscosity forces
     D3DXVECTOR3 velocityDifference1 = Particle2->m_Velocity - Particle1->m_Velocity;
-    float laplacianWViskosityValue1 = LaplacianWViscosity(r1, dist);
+    float laplacianWViskosityValue1 = LaplacianWViscosity(dist);
     D3DXVECTOR3 commonViscosityTerm1 = m_ParticleMass * m_Viscosity * velocityDifference1
             * laplacianWViskosityValue1;
     D3DXVECTOR3 viscosityForce1 = commonViscosityTerm1 / particle2Density;
@@ -391,13 +391,13 @@ inline void fp_Fluid::ProcessParticlePair(
     #endif
 
     // Surface tension
-    D3DXVECTOR3 gradWPoly6Value1 = GradientWPoly6(r1, hSq_lenRSq);
+    D3DXVECTOR3 gradWPoly6Value1 = GradientWPoly6(&r1, hSq_lenRSq);
     D3DXVECTOR3 commonGradientColorFieldTerm1 = m_ParticleMass * gradWPoly6Value1;
     m_GradientColorField[particle1Index] += commonGradientColorFieldTerm1
             / particle2Density;
     m_GradientColorField[particle2Index] -= commonGradientColorFieldTerm1
             / particle1Density;
-    float laplacianWPoly6Value1 = LaplacianWPoly6(r1, DistanceSq, hSq_lenRSq);
+    float laplacianWPoly6Value1 = LaplacianWPoly6(DistanceSq, hSq_lenRSq);
     float commonLaplacianColorFieldTerm1 = m_ParticleMass * laplacianWPoly6Value1;
     m_LaplacianColorField[particle1Index] = commonLaplacianColorFieldTerm1
             / particle2Density;
@@ -414,20 +414,22 @@ inline float fp_Fluid::WPoly6(float HSq_LenRSq) {
     return m_WPoly6Coefficient * pow(HSq_LenRSq, 3);
 }
 
-inline D3DXVECTOR3 fp_Fluid::GradientWPoly6(D3DXVECTOR3 R, float HSq_LenRSq) {
-    return R * m_GradientWPoly6Coefficient * pow(HSq_LenRSq, 2);
+inline D3DXVECTOR3 fp_Fluid::GradientWPoly6(const D3DXVECTOR3* R, float HSq_LenRSq) {
+    return (*R) * m_GradientWPoly6Coefficient * pow(HSq_LenRSq, 2);
 }
 
-inline float fp_Fluid::LaplacianWPoly6(D3DXVECTOR3 R, float LenRSq, float HSq_LenRSq) {
+inline float fp_Fluid::LaplacianWPoly6(
+        float LenRSq, 
+        float HSq_LenRSq) {
     return m_LaplacianWPoly6Coefficient * HSq_LenRSq * (LenRSq - 0.75f * HSq_LenRSq);
 }
 
-inline D3DXVECTOR3 fp_Fluid::GradientWSpiky(D3DXVECTOR3 R, float LenR) {
-    return R * (m_GradientWSpikyCoefficient / LenR) * pow(m_SmoothingLength - LenR, 2);
+inline D3DXVECTOR3 fp_Fluid::GradientWSpiky(const D3DXVECTOR3* R, float LenR) {
+    return (*R) * (m_GradientWSpikyCoefficient / LenR) * pow(m_SmoothingLength - LenR, 2);
 }
 
 
-inline float fp_Fluid::LaplacianWViscosity(D3DXVECTOR3 R, float LenR) {
+inline float fp_Fluid::LaplacianWViscosity(float LenR) {
     return m_LaplacianWViscosityCoefficient * (1.0f - LenR / m_SmoothingLength);
 }
 
