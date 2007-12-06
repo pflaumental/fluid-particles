@@ -56,10 +56,10 @@ fp_GUI::fp_GUI()
         (int) (2.0f * 10.0f) );
 
     iY += 24;
-    StringCchPrintf( sz, 100, L"MC iso level: %0.3f", 0.02f ); 
+    StringCchPrintf( sz, 100, L"MC iso level: %0.3f", 0.01f ); 
     m_SampleUI.AddStatic( IDC_MC_ISO_LEVEL_STATIC, sz, 35, iY += 24, 125, 22 );
     m_SampleUI.AddSlider( IDC_MC_ISO_LEVEL, 50, iY += 24, 100, 22, 1, 100,
-        (int) (0.02f * 500.0f) );
+        (int) (0.01f * 1000.0f) );
 
     iY += 24;
     StringCchPrintf( sz, 100, L"Particle size: %0.2f", 1.0f ); 
@@ -182,7 +182,7 @@ void fp_GUI::OnGUIEvent(
 
         case IDC_MC_ISO_LEVEL: 
             MCIsoLevel = (float) (m_SampleUI.GetSlider(
-                IDC_MC_ISO_LEVEL )->GetValue() * 0.002f);
+                IDC_MC_ISO_LEVEL )->GetValue() * 0.001f);
 
             StringCchPrintf( sz, 100, L"MC iso level: %0.3f", MCIsoLevel ); 
             m_SampleUI.GetStatic( IDC_MC_ISO_LEVEL_STATIC )->SetText( sz );

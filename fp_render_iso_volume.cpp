@@ -133,7 +133,7 @@ void fp_IsoVolume::ConstructFromFluid() {
     for (int i = 0; i < NumParticles; i++) {
         D3DXVECTOR3 particlePosition = Particles[i].m_Position;
         float particleDensity = Densities[i];
-        DistributeParticleWithStamp(particlePosition, ParticleMass / particleDensity, minX, minY,
+        DistributeParticle(particlePosition, ParticleMass / particleDensity, minX, minY,
                 minZ);
     }
 }
@@ -343,7 +343,7 @@ fp_RenderIsoVolume::fp_RenderIsoVolume(
         :
         m_IsoVolume(IsoVolume),
         m_IsoLevel(IsoLevel) {    
-    D3DCOLORVALUE diffuse  = {0.8f, 0.8f, 0.8f, 1.0f};
+    D3DCOLORVALUE diffuse  = {0.5f, 0.6f, 1.0, 1.0f};
     D3DCOLORVALUE ambient  = {0.05f, 0.05f, 0.05f, 1.0f};
     D3DCOLORVALUE emmisive = {0.0f, 0.0f, 0.0f, 1.0f};
     D3DCOLORVALUE specular = {0.5f, 0.5f, 0.5f, 1.0f};

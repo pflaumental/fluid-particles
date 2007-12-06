@@ -364,12 +364,13 @@ void CALLBACK FP_OnGUIEvent(
         g_IsoVolume->SetVoxelSize(mcVoxelSize);
     g_RenderIsoVolume->m_NumActiveLights = g_NumActiveLights;
     if(resetSim) {
+		mcVoxelSize = g_IsoVolume->m_VoxelSize;
         delete g_Sim;
         delete g_IsoVolume;
         D3DXVECTOR3 center(0.0f, 0.0f, 0.0f);
         g_Sim = new fp_Fluid(NUM_PARTICLES_X, NUM_PARTICLES_Y, NUM_PARTICLES_Z,
             PARTICLE_SPACING_X, PARTICLE_SPACING_Y, PARTICLE_SPACING_Z, center);
-        g_IsoVolume = new fp_IsoVolume(g_Sim);
+        g_IsoVolume = new fp_IsoVolume(g_Sim, mcVoxelSize);
         g_RenderSprites->m_Particles = g_Sim->m_Particles;
         g_RenderIsoVolume->m_IsoVolume = g_IsoVolume;
     }
