@@ -13,8 +13,8 @@ fp_RenderSprites::fp_RenderSprites(int NumParticles, fp_FluidParticle* Particles
 }
 
 fp_RenderSprites::~fp_RenderSprites() {
-    OnLostDevice();
-    OnDetroyDevice();
+	OnLostDevice();
+	OnDetroyDevice();
 }
 
 HRESULT fp_RenderSprites::OnCreateDevice(                                 
@@ -94,11 +94,9 @@ void fp_RenderSprites::OnFrameRender(
 }
 
 void fp_RenderSprites::OnDetroyDevice() {
-    if( m_Texture != NULL )
-        m_Texture->Release();
+    SAFE_RELEASE(m_Texture);
 }
 
-void fp_RenderSprites::OnLostDevice() {
-    if( m_VertexBuffer != NULL )        
-        m_VertexBuffer->Release();
+void fp_RenderSprites::OnLostDevice() {   
+    SAFE_RELEASE(m_VertexBuffer);
 }
