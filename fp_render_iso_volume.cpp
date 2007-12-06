@@ -356,8 +356,8 @@ fp_RenderIsoVolume::fp_RenderIsoVolume(
 }
 
 fp_RenderIsoVolume::~fp_RenderIsoVolume() {
-    OnLostDevice();
-    OnDetroyDevice();
+	OnLostDevice();
+	OnDetroyDevice();
 }
 
 HRESULT fp_RenderIsoVolume::OnCreateDevice(                                 
@@ -565,11 +565,9 @@ void fp_RenderIsoVolume::OnDetroyDevice() {
 
 }
 
-void fp_RenderIsoVolume::OnLostDevice() {
-    if( m_VertexBuffer != NULL )        
-        m_VertexBuffer->Release();
-    if( m_IndexBuffer != NULL )        
-        m_IndexBuffer->Release();
+void fp_RenderIsoVolume::OnLostDevice() {     
+    SAFE_RELEASE(m_VertexBuffer);    
+    SAFE_RELEASE(m_IndexBuffer);
 }
 
 inline D3DXVECTOR3 fp_RenderIsoVolume::CalcNormal(
