@@ -46,6 +46,7 @@ public:
     int m_NumCellsX;
     int m_NumCellsY;
     int m_NumCellsZ;
+    int m_NumCellsYZ;
     float m_CellWidth;
     float m_MinX;
     float m_MaxX;
@@ -89,7 +90,11 @@ public:
     float m_GradientWPoly6Coefficient;
     float m_LaplacianWPoly6Coefficient;
     float m_GradientWSpikyCoefficient;
-    float m_LaplacianWViscosityCoefficient;    
+    float m_LaplacianWViscosityCoefficient;
+
+    float m_GlassRadius;
+    float m_GlassFloor;
+    D3DXVECTOR3 m_GlasPosition;
     
     fp_Fluid(
         int NumParticlesX,
@@ -99,6 +104,8 @@ public:
         float SpacingY,
         float SpacingZ,
         D3DXVECTOR3 Center,
+        float GlassRadius,
+        float GlassFloor,
         float SmoothingLenght = FP_DEFAULT_FLUID_SMOOTHING_LENGTH,
         float GasConstantK = FP_DEFAULT_FLUID_GAS_CONSTANT_K,        
         float Viscosity = FP_DEFAULT_FLUID_VISCOSITY,

@@ -16,14 +16,17 @@
 //#define DEBUG_VS   // Uncomment this line to debug D3D9 vertex shaders 
 //#define DEBUG_PS   // Uncomment this line to debug D3D9 pixel shaders 
 
-#define NUM_PARTICLES_X 12
-#define NUM_PARTICLES_Y 12
-#define NUM_PARTICLES_Z 12
-#define NUM_PARTICLES NUM_PARTICLES_X * NUM_PARTICLES_Y * NUM_PARTICLES_Z
+#define FP_NUM_PARTICLES_X 12
+#define FP_NUM_PARTICLES_Y 12
+#define FP_NUM_PARTICLES_Z 12
+#define FP_NUM_PARTICLES FP_NUM_PARTICLES_X * FP_NUM_PARTICLES_Y * FP_NUM_PARTICLES_Z
 
-#define PARTICLE_SPACING_X 1.0f
-#define PARTICLE_SPACING_Y PARTICLE_SPACING_X
-#define PARTICLE_SPACING_Z PARTICLE_SPACING_X
+#define FP_PARTICLE_SPACING_X 1.0f
+#define FP_PARTICLE_SPACING_Y FP_PARTICLE_SPACING_X
+#define FP_PARTICLE_SPACING_Z FP_PARTICLE_SPACING_X
+
+#define FP_GLASS_RADIUS 3.0f
+#define FP_GLASS_FLOOR -4.0f
 
 //--------------------------------------------------------------------------------------
 // Global variables
@@ -157,9 +160,6 @@ int WINAPI wWinMain(
     _CrtSetDbgFlag( _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF );
     #endif
 
-	int foo = sizeof(int*);
-
-
     // DXUT will create and use the best device (either D3D9 or D3D10) 
     // that is available on the system depending on which D3D callbacks are set below
 
@@ -205,9 +205,10 @@ void FP_InitApp() {
     g_NumActiveLights = 1;
     g_LightScale = 1.0f;
     D3DXVECTOR3 center(0.0f, 0.0f, 0.0f);
-    g_Sim = new fp_Fluid(NUM_PARTICLES_X, NUM_PARTICLES_Y, NUM_PARTICLES_Z,
-            PARTICLE_SPACING_X, PARTICLE_SPACING_Y, PARTICLE_SPACING_Z, center);
-    g_RenderSprites = new fp_RenderSprites(NUM_PARTICLES, g_Sim->m_Particles);
+    g_Sim = new fp_Fluid(FP_NUM_PARTICLES_X, FP_NUM_PARTICLES_Y, FP_NUM_PARTICLES_Z,
+            FP_PARTICLE_SPACING_X, FP_PARTICLE_SPACING_Y, FP_PARTICLE_SPACING_Z, center,
+			FP_GLASS_RADIUS, FP_GLASS_FLOOR);
+    g_RenderSprites = new fp_RenderSprites(FP_NUM_PARTICLES, g_Sim->m_Particles);
     g_IsoVolume = new fp_IsoVolume(g_Sim);
     g_RenderIsoVolume = new fp_RenderIsoVolume(g_IsoVolume, 3);
     g_RenderIsoVolume->m_NumActiveLights = g_NumActiveLights;
@@ -368,8 +369,9 @@ void CALLBACK FP_OnGUIEvent(
         delete g_Sim;
         delete g_IsoVolume;
         D3DXVECTOR3 center(0.0f, 0.0f, 0.0f);
-        g_Sim = new fp_Fluid(NUM_PARTICLES_X, NUM_PARTICLES_Y, NUM_PARTICLES_Z,
-            PARTICLE_SPACING_X, PARTICLE_SPACING_Y, PARTICLE_SPACING_Z, center);
+        g_Sim = new fp_Fluid(FP_NUM_PARTICLES_X, FP_NUM_PARTICLES_Y, FP_NUM_PARTICLES_Z,
+            FP_PARTICLE_SPACING_X, FP_PARTICLE_SPACING_Y, FP_PARTICLE_SPACING_Z, center,
+			FP_GLASS_RADIUS, FP_GLASS_FLOOR);
         g_IsoVolume = new fp_IsoVolume(g_Sim, mcVoxelSize);
         g_RenderSprites->m_Particles = g_Sim->m_Particles;
         g_RenderIsoVolume->m_IsoVolume = g_IsoVolume;

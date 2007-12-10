@@ -363,7 +363,7 @@ fp_RenderIsoVolume::~fp_RenderIsoVolume() {
 HRESULT fp_RenderIsoVolume::OnCreateDevice(                                 
         IDirect3DDevice9* d3dDevice,
         const D3DSURFACE_DESC* pBackBufferSurfaceDesc ) {
-    HRESULT hr;
+    //HRESULT hr;
 
     return S_OK;
 }
@@ -545,7 +545,7 @@ void fp_RenderIsoVolume::OnFrameRender(
         float ElapsedTime ) {  
     d3dDevice->SetStreamSource(0, m_VertexBuffer, 0, sizeof(fp_MCVertex));
     d3dDevice->SetIndices(m_IndexBuffer);
-    d3dDevice->SetFVF(fp_MCVertex.FVF_Flags);
+	d3dDevice->SetFVF(fp_MCVertex::FVF_Flags);
     d3dDevice->SetMaterial(&m_Material);
     int i;
     for (i=0; i < m_NumActiveLights; i++) {        
