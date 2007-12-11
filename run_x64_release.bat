@@ -1,0 +1,1 @@
+@start "" "%CD%\x64\Release\Fluid particles.exe" "-forceapi:9"
