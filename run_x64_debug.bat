@@ -1,1 +1,1 @@
-@start "" "%CD%\x64\Debug\Fluid particles.exe" "-forceapi:9"
+@start "" "%CD%\x64\Debug\Fluid particles.exe" "-forceapi:9" "-width:1024" "-height:768"
