@@ -462,29 +462,6 @@ inline void fp_Fluid::ProcessParticlePair(
 
 }
 
-inline float fp_Fluid::WPoly6(float HSq_LenRSq) {
-    return m_WPoly6Coefficient * pow(HSq_LenRSq, 3);
-}
-
-inline D3DXVECTOR3 fp_Fluid::GradientWPoly6(const D3DXVECTOR3* R, float HSq_LenRSq) {
-    return (*R) * m_GradientWPoly6Coefficient * pow(HSq_LenRSq, 2);
-}
-
-inline float fp_Fluid::LaplacianWPoly6(
-        float LenRSq, 
-        float HSq_LenRSq) {
-    return m_LaplacianWPoly6Coefficient * HSq_LenRSq * (LenRSq - 0.75f * HSq_LenRSq);
-}
-
-inline D3DXVECTOR3 fp_Fluid::GradientWSpiky(const D3DXVECTOR3* R, float LenR) {
-    return (*R) * (m_GradientWSpikyCoefficient / LenR) * pow(m_SmoothingLength - LenR, 2);
-}
-
-
-inline float fp_Fluid::LaplacianWViscosity(float LenR) {
-    return m_LaplacianWViscosityCoefficient * (1.0f - LenR / m_SmoothingLength);
-}
-
 fp_Fluid::~fp_Fluid() {
     delete[] m_Particles;
     delete m_Grid;
