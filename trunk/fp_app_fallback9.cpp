@@ -8,12 +8,12 @@
 
 #include "fp_gui.h"
 #include "fp_global.h"
+#include "fp_cpu_sph.h"
 #include "fp_render_sprites.h"
 #include "fp_render_iso_volume.h"
 
 //#define DEBUG_VS   // Uncomment this line to debug D3D9 vertex shaders 
 //#define DEBUG_PS   // Uncomment this line to debug D3D9 pixel shaders 
-#define FP_MAX_LIGHTS 3
 
 #define IDC_NUM_LIGHTS          6
 #define IDC_NUM_LIGHTS_STATIC   7
@@ -36,6 +36,8 @@ extern int                     g_RenderType;
 
 extern D3DXVECTOR3*            g_Particle;
 extern int                     g_Paticles;
+
+extern fp_Fluid*               g_Sim;
 
 // Direct3D9 resources
 ID3DXEffect*            g_Effect9 = NULL;       // D3DX effect interface
@@ -183,7 +185,8 @@ HRESULT CALLBACK FP_OnD3D9CreateDevice(
     D3DXVECTOR3 vecEye(0.0f, 0.0f, -15.0f);
     D3DXVECTOR3 vecAt (0.0f, 0.0f, -0.0f);
     g_Camera.SetViewParams( &vecEye, &vecAt );
-    g_Camera.SetRadius( FP_OBJECT_RADIUS*3.0f, FP_OBJECT_RADIUS*0.5f, FP_OBJECT_RADIUS*10.0f );  
+    g_Camera.SetRadius( FP_OBJECT_RADIUS*3.0f, FP_OBJECT_RADIUS*0.5f, FP_OBJECT_RADIUS*100.0f );
+    g_Camera.SetGlassPosition(&g_Sim->m_GlassPosition);
 
     return S_OK;
 }

@@ -128,7 +128,9 @@ fp_Fluid::fp_Fluid(
         D3DXVECTOR3 Center,
         float GlassRadius,
         float GlassFloor,
+        D3DXVECTOR3 Gravity,
         float SmoothingLenght,
+        float CollisionRadius,
         float GasConstantK,
         float Viscosity,
         float SurfaceTension,
@@ -139,9 +141,10 @@ fp_Fluid::fp_Fluid(
         :
         m_NumParticles(NumParticlesX * NumParticlesY * NumParticlesZ),        
         m_Particles(new fp_FluidParticle[NumParticlesX * NumParticlesY * NumParticlesZ]),
-        m_GlasPosition(Center),
+        m_GlassPosition(Center),
         m_GlassRadius(GlassRadius),
         m_GlassFloor(GlassFloor),
+        m_Gravity(Gravity),
         m_GasConstantK(GasConstantK),
         m_Viscosity(Viscosity),
         m_SurfaceTension(SurfaceTension),
@@ -149,6 +152,7 @@ fp_Fluid::fp_Fluid(
         m_GradientColorFieldThresholdSq(GradientColorFieldThreshold
                 * GradientColorFieldThreshold),
         m_DampingCoefficient(DampingCoefficient) {
+    SetCollisionRadius(CollisionRadius);
     m_ParticleMass = ParticleMass; // Needed in SetSmoothingLength(...)
     m_Grid = NULL;
     SetSmoothingLength(SmoothingLenght);
@@ -189,6 +193,15 @@ fp_Fluid::fp_Fluid(
         tmpDensities[i] = m_InitialDensity;
     }
     m_NewDensities = tmpDensities;
+}
+
+void fp_Fluid::SetCollisionRadius(float CollisionRadius) {
+    m_CollisionRadius =CollisionRadius;
+    m_CollisionRadiusSq = CollisionRadius * CollisionRadius;
+    m_GlassRadiusMinusCollisionRadius = m_GlassRadius - CollisionRadius;
+    m_GlassRadiusMinusCollisionRadiusSq = m_GlassRadiusMinusCollisionRadius
+        * m_GlassRadiusMinusCollisionRadius ;
+    m_GlassFloorPlusCollisionRadius = m_GlassFloor + CollisionRadius;
 }
 
 void fp_Fluid::SetSmoothingLength(float SmoothingLength) {
@@ -295,7 +308,7 @@ void fp_Fluid::Update(float ElapsedTime) {
                                     D3DXVECTOR3 toNeighbour = neighborParticle->m_Position
                                             - particle->m_Position;
                                     float distSq = D3DXVec3LengthSq(&toNeighbour);
-                                    if(distSq < FP_DEFAULT_FLUID_SMOOTHING_LENGTH_SQ) {                                        
+                                    if(distSq < m_SmoothingLengthSq) {                                        
                                         ProcessParticlePair(particle, neighborParticle,
                                                 distSq);
                                     }
@@ -322,10 +335,12 @@ void fp_Fluid::Update(float ElapsedTime) {
             totalForce += surfaceTensionForce;
         }
         D3DXVECTOR3 newVelocity = oldVelocityContribution 
-                + totalForce * ElapsedTime / m_OldDensities[i];        
+                + (totalForce / m_OldDensities[i] + m_Gravity) * ElapsedTime;        
         m_Particles[i].m_Velocity = newVelocity;
         m_Particles[i].m_Position += 0.5f * ElapsedTime
-                * (oldVelocityContribution + newVelocity);
+                * (oldVelocityContribution + newVelocity);        
+
+        HandleGlassCollision(&m_Particles[i]);
 
         m_PressureAndViscosityForces[i] = D3DXVECTOR3(0.0f, 0.0f, 0.0f);        
         m_GradientColorField[i] = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
@@ -340,6 +355,36 @@ void fp_Fluid::Update(float ElapsedTime) {
     float* tmpDensities = m_OldDensities;
     m_OldDensities = m_NewDensities;
     m_NewDensities = tmpDensities;
+}
+
+inline void fp_Fluid::HandleGlassCollision(fp_FluidParticle* Particle) {
+    D3DXVECTOR3 particlePosition = Particle->m_Position;
+    //// Handle Collision with floor    
+    float minPositionY = m_GlassPosition.y + m_GlassFloorPlusCollisionRadius;
+    if(particlePosition.y < minPositionY) {
+        // Position particle on floor
+        Particle->m_Position.y = minPositionY;
+        // Invert it's velocity along y-Axis
+        Particle->m_Velocity.y = -Particle->m_Velocity.y;
+    }
+
+    // Handle collision with side
+    D3DXVECTOR3 particleToCenter = m_GlassPosition - particlePosition;
+    particleToCenter.y = 0.0f;
+    float particleToCenterLenSq = D3DXVec3LengthSq(&particleToCenter);
+    if(particleToCenterLenSq > m_GlassRadiusMinusCollisionRadiusSq) {
+        // Position particle on side
+        float particleToCenterLen = sqrt(particleToCenterLenSq);
+        float scale = (particleToCenterLen - m_GlassRadiusMinusCollisionRadius)
+                / particleToCenterLen;
+        Particle->m_Position += scale * particleToCenter;
+        // Invert it's velocity along the sides normal
+        D3DXVECTOR3 normal;
+        D3DXVec3Normalize(&normal, &particleToCenter);
+        // R = -2 * (N*V) * N + V
+        Particle->m_Velocity += -2.0f * D3DXVec3Dot(&normal, &Particle->m_Velocity)
+                * normal;
+    }
 }
 
 inline void fp_Fluid::ProcessParticlePair(
@@ -377,8 +422,8 @@ inline void fp_Fluid::ProcessParticlePair(
     D3DXVec3Normalize(&pressureForce1Normalized, &pressureForce1);
     D3DXVec3Normalize(&r1Normalized, &r1);
     float testDot = D3DXVec3Dot(&pressureForce1Normalized, &r1Normalized);
-    assert(pressureForce1LenSq < 0.001f || pressureForce1LenSq > -0.001f
-            || testDot > 0.99f);
+    //assert(pressureForce1LenSq < 0.1f || pressureForce1LenSq > -0.1f
+    //        || testDot > 0.99f);
     assert(m_OldDensities[particle1Index] >= m_InitialDensity);
     assert(pressureForce1LenSq < FP_DEBUG_MAX_FORCE_SQ);
 

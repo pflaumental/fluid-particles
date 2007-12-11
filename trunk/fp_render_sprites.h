@@ -7,8 +7,6 @@
 #include "fp_global.h"
 #include "fp_cpu_sph.h"
 
-#define FP_RENDER_DEFAULT_SPRITE_SIZE 1.0f
-
 //--------------------------------------------------------------------------------------
 // Fluid particles render technique: Point Sprites
 //--------------------------------------------------------------------------------------

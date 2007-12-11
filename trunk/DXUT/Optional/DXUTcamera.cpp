@@ -800,6 +800,9 @@ CModelViewerCamera::CModelViewerCamera()
     m_nZoomButtonMask         = MOUSE_WHEEL;
     m_nRotateCameraButtonMask = MOUSE_RIGHT_BUTTON;
     m_bDragSinceLastUpdate    = true;
+
+    // User Implemented:
+    m_IsLeftButtonDrag = false;
 }
 
 
@@ -915,7 +918,7 @@ VOID CModelViewerCamera::FrameMove( FLOAT fElapsedTime )
 
 void CModelViewerCamera::SetDragRect( RECT &rc )
 {
-    CBaseCamera::SetDragRect( rc );
+    CBaseCamera::SetDragRect( rc );    
 
     m_WorldArcBall.SetOffset( rc.left, rc.top );
     m_ViewArcBall.SetOffset( rc.left, rc.top );
@@ -965,6 +968,9 @@ void CModelViewerCamera::SetViewParams( D3DXVECTOR3* pvEyePt, D3DXVECTOR3* pvLoo
     m_bDragSinceLastUpdate = true;
 }
 
+void CModelViewerCamera::SetGlassPosition(D3DXVECTOR3* GlassPosition) {
+    m_GlassPosition = GlassPosition;
+}
 
 
 //--------------------------------------------------------------------------------------
@@ -980,7 +986,12 @@ LRESULT CModelViewerCamera::HandleMessages( HWND hWnd, UINT uMsg, WPARAM wParam,
     {
         int iMouseX = (short)LOWORD(lParam);
         int iMouseY = (short)HIWORD(lParam);
-        m_WorldArcBall.OnBegin( iMouseX, iMouseY );
+        
+        // Usercode
+        m_LastLeftButtonDragX = iMouseX;
+        m_LastLeftButtonDragY = iMouseY;
+        m_IsLeftButtonDrag = true;
+        //m_WorldArcBall.OnBegin( iMouseX, iMouseY );
     }
 
     if( ( (uMsg == WM_LBUTTONDOWN || uMsg == WM_LBUTTONDBLCLK ) && m_nRotateCameraButtonMask & MOUSE_LEFT_BUTTON) ||
@@ -995,16 +1006,29 @@ LRESULT CModelViewerCamera::HandleMessages( HWND hWnd, UINT uMsg, WPARAM wParam,
     if( uMsg == WM_MOUSEMOVE )
     {
         int iMouseX = (short)LOWORD(lParam);
-        int iMouseY = (short)HIWORD(lParam);
-        m_WorldArcBall.OnMove( iMouseX, iMouseY );
+        int iMouseY = (short)HIWORD(lParam);        
+        // Usercode
+        if(m_IsLeftButtonDrag) {
+            float dragX = (iMouseX - m_LastLeftButtonDragX) / ((float)m_DragRect.right);
+            float dragY = (iMouseY - m_LastLeftButtonDragY) / ((float)m_DragRect.bottom);
+            m_LastLeftButtonDragX = iMouseX;
+            m_LastLeftButtonDragY = iMouseY;
+            m_GlassPosition->x += 100.0f * dragX;
+            m_GlassPosition->y -= 100.0f * dragY;
+        }
+        //m_WorldArcBall.OnMove( iMouseX, iMouseY );
         m_ViewArcBall.OnMove( iMouseX, iMouseY );
     }
 
     if( (uMsg == WM_LBUTTONUP && m_nRotateModelButtonMask & MOUSE_LEFT_BUTTON) ||
         (uMsg == WM_MBUTTONUP && m_nRotateModelButtonMask & MOUSE_MIDDLE_BUTTON) ||
         (uMsg == WM_RBUTTONUP && m_nRotateModelButtonMask & MOUSE_RIGHT_BUTTON) )
-    {
-        m_WorldArcBall.OnEnd();
+    {        
+        // Usercode
+        m_LastLeftButtonDragX = -1;
+        m_LastLeftButtonDragY = -1;
+        m_IsLeftButtonDrag = false;
+        //m_WorldArcBall.OnEnd();
     }
 
     if( (uMsg == WM_LBUTTONUP && m_nRotateCameraButtonMask & MOUSE_LEFT_BUTTON) ||
@@ -1022,7 +1046,11 @@ LRESULT CModelViewerCamera::HandleMessages( HWND hWnd, UINT uMsg, WPARAM wParam,
                 (m_nRotateModelButtonMask & MOUSE_MIDDLE_BUTTON) ||
                 (m_nRotateModelButtonMask & MOUSE_RIGHT_BUTTON) )
             {
-                m_WorldArcBall.OnEnd();
+                // Usercode
+                m_LastLeftButtonDragX = -1;
+                m_LastLeftButtonDragY = -1;
+                m_IsLeftButtonDrag = false;
+                //m_WorldArcBall.OnEnd();
             }
         
             if( (m_nRotateCameraButtonMask & MOUSE_LEFT_BUTTON) ||

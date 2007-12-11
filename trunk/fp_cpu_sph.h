@@ -9,25 +9,7 @@
 
 #include "fp_global.h"
 
-#define FP_DEFAULT_FLUID_SMOOTHING_LENGTH 4.0f//0.01f
-#define FP_DEFAULT_FLUID_SMOOTHING_LENGTH_SQ FP_DEFAULT_FLUID_SMOOTHING_LENGTH\
-        * FP_DEFAULT_FLUID_SMOOTHING_LENGTH
-#define FP_DEFAULT_FLUID_GAS_CONSTANT_K 5.0f
-#define FP_DEFAULT_FLUID_SURFACE_TENSION 0.005f//0.0003f
-#define FP_DEFAULT_FLUID_GRADIENT_COLORFIELD_THRESHOLD 0.4f
-#define FP_DEFAULT_FLUID_VISCOSITY 0.001f
-#define FP_DEFAULT_FLUID_PARTICLE_MASS 0.00020543f
-#define FP_DEFAULT_FLUID_REST_DENSITY_COEFFICIENT 20.0f // TODO: tune
-#define FP_DEFAULT_FLUID_DAMPING_COEFFICIENT 0.90f // TODO: tune
-#define FP_DEFAULT_INITIAL_CELL_CAPACITY 10
-#define FP_INITIAL_GRID_SIDELENGTH 50
-#define FP_INITIAL_GRID_CAPACITY FP_INITIAL_GRID_SIDELENGTH \
-        * FP_INITIAL_GRID_SIDELENGTH * FP_INITIAL_GRID_SIDELENGTH
-#define FP_FLUID_MAX_POS 150.0f
 
-// For Debug:
-#define FP_DEBUG_MAX_FORCE 0.5f
-#define FP_DEBUG_MAX_FORCE_SQ FP_DEBUG_MAX_FORCE * FP_DEBUG_MAX_FORCE
 
 typedef struct {
     D3DXVECTOR3 m_Position;
@@ -80,6 +62,8 @@ public:
     float m_SmoothingLengthSq;
     float m_SmoothingLengthSqInv;
     float m_SmoothingLengthPow3Inv;
+    float m_CollisionRadius;
+    float m_CollisionRadiusSq;
     float m_InitialDensity;
     float m_RestDensity;
     float m_RestDensityCoefficient;
@@ -93,9 +77,14 @@ public:
     float m_LaplacianWViscosityCoefficient;
 
     float m_GlassRadius;
+    float m_GlassRadiusMinusCollisionRadius;
+    float m_GlassRadiusMinusCollisionRadiusSq;
     float m_GlassFloor;
-    D3DXVECTOR3 m_GlasPosition;
+    float m_GlassFloorPlusCollisionRadius;
+    D3DXVECTOR3 m_GlassPosition;
     
+    D3DXVECTOR3 m_Gravity;
+
     fp_Fluid(
         int NumParticlesX,
         int NumParticlesY,
@@ -106,7 +95,9 @@ public:
         D3DXVECTOR3 Center,
         float GlassRadius,
         float GlassFloor,
+        D3DXVECTOR3 Gravity = FP_DEFAULT_GRAVITY,
         float SmoothingLenght = FP_DEFAULT_FLUID_SMOOTHING_LENGTH,
+        float CollisionRadius = FP_DEFAULT_FLUID_COLLISION_RADIUS,
         float GasConstantK = FP_DEFAULT_FLUID_GAS_CONSTANT_K,        
         float Viscosity = FP_DEFAULT_FLUID_VISCOSITY,
         float SurfaceTension = FP_DEFAULT_FLUID_SURFACE_TENSION,
@@ -116,6 +107,7 @@ public:
         float DampingCoefficient = FP_DEFAULT_FLUID_DAMPING_COEFFICIENT);
     ~fp_Fluid();
     void Update(float ElapsedTime);
+    void SetCollisionRadius(float CollisionRadius);
     void SetSmoothingLength(float SmoothingLength);
     void SetParticleMass(float ParticleMass);
     float* GetDensities();
@@ -140,7 +132,7 @@ private:
     D3DXVECTOR3* m_GradientColorField;
     float* m_LaplacianColorField;
 
-
+    inline void HandleGlassCollision(fp_FluidParticle* Particle);
     inline void ProcessParticlePair(
             fp_FluidParticle* Particle1, 
             fp_FluidParticle* Particle2,
