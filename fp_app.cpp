@@ -16,17 +16,7 @@
 //#define DEBUG_VS   // Uncomment this line to debug D3D9 vertex shaders 
 //#define DEBUG_PS   // Uncomment this line to debug D3D9 pixel shaders 
 
-#define FP_NUM_PARTICLES_X 12
-#define FP_NUM_PARTICLES_Y 12
-#define FP_NUM_PARTICLES_Z 12
-#define FP_NUM_PARTICLES FP_NUM_PARTICLES_X * FP_NUM_PARTICLES_Y * FP_NUM_PARTICLES_Z
 
-#define FP_PARTICLE_SPACING_X 1.0f
-#define FP_PARTICLE_SPACING_Y FP_PARTICLE_SPACING_X
-#define FP_PARTICLE_SPACING_Z FP_PARTICLE_SPACING_X
-
-#define FP_GLASS_RADIUS 3.0f
-#define FP_GLASS_FLOOR -4.0f
 
 //--------------------------------------------------------------------------------------
 // Global variables
@@ -203,7 +193,7 @@ int WINAPI wWinMain(
 void FP_InitApp() {
     g_ActiveLight = 0;
     g_NumActiveLights = 1;
-    g_LightScale = 1.0f;
+    g_LightScale = FP_DEFAULT_LIGHT_SCALE;
     D3DXVECTOR3 center(0.0f, 0.0f, 0.0f);
     g_Sim = new fp_Fluid(FP_NUM_PARTICLES_X, FP_NUM_PARTICLES_Y, FP_NUM_PARTICLES_Z,
             FP_PARTICLE_SPACING_X, FP_PARTICLE_SPACING_Y, FP_PARTICLE_SPACING_Z, center,
@@ -375,6 +365,7 @@ void CALLBACK FP_OnGUIEvent(
         g_IsoVolume = new fp_IsoVolume(g_Sim, mcVoxelSize);
         g_RenderSprites->m_Particles = g_Sim->m_Particles;
         g_RenderIsoVolume->m_IsoVolume = g_IsoVolume;
+        g_Camera.SetGlassPosition(&g_Sim->m_GlassPosition);
     }
 }
 

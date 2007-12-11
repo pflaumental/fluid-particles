@@ -251,7 +251,7 @@ public:
     void SetViewParams( D3DXVECTOR3* pvEyePt, D3DXVECTOR3* pvLookatPt );
     void SetButtonMasks( int nRotateModelButtonMask = MOUSE_LEFT_BUTTON, int nZoomButtonMask = MOUSE_WHEEL, int nRotateCameraButtonMask = MOUSE_RIGHT_BUTTON ) { m_nRotateModelButtonMask = nRotateModelButtonMask, m_nZoomButtonMask = nZoomButtonMask; m_nRotateCameraButtonMask = nRotateCameraButtonMask; }
     void SetAttachCameraToModel( bool bEnable = false ) { m_bAttachCameraToModel = bEnable; }
-    void SetWindow( int nWidth, int nHeight, float fArcballRadius=0.9f ) { m_WorldArcBall.SetWindow( nWidth, nHeight, fArcballRadius ); m_ViewArcBall.SetWindow( nWidth, nHeight, fArcballRadius ); }
+    void SetWindow( int nWidth, int nHeight, float fArcballRadius=0.9f ) { m_WorldArcBall.SetWindow( nWidth, nHeight, fArcballRadius ); m_DragRect.right = nWidth; m_DragRect.bottom = nHeight; m_ViewArcBall.SetWindow( nWidth, nHeight, fArcballRadius ); }
     void SetRadius( float fDefaultRadius=5.0f, float fMinRadius=1.0f, float fMaxRadius=FLT_MAX  ) { m_fDefaultRadius = m_fRadius = fDefaultRadius; m_fMinRadius = fMinRadius; m_fMaxRadius = fMaxRadius; m_bDragSinceLastUpdate = true; }
     void SetModelCenter( D3DXVECTOR3 vModelCenter ) { m_vModelCenter = vModelCenter; }
     void SetLimitPitch( bool bLimitPitch ) { m_bLimitPitch = bLimitPitch; }
@@ -262,6 +262,9 @@ public:
     const D3DXMATRIX* GetWorldMatrix() const { return &m_mWorld; }
     void SetWorldMatrix( D3DXMATRIX &mWorld ) { m_mWorld = mWorld; m_bDragSinceLastUpdate = true; }
 
+    // Usercode
+    void SetGlassPosition(D3DXVECTOR3* GlassPosition);
+
 protected:
     CD3DArcBall  m_WorldArcBall;
     CD3DArcBall  m_ViewArcBall;
@@ -269,6 +272,13 @@ protected:
     D3DXMATRIX   m_mModelLastRot;        // Last arcball rotation matrix for model 
     D3DXMATRIX   m_mModelRot;            // Rotation matrix of model
     D3DXMATRIX   m_mWorld;               // World matrix of model
+
+    // User imlemented:
+    int m_LastLeftButtonDragX;
+    int m_LastLeftButtonDragY;
+    bool m_IsLeftButtonDrag;
+    RECT m_DragRect;
+    D3DXVECTOR3* m_GlassPosition;
 
     int          m_nRotateModelButtonMask;
     int          m_nZoomButtonMask;

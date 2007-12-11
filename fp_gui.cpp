@@ -50,22 +50,22 @@ fp_GUI::fp_GUI()
     }
 
     iY += 24;
-    StringCchPrintf( sz, 100, L"MC voxel size: %0.1f", 2.0f ); 
+    StringCchPrintf( sz, 100, L"MC voxel size: %0.1f", FP_DEFAULT_ISOVOLUME_VOXELSIZE ); 
     m_SampleUI.AddStatic( IDC_MC_VOXEL_SIZE_STATIC, sz, 35, iY += 24, 125, 22 );
     m_SampleUI.AddSlider( IDC_MC_VOXEL_SIZE, 50, iY += 24, 100, 22, 1, 100,
-        (int) (2.0f * 10.0f) );
+        (int) (FP_DEFAULT_ISOVOLUME_VOXELSIZE * 10.0f) );
 
     iY += 24;
-    StringCchPrintf( sz, 100, L"MC iso level: %0.3f", 0.01f ); 
+    StringCchPrintf( sz, 100, L"MC iso level: %0.3f", FP_DEFAULT_MC_ISO_LEVEL ); 
     m_SampleUI.AddStatic( IDC_MC_ISO_LEVEL_STATIC, sz, 35, iY += 24, 125, 22 );
     m_SampleUI.AddSlider( IDC_MC_ISO_LEVEL, 50, iY += 24, 100, 22, 1, 100,
-        (int) (0.01f * 1000.0f) );
+        (int) (FP_DEFAULT_MC_ISO_LEVEL * 1000.0f) );
 
     iY += 24;
-    StringCchPrintf( sz, 100, L"Particle size: %0.2f", 1.0f ); 
+    StringCchPrintf( sz, 100, L"Sprite size: %0.2f", FP_RENDER_DEFAULT_SPRITE_SIZE ); 
     m_SampleUI.AddStatic( IDC_PARTICLE_SCALE_STATIC, sz, 35, iY += 24, 125, 22 );
     m_SampleUI.AddSlider( IDC_PARTICLE_SCALE, 50, iY += 24, 100, 22, 1, 100,
-            (int) (1.0f * 50.0f) );
+            (int) (FP_RENDER_DEFAULT_SPRITE_SIZE * 50.0f) );
 
     iY += 24;
     StringCchPrintf( sz, 100, L"# Lights: %d", 1 ); 
@@ -73,10 +73,10 @@ fp_GUI::fp_GUI()
     m_SampleUI.AddSlider( IDC_NUM_LIGHTS, 50, iY += 24, 100, 22, 1, FP_MAX_LIGHTS, 1 );
 
     iY += 24;
-    StringCchPrintf( sz, 100, L"Light scale: %0.2f", 1.0f ); 
+    StringCchPrintf( sz, 100, L"Light scale: %0.2f", FP_DEFAULT_LIGHT_SCALE ); 
     m_SampleUI.AddStatic( IDC_LIGHT_SCALE_STATIC, sz, 35, iY += 24, 125, 22 );
     m_SampleUI.AddSlider( IDC_LIGHT_SCALE, 50, iY += 24, 100, 22, 0, 20,
-            (int) (1.0f * 10.0f) );
+            (int) (FP_DEFAULT_LIGHT_SCALE * 10.0f) );
 
     iY += 24;
     m_SampleUI.AddButton( IDC_ACTIVE_LIGHT, L"Change active light (K)", 35, iY += 24,
@@ -192,7 +192,7 @@ void fp_GUI::OnGUIEvent(
             ParticleScale = (float) (m_SampleUI.GetSlider(
                     IDC_PARTICLE_SCALE )->GetValue() * 0.02f);
 
-            StringCchPrintf( sz, 100, L"Particle scale: %0.2f", ParticleScale ); 
+            StringCchPrintf( sz, 100, L"Sprite size: %0.2f", ParticleScale ); 
             m_SampleUI.GetStatic( IDC_PARTICLE_SCALE_STATIC )->SetText( sz );
             break;
 

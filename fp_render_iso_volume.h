@@ -7,18 +7,6 @@
 #include "fp_global.h"
 #include "fp_cpu_sph.h"
 
-#define FP_DEFAULT_ISOVOLUME_VOXELSIZE 2.0f
-#define FP_DEFAULT_ISO_VOLUME_BORDER 5.0f
-#define FP_DEFAULT_MC_ISO_LEVEL 0.01f
-#define FP_INITIAL_ISOVOLUME_SIDELENGTH 200
-#define FP_MC_MAX_TRIANGLES 1000000
-#define FP_MC_MAX_VETICES FP_MC_MAX_TRIANGLES * 3
-#define FP_ISO_VOLUME_GROW_FACTOR 0.2f
-#define FP_ISO_VOLUME_SHRINK_BORDER 0.8f
-#define FP_INITIAL_ISOVOLUME_CAPACITY FP_INITIAL_ISOVOLUME_SIDELENGTH \
-        * FP_INITIAL_ISOVOLUME_SIDELENGTH * FP_INITIAL_ISOVOLUME_SIDELENGTH
-
-
 //--------------------------------------------------------------------------------------
 // Fluid particles render technique: Iso volume via marching cubes
 //--------------------------------------------------------------------------------------
