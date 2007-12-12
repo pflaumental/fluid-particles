@@ -109,25 +109,56 @@ public:
             float IsoLevel = FP_DEFAULT_MC_ISO_LEVEL);
     ~fp_RenderIsoVolume();
 
-    HRESULT OnCreateDevice(
-            IDirect3DDevice9* d3dDevice,
-            const D3DSURFACE_DESC* pBackBufferSurfaceDesc );
-
-    HRESULT OnResetDevice(
-            IDirect3DDevice9* d3dDevice,
-            const D3DSURFACE_DESC* BackBufferSurfaceDesc );
-
     void ConstructMesh();
 
-    void OnFrameRender(
+    // DX9 specific
+    HRESULT OnD3D9CreateDevice(
+            IDirect3DDevice9* d3dDevice,
+            const D3DSURFACE_DESC* BackBufferSurfaceDesc,
+            void* UserContext );
+    HRESULT OnD3D9ResetDevice(
+            IDirect3DDevice9* d3dDevice,
+            const D3DSURFACE_DESC* BackBufferSurfaceDesc,
+            void* UserContext );
+    void    OnD3D9FrameRender(
             IDirect3DDevice9* d3dDevice,
             double Time,
-            float ElapsedTime );
-    
+            float ElapsedTime,
+            const D3DXVECTOR3* EyePt,
+            const D3DXMATRIX*  WorldViewProjection,
+            const D3DXMATRIX*  World,
+            const D3DXMATRIX*  View,
+            const D3DXMATRIX*  Proj,
+            int NumActiveLights,
+            int ActiveLight,
+            float LightScale);
+    void    OnD3D9LostDevice( void* UserContext );
+    void    OnD3D9DestroyDevice( void* UserContext );
 
-    void OnDetroyDevice();
-
-    void OnLostDevice();
+    // DX10 specific
+    HRESULT OnD3D10CreateDevice(
+            ID3D10Device* d3dDevice,
+            const DXGI_SURFACE_DESC* BackBufferSurfaceDesc,
+            void* UserContext );
+    HRESULT OnD3D10ResizedSwapChain(
+            ID3D10Device* d3dDevice,
+            IDXGISwapChain *SwapChain,
+            const DXGI_SURFACE_DESC* BackBufferSurfaceDesc,
+            void* UserContext );
+    void    OnD3D10ReleasingSwapChain( void* UserContext );
+    void    OnD3D10DestroyDevice( void* UserContext );
+    void    OnD3D10FrameRender(
+            ID3D10Device* d3dDevice,
+            double Time,
+            float ElapsedTime,
+            const D3DXVECTOR3* EyePt,
+            const D3DXMATRIX*  WorldViewProjection,
+            const D3DXMATRIX*  World,
+            const D3DXMATRIX*  View,
+            const D3DXMATRIX*  Proj,
+            int NumActiveLights,
+            int ActiveLight,
+            float LightScale); 
 
 private:
     LPDIRECT3DVERTEXBUFFER9 m_VertexBuffer;

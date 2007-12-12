@@ -304,7 +304,7 @@ void fp_GUI::OnD3D10FrameRender(
         int ActiveLight,
         float LightScale) {
     HRESULT hr;
-   
+
     // Render the light arrow so the user can visually see the light dir
     for( int i=0; i<NumActiveLights; i++ ) {
         D3DXCOLOR arrowColor = ( i == ActiveLight )
@@ -418,30 +418,30 @@ HRESULT fp_GUI::OnD3D9ResetDevice(
 //--------------------------------------------------------------------------------------
 void fp_GUI::OnD3D9FrameRender(
         IDirect3DDevice9* d3dDevice,
-        double fTime,
-        float fElapsedTime,
-        const D3DXVECTOR3* vEyePt,
-        const D3DXMATRIX*  mWorldViewProjection,
-        const D3DXMATRIX*  mWorld,
-        const D3DXMATRIX*  mView,
-        const D3DXMATRIX*  mProj,
+        double Time,
+        float ElapsedTime,
+        const D3DXVECTOR3* EyePt,
+        const D3DXMATRIX*  WorldViewProjection,
+        const D3DXMATRIX*  World,
+        const D3DXMATRIX*  View,
+        const D3DXMATRIX*  Proj,
         int NumActiveLights,
-        int nActiveLight,
-        float fLightScale) {
+        int ActiveLight,
+        float LightScale) {
     HRESULT hr;
    
     // Render the GUI
 
     // Render the light arrow so the user can visually see the light dir
     for( int i=0; i<NumActiveLights; i++ ) {
-        D3DXCOLOR arrowColor = ( i == nActiveLight ) ? D3DXCOLOR(1,1,0,1) : D3DXCOLOR(1,1,1,1);
-        V( m_LightControl[i].OnRender9( arrowColor, mView, mProj, vEyePt ) );
+        D3DXCOLOR arrowColor = ( i == ActiveLight ) ? D3DXCOLOR(1,1,0,1) : D3DXCOLOR(1,1,1,1);
+        V( m_LightControl[i].OnRender9( arrowColor, View, Proj, EyePt ) );
         m_LightDir[i] = m_LightControl[i].GetLightDirection();
-        m_LightDiffuseColor[i] = fLightScale * D3DXCOLOR(1,1,1,1);
+        m_LightDiffuseColor[i] = LightScale * D3DXCOLOR(1,1,1,1);
     }
 
-    m_HUD.OnRender( fElapsedTime );
-    m_SampleUI.OnRender( fElapsedTime );
+    m_HUD.OnRender( ElapsedTime );
+    m_SampleUI.OnRender( ElapsedTime );
 
     RenderText();
 }
