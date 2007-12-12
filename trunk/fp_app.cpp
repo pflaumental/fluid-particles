@@ -37,14 +37,14 @@ int                     g_ActiveLight;
 int                     g_RenderType;
 
 // Direct3D10 resources
-CDXUTSDKMesh            g_Mesh10;
-ID3D10InputLayout*      g_VertexLayout = NULL;
+//CDXUTSDKMesh            g_Mesh10;
+//ID3D10InputLayout*      g_VertexLayout = NULL;
 
-ID3D10Effect*           g_Effect10 = NULL;
-ID3D10EffectTechnique*  g_TechRenderSceneWithTexture1Light = NULL;
-ID3D10EffectTechnique*  g_TechRenderSceneWithTexture2Light = NULL;
-ID3D10EffectTechnique*  g_TechRenderSceneWithTexture3Light = NULL;
-ID3D10EffectShaderResourceVariable* g_ptxDiffuse = NULL;
+//ID3D10Effect*           g_Effect10 = NULL;
+//ID3D10EffectTechnique*  g_TechRenderSceneWithTexture1Light = NULL;
+//ID3D10EffectTechnique*  g_TechRenderSceneWithTexture2Light = NULL;
+//ID3D10EffectTechnique*  g_TechRenderSceneWithTexture3Light = NULL;
+//ID3D10EffectShaderResourceVariable* g_ptxDiffuse = NULL;
 ID3D10EffectVectorVariable* g_LightDir = NULL;
 ID3D10EffectVectorVariable* g_LightDiffuse = NULL;
 ID3D10EffectMatrixVariable* g_WorldViewProjection = NULL;
@@ -380,7 +380,7 @@ bool CALLBACK FP_IsD3D10DeviceAcceptable( UINT Adapter, UINT Output, D3D10_DRIVE
 
 
 //--------------------------------------------------------------------------------------
-// Create any D3D10 resources that aren't dependant on the back buffer
+// Create any D3D10 resources that aren't dependent on the back buffer
 //--------------------------------------------------------------------------------------
 HRESULT CALLBACK FP_OnD3D10CreateDevice(
         ID3D10Device* d3dDevice, 
@@ -389,83 +389,88 @@ HRESULT CALLBACK FP_OnD3D10CreateDevice(
     HRESULT hr;
 
     g_GUI.OnD3D10CreateDevice(d3dDevice, BackBufferSurfaceDesc, UserContext);
+    g_RenderSprites->OnD3D10CreateDevice(d3dDevice, BackBufferSurfaceDesc,
+            UserContext);
+    g_RenderIsoVolume->OnD3D10CreateDevice(d3dDevice, BackBufferSurfaceDesc,
+            UserContext);
 
-    D3DXVECTOR3 vCenter( 0.25767413f, -28.503521f, 111.00689f );
+    //D3DXVECTOR3 vCenter( 0.25767413f, -28.503521f, 111.00689f );
 
-    D3DXMatrixTranslation( &g_CenterMesh, -vCenter.x, -vCenter.y, -vCenter.z );
-    D3DXMATRIXA16 m;
-    D3DXMatrixRotationY( &m, D3DX_PI );
-    g_CenterMesh *= m;
-    D3DXMatrixRotationX( &m, D3DX_PI / 2.0f );
-    g_CenterMesh *= m;
+    //D3DXMatrixTranslation( &g_CenterMesh, -vCenter.x, -vCenter.y, -vCenter.z );
+    //D3DXMATRIXA16 m;
+    //D3DXMatrixRotationY( &m, D3DX_PI );
+    //g_CenterMesh *= m;
+    //D3DXMatrixRotationX( &m, D3DX_PI / 2.0f );
+    //g_CenterMesh *= m;
 
-    DWORD dwShaderFlags = D3D10_SHADER_ENABLE_STRICTNESS;
-    #if defined( DEBUG ) || defined( _DEBUG )
-    // Set the D3D10_SHADER_DEBUG flag to embed debug information in the shaders.
-    // Setting this flag improves the shader debugging experience, but still allows 
-    // the shaders to be optimized and to run exactly the way they will run in 
-    // the release configuration of this program.
-    dwShaderFlags |= D3D10_SHADER_DEBUG;
-    #endif
+    //DWORD dwShaderFlags = D3D10_SHADER_ENABLE_STRICTNESS;
+    //#if defined( DEBUG ) || defined( _DEBUG )
+    //// Set the D3D10_SHADER_DEBUG flag to embed debug information in the shaders.
+    //// Setting this flag improves the shader debugging experience, but still allows 
+    //// the shaders to be optimized and to run exactly the way they will run in 
+    //// the release configuration of this program.
+    //dwShaderFlags |= D3D10_SHADER_DEBUG;
+    //#endif
 
-    // Read the D3DX effect file
-    WCHAR str[MAX_PATH];
-    V_RETURN( DXUTFindDXSDKMediaFileCch( str, MAX_PATH, L"fp_effect10.fx" ) );
-    V_RETURN( D3DX10CreateEffectFromFile( str, NULL, NULL, "fx_4_0", dwShaderFlags, 
-            0, d3dDevice, NULL, NULL, &g_Effect10, NULL, NULL ) );
+    //// Read the D3DX effect file
+    //WCHAR str[MAX_PATH];
+    //V_RETURN( DXUTFindDXSDKMediaFileCch( str, MAX_PATH, L"fp_effect10.fx" ) );
+    //V_RETURN( D3DX10CreateEffectFromFile( str, NULL, NULL, "fx_4_0", dwShaderFlags, 
+    //        0, d3dDevice, NULL, NULL, &g_Effect10, NULL, NULL ) );
 
-    // Obtain technique objects
-    g_TechRenderSceneWithTexture1Light = g_Effect10->GetTechniqueByName(
-            "RenderSceneWithTexture1Light" );
-    g_TechRenderSceneWithTexture2Light = g_Effect10->GetTechniqueByName( 
-            "RenderSceneWithTexture2Light" );
-    g_TechRenderSceneWithTexture3Light = g_Effect10->GetTechniqueByName( 
-            "RenderSceneWithTexture3Light" );
+    //// Obtain technique objects
+    //g_TechRenderSceneWithTexture1Light = g_Effect10->GetTechniqueByName(
+    //        "RenderSceneWithTexture1Light" );
+    //g_TechRenderSceneWithTexture2Light = g_Effect10->GetTechniqueByName( 
+    //        "RenderSceneWithTexture2Light" );
+    //g_TechRenderSceneWithTexture3Light = g_Effect10->GetTechniqueByName( 
+    //        "RenderSceneWithTexture3Light" );
 
-    // Obtain variables
-    g_ptxDiffuse = g_Effect10->GetVariableByName( "g_MeshTexture" )->AsShaderResource();
-    g_LightDir = g_Effect10->GetVariableByName( "g_LightDir" )->AsVector();
-    g_LightDiffuse = g_Effect10->GetVariableByName( "g_LightDiffuse" )->AsVector();
-    g_WorldViewProjection = g_Effect10->GetVariableByName( "g_mWorldViewProjection" )
-            ->AsMatrix();
-    g_World = g_Effect10->GetVariableByName( "g_mWorld" )->AsMatrix();
-    g_Time = g_Effect10->GetVariableByName( "g_fTime" )->AsScalar();
-    g_MaterialAmbientColor = g_Effect10->GetVariableByName("g_MaterialAmbientColor")
-            ->AsVector();
-    g_MaterialDiffuseColor = g_Effect10->GetVariableByName( "g_MaterialDiffuseColor" )
-            ->AsVector();
-    g_NumLights = g_Effect10->GetVariableByName( "g_NumLights" )->AsScalar();
+    //// Obtain variables
+    //g_ptxDiffuse = g_Effect10->GetVariableByName( "g_MeshTexture" )->AsShaderResource();
+    //g_LightDir = g_Effect10->GetVariableByName( "g_LightDir" )->AsVector();
+    //g_LightDiffuse = g_Effect10->GetVariableByName( "g_LightDiffuse" )->AsVector();
+    //g_WorldViewProjection = g_Effect10->GetVariableByName( "g_mWorldViewProjection" )
+    //        ->AsMatrix();
+    //g_World = g_Effect10->GetVariableByName( "g_mWorld" )->AsMatrix();
+    //g_Time = g_Effect10->GetVariableByName( "g_fTime" )->AsScalar();
+    //g_MaterialAmbientColor = g_Effect10->GetVariableByName("g_MaterialAmbientColor")
+    //        ->AsVector();
+    //g_MaterialDiffuseColor = g_Effect10->GetVariableByName( "g_MaterialDiffuseColor" )
+    //        ->AsVector();
+    //g_NumLights = g_Effect10->GetVariableByName( "g_NumLights" )->AsScalar();
 
-    // Create our vertex input layout
-    const D3D10_INPUT_ELEMENT_DESC layout[] = {
-        { "POSITION",  0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0,  
-                D3D10_INPUT_PER_VERTEX_DATA, 0 },
-        { "NORMAL",    0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, 
-                D3D10_INPUT_PER_VERTEX_DATA, 0 },
-        { "TEXCOORD",  0, DXGI_FORMAT_R32G32_FLOAT,    0, 24, 
-                D3D10_INPUT_PER_VERTEX_DATA, 0 },
-    };
+    //// Create our vertex input layout
+    //const D3D10_INPUT_ELEMENT_DESC layout[] = {
+    //    { "POSITION",  0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0,  
+    //            D3D10_INPUT_PER_VERTEX_DATA, 0 },
+    //    { "NORMAL",    0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, 
+    //            D3D10_INPUT_PER_VERTEX_DATA, 0 },
+    //    { "TEXCOORD",  0, DXGI_FORMAT_R32G32_FLOAT,    0, 24, 
+    //            D3D10_INPUT_PER_VERTEX_DATA, 0 },
+    //};
 
-    D3D10_PASS_DESC PassDesc;
-    V_RETURN( g_TechRenderSceneWithTexture1Light->GetPassByIndex( 0 )->GetDesc(
-            &PassDesc ) );
-    V_RETURN( d3dDevice->CreateInputLayout( layout, 3, PassDesc.pIAInputSignature, 
-            PassDesc.IAInputSignatureSize, &g_VertexLayout ) );
+    //D3D10_PASS_DESC PassDesc;
+    //V_RETURN( g_TechRenderSceneWithTexture1Light->GetPassByIndex( 0 )->GetDesc(
+    //        &PassDesc ) );
+    //V_RETURN( d3dDevice->CreateInputLayout( layout, 3, PassDesc.pIAInputSignature, 
+    //        PassDesc.IAInputSignatureSize, &g_VertexLayout ) );
 
-    // Load the mesh
-    V_RETURN( g_Mesh10.Create( d3dDevice, L"tiny\\tiny.sdkmesh", true ) );
+    //// Load the mesh
+    //V_RETURN( g_Mesh10.Create( d3dDevice, L"tiny\\tiny.sdkmesh", true ) );
 
-    // Set effect variables as needed
-    D3DXCOLOR colorMtrlDiffuse(1.0f, 1.0f, 1.0f, 1.0f);
-    D3DXCOLOR colorMtrlAmbient(0.35f, 0.35f, 0.35f, 0);
-    V_RETURN( g_MaterialAmbientColor->SetFloatVector( (float*)&colorMtrlAmbient ) );
-    V_RETURN( g_MaterialDiffuseColor->SetFloatVector( (float*)&colorMtrlDiffuse ) );
+    //// Set effect variables as needed
+    //D3DXCOLOR colorMtrlDiffuse(1.0f, 1.0f, 1.0f, 1.0f);
+    //D3DXCOLOR colorMtrlAmbient(0.35f, 0.35f, 0.35f, 0);
+    //V_RETURN( g_MaterialAmbientColor->SetFloatVector( (float*)&colorMtrlAmbient ) );
+    //V_RETURN( g_MaterialDiffuseColor->SetFloatVector( (float*)&colorMtrlDiffuse ) );
 
     // Setup the camera's view parameters
     D3DXVECTOR3 vecEye(0.0f, 0.0f, -15.0f);
     D3DXVECTOR3 vecAt (0.0f, 0.0f, -0.0f);
     g_Camera.SetViewParams( &vecEye, &vecAt );
-    g_Camera.SetRadius( FP_OBJECT_RADIUS*3.0f, FP_OBJECT_RADIUS*0.5f, FP_OBJECT_RADIUS*10.0f );  
+    g_Camera.SetRadius( FP_OBJECT_RADIUS*3.0f, FP_OBJECT_RADIUS*0.5f, FP_OBJECT_RADIUS*100.0f );
+    g_Camera.SetGlassPosition(&g_Sim->m_GlassPosition);
 
     return S_OK;
 }
@@ -480,6 +485,10 @@ HRESULT CALLBACK FP_OnD3D10ResizedSwapChain(
         const DXGI_SURFACE_DESC* BackBufferSurfaceDesc, 
         void* UserContext ) {
     g_GUI.OnD3D10ResizedSwapChain(d3dDevice, SwapChain, BackBufferSurfaceDesc,
+            UserContext);
+    g_RenderSprites->OnD3D10ResizedSwapChain(d3dDevice, SwapChain, BackBufferSurfaceDesc,
+            UserContext);
+    g_RenderIsoVolume->OnD3D10ResizedSwapChain(d3dDevice, SwapChain, BackBufferSurfaceDesc,
             UserContext);
 
     // Setup the camera's projection parameters
@@ -515,89 +524,113 @@ void CALLBACK FP_OnD3D10FrameRender(
     ID3D10DepthStencilView* pDSV = DXUTGetD3D10DepthStencilView();
     d3dDevice->ClearDepthStencilView( pDSV, D3D10_CLEAR_DEPTH, 1.0, 0 );
 
-    D3DXMATRIX  mWorldViewProjection;
-    D3DXMATRIX  mWorld;
-    D3DXMATRIX  mView;
-    D3DXMATRIX  mProj;
+    D3DXMATRIX  WorldViewProjection;
+    D3DXMATRIX  World;
+    D3DXMATRIX  View;
+    D3DXMATRIX  Proj;
 
     // Get the projection & view matrix from the camera class
-    mWorld = g_CenterMesh * *g_Camera.GetWorldMatrix();
-    mProj = *g_Camera.GetProjMatrix();
-    mView = *g_Camera.GetViewMatrix();
+    World = g_CenterMesh * *g_Camera.GetWorldMatrix();
+    Proj = *g_Camera.GetProjMatrix();
+    View = *g_Camera.GetViewMatrix();
 
-    mWorldViewProjection = mWorld * mView * mProj;
+    WorldViewProjection = World * View * Proj;
 
-    V( g_LightDir->SetRawValue( g_GUI.m_LightDir, 0, sizeof(D3DXVECTOR3)
-            * FP_MAX_LIGHTS ) );
-    V( g_LightDiffuse->SetFloatVectorArray( (float*)g_GUI.m_LightDiffuse, 0, 
-            FP_MAX_LIGHTS ) );
     for (int i=0; i < FP_MAX_LIGHTS; i++) {
         g_RenderIsoVolume->m_Lights[i].Direction = g_GUI.m_LightDir[i];
         D3DCOLORVALUE diffuse = { g_GUI.m_LightDiffuseColor->r,
             g_GUI.m_LightDiffuseColor->g, g_GUI.m_LightDiffuseColor->b, 1.0f };
         g_RenderIsoVolume->m_Lights[i].Diffuse = diffuse;
     }
-    V( g_WorldViewProjection->SetMatrix( (float*)&mWorldViewProjection ) );
-    V( g_World->SetMatrix( (float*)&mWorld ) );
-    V( g_Time->SetFloat( (float)Time ) );
-    V( g_NumLights->SetInt( g_NumActiveLights ) );
 
-    // Render the scene with this technique as defined in the .fx file
-    ID3D10EffectTechnique *pRenderTechnique;
-    switch( g_NumActiveLights )
-    {
-        case 1: pRenderTechnique = g_TechRenderSceneWithTexture1Light;
-			break;
-        case 2: pRenderTechnique = g_TechRenderSceneWithTexture2Light;
-			break;
-        case 3: pRenderTechnique = g_TechRenderSceneWithTexture3Light;
-			break;
-        default: pRenderTechnique = g_TechRenderSceneWithTexture1Light;
-			break;
-    }
+   // V( g_LightDir->SetRawValue( g_GUI.m_LightDir, 0, sizeof(D3DXVECTOR3)
+   //         * FP_MAX_LIGHTS ) );
+   // V( g_LightDiffuse->SetFloatVectorArray( (float*)g_GUI.m_LightDiffuse, 0, 
+   //         FP_MAX_LIGHTS ) );
+   // for (int i=0; i < FP_MAX_LIGHTS; i++) {
+   //     g_RenderIsoVolume->m_Lights[i].Direction = g_GUI.m_LightDir[i];
+   //     D3DCOLORVALUE diffuse = { g_GUI.m_LightDiffuseColor->r,
+   //         g_GUI.m_LightDiffuseColor->g, g_GUI.m_LightDiffuseColor->b, 1.0f };
+   //     g_RenderIsoVolume->m_Lights[i].Diffuse = diffuse;
+   // }
+   // V( g_WorldViewProjection->SetMatrix( (float*)&mWorldViewProjection ) );
+   // V( g_World->SetMatrix( (float*)&mWorld ) );
+   // V( g_Time->SetFloat( (float)Time ) );
+   // V( g_NumLights->SetInt( g_NumActiveLights ) );
 
-    //Get the mesh
-    //IA setup
-    d3dDevice->IASetInputLayout( g_VertexLayout );
-    UINT Strides[1];
-    UINT Offsets[1];
-    ID3D10Buffer* pVB[1];
-    pVB[0] = g_Mesh10.GetVB10(0,0);
-    Strides[0] = (UINT)g_Mesh10.GetVertexStride(0,0);
-    Offsets[0] = 0;
-    d3dDevice->IASetVertexBuffers( 0, 1, pVB, Strides, Offsets );
-    d3dDevice->IASetIndexBuffer( g_Mesh10.GetIB10(0), g_Mesh10.GetIBFormat10(0), 0 );
+   // // Render the scene with this technique as defined in the .fx file
+   // ID3D10EffectTechnique *pRenderTechnique;
+   // switch( g_NumActiveLights )
+   // {
+   //     case 1: pRenderTechnique = g_TechRenderSceneWithTexture1Light;
+			//break;
+   //     case 2: pRenderTechnique = g_TechRenderSceneWithTexture2Light;
+			//break;
+   //     case 3: pRenderTechnique = g_TechRenderSceneWithTexture3Light;
+			//break;
+   //     default: pRenderTechnique = g_TechRenderSceneWithTexture1Light;
+			//break;
+   // }
 
-    //Render
-    D3D10_TECHNIQUE_DESC techDesc;
-    pRenderTechnique->GetDesc( &techDesc );
-    SDKMESH_SUBSET* pSubset = NULL;
-    ID3D10ShaderResourceView* pDiffuseRV = NULL;
-    D3D10_PRIMITIVE_TOPOLOGY PrimType;
+   // //Get the mesh
+   // //IA setup
+   // d3dDevice->IASetInputLayout( g_VertexLayout );
+   // UINT Strides[1];
+   // UINT Offsets[1];
+   // ID3D10Buffer* pVB[1];
+   // pVB[0] = g_Mesh10.GetVB10(0,0);
+   // Strides[0] = (UINT)g_Mesh10.GetVertexStride(0,0);
+   // Offsets[0] = 0;
+   // d3dDevice->IASetVertexBuffers( 0, 1, pVB, Strides, Offsets );
+   // d3dDevice->IASetIndexBuffer( g_Mesh10.GetIB10(0), g_Mesh10.GetIBFormat10(0), 0 );
 
-    for( UINT p = 0; p < techDesc.Passes; ++p )
-    {
-        for( UINT subset = 0; subset < g_Mesh10.GetNumSubsets(0); ++subset )
-        {
-            // Get the subset
-            pSubset = g_Mesh10.GetSubset( 0, subset );
+   // //Render
+   // D3D10_TECHNIQUE_DESC techDesc;
+   // pRenderTechnique->GetDesc( &techDesc );
+   // SDKMESH_SUBSET* pSubset = NULL;
+   // ID3D10ShaderResourceView* pDiffuseRV = NULL;
+   // D3D10_PRIMITIVE_TOPOLOGY PrimType;
 
-            PrimType = CDXUTSDKMesh::GetPrimitiveType10( (SDKMESH_PRIMITIVE_TYPE)pSubset
-                    ->PrimitiveType );
-            d3dDevice->IASetPrimitiveTopology( PrimType );
+   // for( UINT p = 0; p < techDesc.Passes; ++p )
+   // {
+   //     for( UINT subset = 0; subset < g_Mesh10.GetNumSubsets(0); ++subset )
+   //     {
+   //         // Get the subset
+   //         pSubset = g_Mesh10.GetSubset( 0, subset );
 
-            pDiffuseRV = g_Mesh10.GetMaterial(pSubset->MaterialID)->pDiffuseRV10;
-            g_ptxDiffuse->SetResource( pDiffuseRV );
+   //         PrimType = CDXUTSDKMesh::GetPrimitiveType10( (SDKMESH_PRIMITIVE_TYPE)pSubset
+   //                 ->PrimitiveType );
+   //         d3dDevice->IASetPrimitiveTopology( PrimType );
 
-            pRenderTechnique->GetPassByIndex( p )->Apply(0);
-            d3dDevice->DrawIndexed( (UINT)pSubset->IndexCount, 0, (UINT)pSubset
-                    ->VertexStart );
-        }
-    }
+   //         pDiffuseRV = g_Mesh10.GetMaterial(pSubset->MaterialID)->pDiffuseRV10;
+   //         g_ptxDiffuse->SetResource( pDiffuseRV );
+
+   //         pRenderTechnique->GetPassByIndex( p )->Apply(0);
+   //         d3dDevice->DrawIndexed( (UINT)pSubset->IndexCount, 0, (UINT)pSubset
+   //                 ->VertexStart );
+   //     }
+   // }
+
+
+
+
+
+    //d3dDevice->SetTransform( D3DTS_WORLD, &World );
+    //d3dDevice->SetTransform( D3DTS_PROJECTION, &Proj );
+    //d3dDevice->SetTransform( D3DTS_VIEW, &View ); 
+
+    if(g_RenderType == FP_GUI_RENDER_TYPE_POINT_SPRITE)
+        g_RenderSprites->OnD3D10FrameRender(d3dDevice, Time, ElapsedTime,
+                g_Camera.GetEyePt(), &WorldViewProjection, &World, &View, &Proj,
+                g_NumActiveLights, g_ActiveLight, g_LightScale);
+    else if(g_RenderType == FP_GUI_RENDER_TYPE_ISO_SURFACE)
+        g_RenderIsoVolume->OnD3D10FrameRender(d3dDevice, Time, ElapsedTime,
+                g_Camera.GetEyePt(), &WorldViewProjection, &World, &View, &Proj,
+                g_NumActiveLights, g_ActiveLight, g_LightScale);
 
     // Render GUI
     g_GUI.OnD3D10FrameRender(d3dDevice, Time, ElapsedTime, g_Camera.GetEyePt(),
-            &mWorldViewProjection, &mWorld, &mView, &mProj, g_NumActiveLights,
+            &WorldViewProjection, &World, &View, &Proj, g_NumActiveLights,
             g_ActiveLight, g_LightScale);
 }
 
@@ -607,6 +640,9 @@ void CALLBACK FP_OnD3D10FrameRender(
 //--------------------------------------------------------------------------------------
 void CALLBACK FP_OnD3D10ReleasingSwapChain( void* UserContext ) {
     g_GUI.OnD3D10ReleasingSwapChain(UserContext);
+    if(g_RenderSprites) g_RenderSprites->OnD3D10ReleasingSwapChain(UserContext);
+    if(g_RenderIsoVolume) g_RenderIsoVolume->OnD3D10ReleasingSwapChain(UserContext);
+    //if(g_Effect10) g_Effect10->OnD3D10ReleasingSwapChain(UserContext);  
 }
 
 
@@ -615,10 +651,11 @@ void CALLBACK FP_OnD3D10ReleasingSwapChain( void* UserContext ) {
 //--------------------------------------------------------------------------------------
 void CALLBACK FP_OnD3D10DestroyDevice( void* UserContext ) {
     g_GUI.OnD3D10DestroyDevice(UserContext);
-    
+    if(g_RenderSprites) g_RenderSprites->OnD3D10DestroyDevice(UserContext);
+    if(g_RenderIsoVolume) g_RenderIsoVolume->OnD3D10DestroyDevice(UserContext);
     DXUTGetGlobalResourceCache().OnDestroyDevice();
 
-    SAFE_RELEASE( g_Effect10 );
-    SAFE_RELEASE( g_VertexLayout );
-    g_Mesh10.Destroy();
+    //SAFE_RELEASE( g_Effect10 );
+    //SAFE_RELEASE( g_VertexLayout );
+    //g_Mesh10.Destroy();
 }

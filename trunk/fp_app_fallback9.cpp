@@ -118,8 +118,8 @@ HRESULT CALLBACK FP_OnD3D9CreateDevice(
     //HRESULT hr;
 
     g_GUI.OnD3D9CreateDevice(d3dDevice, BackBufferSurfaceDesc, UserContext);
-    g_RenderSprites->OnCreateDevice(d3dDevice, BackBufferSurfaceDesc);
-    g_RenderIsoVolume->OnCreateDevice(d3dDevice, BackBufferSurfaceDesc);
+    g_RenderSprites->OnD3D9CreateDevice(d3dDevice, BackBufferSurfaceDesc, UserContext);
+    g_RenderIsoVolume->OnD3D9CreateDevice(d3dDevice, BackBufferSurfaceDesc, UserContext);
 
     //// Load the mesh
     //V_RETURN( FP_LoadMesh( d3dDevice, L"tiny\\tiny.x", &g_Mesh9 ) );
@@ -253,8 +253,8 @@ HRESULT CALLBACK FP_OnD3D9ResetDevice(
     HRESULT hr;
     //initPointSprites(d3dDevice);
     g_GUI.OnD3D9ResetDevice(d3dDevice, BackBufferSurfaceDesc, UserContext);
-    g_RenderSprites->OnResetDevice(d3dDevice, BackBufferSurfaceDesc);
-    g_RenderIsoVolume->OnResetDevice(d3dDevice, BackBufferSurfaceDesc);
+    g_RenderSprites->OnD3D9ResetDevice(d3dDevice, BackBufferSurfaceDesc, UserContext);
+    g_RenderIsoVolume->OnD3D9ResetDevice(d3dDevice, BackBufferSurfaceDesc, UserContext);
 
     if( g_Effect9 ) V_RETURN( g_Effect9->OnResetDevice() );
     // Setup the camera's projection parameters
@@ -345,15 +345,16 @@ void CALLBACK FP_OnD3D9FrameRender(
         d3dDevice->SetTransform( D3DTS_VIEW, &View );        
        
         if(g_RenderType == FP_GUI_RENDER_TYPE_POINT_SPRITE)
-            g_RenderSprites->OnFrameRender(d3dDevice, Time, ElapsedTime);
+            g_RenderSprites->OnD3D9FrameRender(d3dDevice, Time, ElapsedTime,
+                    g_Camera.GetEyePt(), &WorldViewProjection, &World, &View, &Proj,
+                    g_NumActiveLights, g_ActiveLight, g_LightScale);
         else if(g_RenderType == FP_GUI_RENDER_TYPE_ISO_SURFACE)
-            g_RenderIsoVolume->OnFrameRender(d3dDevice, Time, ElapsedTime);
-
+            g_RenderIsoVolume->OnD3D9FrameRender(d3dDevice, Time, ElapsedTime,
+                    g_Camera.GetEyePt(), &WorldViewProjection, &World, &View, &Proj,
+                    g_NumActiveLights, g_ActiveLight, g_LightScale);
         g_GUI.OnD3D9FrameRender(d3dDevice, Time, ElapsedTime, g_Camera.GetEyePt(),
                 &WorldViewProjection, &World, &View, &Proj, g_NumActiveLights,
                 g_ActiveLight, g_LightScale);
-
-
 
         V( d3dDevice->EndScene() );
     }
@@ -365,10 +366,9 @@ void CALLBACK FP_OnD3D9FrameRender(
 //--------------------------------------------------------------------------------------
 void CALLBACK FP_OnD3D9LostDevice( void* UserContext ) {
     g_GUI.OnD3D9LostDevice(UserContext);
-    if(g_RenderSprites) g_RenderSprites->OnLostDevice();
-    if(g_RenderIsoVolume) g_RenderIsoVolume->OnLostDevice();
-    if(g_Effect9) g_Effect9->OnLostDevice();    
-    //shutDownPointSprites();    
+    if(g_RenderSprites) g_RenderSprites->OnD3D9LostDevice(UserContext);
+    if(g_RenderIsoVolume) g_RenderIsoVolume->OnD3D9LostDevice(UserContext);
+    if(g_Effect9) g_Effect9->OnLostDevice();      
 }
 
 
@@ -378,8 +378,8 @@ void CALLBACK FP_OnD3D9LostDevice( void* UserContext ) {
 void CALLBACK FP_OnD3D9DestroyDevice( void* UserContext )
 {
     g_GUI.OnD3D9DestroyDevice(UserContext);
-    if(g_RenderSprites) g_RenderSprites->OnDetroyDevice();
-    if(g_RenderIsoVolume) g_RenderIsoVolume->OnDetroyDevice();
+    if(g_RenderSprites) g_RenderSprites->OnD3D9DestroyDevice(UserContext);
+    if(g_RenderIsoVolume) g_RenderIsoVolume->OnD3D9DestroyDevice(UserContext);
     SAFE_RELEASE(g_Effect9);
     SAFE_RELEASE(g_Mesh9);
     SAFE_RELEASE(g_MeshTexture9);

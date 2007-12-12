@@ -133,7 +133,7 @@ void fp_IsoVolume::ConstructFromFluid() {
     for (int i = 0; i < NumParticles; i++) {
         D3DXVECTOR3 particlePosition = Particles[i].m_Position;
         float particleDensity = Densities[i];
-        DistributeParticle(particlePosition, ParticleMass / particleDensity, minX, minY,
+        DistributeParticleWithStamp(particlePosition, ParticleMass / particleDensity, minX, minY,
                 minZ);
     }
 }
@@ -356,31 +356,16 @@ fp_RenderIsoVolume::fp_RenderIsoVolume(
 }
 
 fp_RenderIsoVolume::~fp_RenderIsoVolume() {
-	OnLostDevice();
-	OnDetroyDevice();
-}
-
-HRESULT fp_RenderIsoVolume::OnCreateDevice(                                 
-        IDirect3DDevice9* d3dDevice,
-        const D3DSURFACE_DESC* pBackBufferSurfaceDesc ) {
-    //HRESULT hr;
-
-    return S_OK;
-}
-
-HRESULT fp_RenderIsoVolume::OnResetDevice(
-        IDirect3DDevice9* d3dDevice,
-        const D3DSURFACE_DESC* BackBufferSurfaceDesc ) {
-    d3dDevice->CreateVertexBuffer( FP_MC_MAX_VETICES * sizeof(fp_MCVertex), 
-            D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY, 
-            fp_MCVertex::FVF_Flags, D3DPOOL_DEFAULT, &m_VertexBuffer, NULL );
-    d3dDevice->CreateIndexBuffer(FP_MC_MAX_TRIANGLES * 3,
-            D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY,
-            D3DFMT_INDEX32, D3DPOOL_DEFAULT, &m_IndexBuffer, NULL );
-    return S_OK;
+	OnD3D9LostDevice(NULL);
+	OnD3D9DestroyDevice(NULL);
+    OnD3D10ReleasingSwapChain(NULL);
+    OnD3D10DestroyDevice(NULL);
 }
 
 void fp_RenderIsoVolume::ConstructMesh() {
+    if(m_VertexBuffer == NULL) // TODO:
+        return; 
+
     m_NumVertices = 0;
     int indexIndex = 0;
     m_NumTriangles = 0;
@@ -404,7 +389,7 @@ void fp_RenderIsoVolume::ConstructMesh() {
         (void**)&mcVertices, D3DLOCK_DISCARD );
     int* mcIndizes;
     m_IndexBuffer->Lock(0, FP_MC_MAX_TRIANGLES * 3, (void**)&mcIndizes, D3DLOCK_DISCARD);
-    
+
     for(int cubeX=0; cubeX < xEnd; cubeX++) {
         for(int cubeY=0; cubeY < yEnd; cubeY++) {
             int isoVolumeIndex4 = cubeX * NumValuesYZ + cubeY * NumValuesZ; // x,y,z
@@ -417,14 +402,14 @@ void fp_RenderIsoVolume::ConstructMesh() {
             float isoValue6 = (*isoValues)[isoVolumeIndex6];
             float isoValue7 = (*isoValues)[isoVolumeIndex7];
             D3DXVECTOR3 *gradientIsoValue0, *gradientIsoValue1, 
-                    *gradientIsoValue2, *gradientIsoValue3;
+                *gradientIsoValue2, *gradientIsoValue3;
             D3DXVECTOR3* gradientIsoValue4 = &(*gradientIsoValues)[isoVolumeIndex4++];
             D3DXVECTOR3* gradientIsoValue5 = &(*gradientIsoValues)[isoVolumeIndex5++];
             D3DXVECTOR3* gradientIsoValue6 = &(*gradientIsoValues)[isoVolumeIndex6++];
             D3DXVECTOR3* gradientIsoValue7 = &(*gradientIsoValues)[isoVolumeIndex7++];
             int vertexIndizes[12] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
             D3DXVECTOR3 corner0(volumeStart + D3DXVECTOR3(volumeOffset.x * cubeX, 
-                    volumeOffset.y * cubeY, 0.0f ));
+                volumeOffset.y * cubeY, 0.0f ));
             for(int cubeZ=0; cubeZ < zEnd; cubeZ++) {                
                 isoValue0 = isoValue4;
                 isoValue1 = isoValue5;
@@ -475,52 +460,52 @@ void fp_RenderIsoVolume::ConstructMesh() {
 
                 if(edgeValue & 16) // Edge 4 between corner 4 and 5
                     mcVertices[vertexIndizes[4] = m_NumVertices++] = fp_MCVertex(
-                            D3DXVECTOR3(corner0.x + (s = (m_IsoLevel - isoValue4)
-                            / (isoValue5 - isoValue4)) * volumeOffset.x, corner0.y,
-                            corner0.z + volumeOffset.z), CalcNormal(gradientIsoValue4,
-                            gradientIsoValue5, s));
+                    D3DXVECTOR3(corner0.x + (s = (m_IsoLevel - isoValue4)
+                    / (isoValue5 - isoValue4)) * volumeOffset.x, corner0.y,
+                    corner0.z + volumeOffset.z), CalcNormal(gradientIsoValue4,
+                    gradientIsoValue5, s));
                 if(edgeValue & 32) // Edge 5 between corner 5 and 6
                     mcVertices[vertexIndizes[5] = m_NumVertices++] = fp_MCVertex(
-                            D3DXVECTOR3(corner0.x + volumeOffset.x, corner0.y + (s
-                            = (m_IsoLevel - isoValue5) / (isoValue6 - isoValue5))
-                            * volumeOffset.y, corner0.z + volumeOffset.z), CalcNormal(
-                            gradientIsoValue5, gradientIsoValue6, s));
+                    D3DXVECTOR3(corner0.x + volumeOffset.x, corner0.y + (s
+                    = (m_IsoLevel - isoValue5) / (isoValue6 - isoValue5))
+                    * volumeOffset.y, corner0.z + volumeOffset.z), CalcNormal(
+                    gradientIsoValue5, gradientIsoValue6, s));
                 if(edgeValue & 64) // Edge 6 between corner 7 and 6
                     mcVertices[vertexIndizes[6] = m_NumVertices++] = fp_MCVertex(
-                            D3DXVECTOR3(corner0.x + (s = (m_IsoLevel - isoValue7)
-                            / (isoValue6 - isoValue7)) * volumeOffset.x, corner0.y 
-                            + volumeOffset.y, corner0.z+ volumeOffset.z), CalcNormal(
-                            gradientIsoValue7, gradientIsoValue6, s));
+                    D3DXVECTOR3(corner0.x + (s = (m_IsoLevel - isoValue7)
+                    / (isoValue6 - isoValue7)) * volumeOffset.x, corner0.y 
+                    + volumeOffset.y, corner0.z+ volumeOffset.z), CalcNormal(
+                    gradientIsoValue7, gradientIsoValue6, s));
                 if(edgeValue & 128) // Edge 7 between corner 4 and 7
                     mcVertices[vertexIndizes[7] = m_NumVertices++] = fp_MCVertex(
-                            D3DXVECTOR3(corner0.x, corner0.y + (s = (m_IsoLevel -
-                            isoValue4) / (isoValue7 - isoValue4)) * volumeOffset.y,
-                            corner0.z + volumeOffset.z), CalcNormal(gradientIsoValue4,
-                            gradientIsoValue7, s));
+                    D3DXVECTOR3(corner0.x, corner0.y + (s = (m_IsoLevel -
+                    isoValue4) / (isoValue7 - isoValue4)) * volumeOffset.y,
+                    corner0.z + volumeOffset.z), CalcNormal(gradientIsoValue4,
+                    gradientIsoValue7, s));
                 if(edgeValue & 256) // Edge 8 between corner 0 and 4
                     mcVertices[vertexIndizes[8] = m_NumVertices++] = fp_MCVertex(
-                            D3DXVECTOR3(corner0.x, corner0.y, corner0.z + (s
-                            = (m_IsoLevel - isoValue0) / (isoValue4 - isoValue0))
-                            * volumeOffset.z), CalcNormal(gradientIsoValue0,
-                            gradientIsoValue4, s));
+                    D3DXVECTOR3(corner0.x, corner0.y, corner0.z + (s
+                    = (m_IsoLevel - isoValue0) / (isoValue4 - isoValue0))
+                    * volumeOffset.z), CalcNormal(gradientIsoValue0,
+                    gradientIsoValue4, s));
                 if(edgeValue & 512) // Edge 9 between corner 1 and 5
                     mcVertices[vertexIndizes[9] = m_NumVertices++] = fp_MCVertex(
-                            D3DXVECTOR3(corner0.x + volumeOffset.x, corner0.y, corner0.z
-                            + (s = (m_IsoLevel - isoValue1) / (isoValue5 - isoValue1))
-                            * volumeOffset.z), CalcNormal(gradientIsoValue1, 
-                            gradientIsoValue5, s));
+                    D3DXVECTOR3(corner0.x + volumeOffset.x, corner0.y, corner0.z
+                    + (s = (m_IsoLevel - isoValue1) / (isoValue5 - isoValue1))
+                    * volumeOffset.z), CalcNormal(gradientIsoValue1, 
+                    gradientIsoValue5, s));
                 if(edgeValue & 1024) // Edge 10 between corner 2 and 6
                     mcVertices[vertexIndizes[10] = m_NumVertices++] = fp_MCVertex(
-                            D3DXVECTOR3(corner0.x + volumeOffset.x, corner0.y
-                            + volumeOffset.y, corner0.z + (s = (m_IsoLevel - isoValue2)
-                            / (isoValue6 - isoValue2)) * volumeOffset.z), CalcNormal(
-                            gradientIsoValue2, gradientIsoValue6, s));
+                    D3DXVECTOR3(corner0.x + volumeOffset.x, corner0.y
+                    + volumeOffset.y, corner0.z + (s = (m_IsoLevel - isoValue2)
+                    / (isoValue6 - isoValue2)) * volumeOffset.z), CalcNormal(
+                    gradientIsoValue2, gradientIsoValue6, s));
                 if(edgeValue & 2048) // Edge 11 between corner 3 and 7
                     mcVertices[vertexIndizes[11] = m_NumVertices++] = fp_MCVertex(
-                            D3DXVECTOR3(corner0.x, corner0.y + volumeOffset.y, corner0.z
-                            + (s = (m_IsoLevel - isoValue3) / (isoValue7 - isoValue3))
-                            * volumeOffset.z), CalcNormal(gradientIsoValue3,
-                            gradientIsoValue7, s));
+                    D3DXVECTOR3(corner0.x, corner0.y + volumeOffset.y, corner0.z
+                    + (s = (m_IsoLevel - isoValue3) / (isoValue7 - isoValue3))
+                    * volumeOffset.z), CalcNormal(gradientIsoValue3,
+                    gradientIsoValue7, s));
 
                 // Triangles:
                 int* triTableEntry = s_TriTable[cubeType];
@@ -539,10 +524,41 @@ void fp_RenderIsoVolume::ConstructMesh() {
     m_VertexBuffer->Unlock();
 }
 
-void fp_RenderIsoVolume::OnFrameRender(
+
+HRESULT fp_RenderIsoVolume::OnD3D9CreateDevice(
+        IDirect3DDevice9* d3dDevice,
+        const D3DSURFACE_DESC* BackBufferSurfaceDesc,
+        void* UserContext ) {
+    //HRESULT hr;
+
+    return S_OK;
+}
+
+HRESULT fp_RenderIsoVolume::OnD3D9ResetDevice(
+        IDirect3DDevice9* d3dDevice,
+        const D3DSURFACE_DESC* BackBufferSurfaceDesc,
+        void* UserContext ) {
+    d3dDevice->CreateVertexBuffer( FP_MC_MAX_VETICES * sizeof(fp_MCVertex), 
+            D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY, 
+            fp_MCVertex::FVF_Flags, D3DPOOL_DEFAULT, &m_VertexBuffer, NULL );
+    d3dDevice->CreateIndexBuffer(FP_MC_MAX_TRIANGLES * 3,
+            D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY,
+            D3DFMT_INDEX32, D3DPOOL_DEFAULT, &m_IndexBuffer, NULL );
+    return S_OK;
+}
+
+void fp_RenderIsoVolume::OnD3D9FrameRender(
         IDirect3DDevice9* d3dDevice,
         double Time,
-        float ElapsedTime ) {  
+        float ElapsedTime,
+        const D3DXVECTOR3* EyePt,
+        const D3DXMATRIX*  WorldViewProjection,
+        const D3DXMATRIX*  World,
+        const D3DXMATRIX*  View,
+        const D3DXMATRIX*  Proj,
+        int NumActiveLights,
+        int ActiveLight,
+        float LightScale) {  
     d3dDevice->SetStreamSource(0, m_VertexBuffer, 0, sizeof(fp_MCVertex));
     d3dDevice->SetIndices(m_IndexBuffer);
 	d3dDevice->SetFVF(fp_MCVertex::FVF_Flags);
@@ -561,13 +577,79 @@ void fp_RenderIsoVolume::OnFrameRender(
     d3dDevice->LightEnable(0, FALSE);
 }
 
-void fp_RenderIsoVolume::OnDetroyDevice() {
+void fp_RenderIsoVolume::OnD3D9DestroyDevice(void* UserContext) {
 
 }
 
-void fp_RenderIsoVolume::OnLostDevice() {     
+void fp_RenderIsoVolume::OnD3D9LostDevice(void* UserContext) {     
     SAFE_RELEASE(m_VertexBuffer);    
     SAFE_RELEASE(m_IndexBuffer);
+}
+
+
+
+
+HRESULT fp_RenderIsoVolume::OnD3D10CreateDevice(
+        ID3D10Device* d3dDevice,
+        const DXGI_SURFACE_DESC* BackBufferSurfaceDesc,
+        void* UserContext ) {
+    //HRESULT hr;
+
+    return S_OK;
+}
+
+HRESULT fp_RenderIsoVolume::OnD3D10ResizedSwapChain(
+        ID3D10Device* d3dDevice,
+        IDXGISwapChain *SwapChain,
+        const DXGI_SURFACE_DESC* BackBufferSurfaceDesc,
+        void* UserContext ) {
+    //d3dDevice->CreateVertexBuffer( FP_MC_MAX_VETICES * sizeof(fp_MCVertex), 
+    //    D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY, 
+    //    fp_MCVertex::FVF_Flags, D3DPOOL_DEFAULT, &m_VertexBuffer, NULL );
+    //d3dDevice->CreateIndexBuffer(FP_MC_MAX_TRIANGLES * 3,
+    //    D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY,
+    //    D3DFMT_INDEX32, D3DPOOL_DEFAULT, &m_IndexBuffer, NULL );
+    return S_OK;
+}
+
+void fp_RenderIsoVolume::OnD3D10FrameRender(
+        ID3D10Device* d3dDevice,
+        double Time,
+        float ElapsedTime,
+        const D3DXVECTOR3* EyePt,
+        const D3DXMATRIX*  WorldViewProjection,
+        const D3DXMATRIX*  World,
+        const D3DXMATRIX*  View,
+        const D3DXMATRIX*  Proj,
+        int NumActiveLights,
+        int ActiveLight,
+        float LightScale) {  
+   //d3dDevice->SetStreamSource(0, m_VertexBuffer, 0, sizeof(fp_MCVertex));
+   //d3dDevice->SetIndices(m_IndexBuffer);
+   //d3dDevice->SetFVF(fp_MCVertex::FVF_Flags);
+   //d3dDevice->SetMaterial(&m_Material);
+   //int i;
+   //for (i=0; i < m_NumActiveLights; i++) {        
+   //    d3dDevice->SetLight(i, &m_Lights[i]);
+   //    d3dDevice->LightEnable(i, TRUE);
+   //}
+   //d3dDevice->LightEnable(i, FALSE);
+   //d3dDevice->SetRenderState(D3DRS_LIGHTING, TRUE);
+
+   //d3dDevice->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, m_NumVertices, 0, m_NumTriangles);
+
+   //d3dDevice->SetRenderState(D3DRS_LIGHTING, FALSE);
+   //d3dDevice->LightEnable(0, FALSE);
+}
+
+void fp_RenderIsoVolume::OnD3D10DestroyDevice( void* UserContext ) {
+    ;
+}
+
+void fp_RenderIsoVolume::OnD3D10ReleasingSwapChain( void* UserContext ) {
+    ;
+    //SAFE_RELEASE(m_VertexBuffer);    
+    //SAFE_RELEASE(m_IndexBuffer);
 }
 
 inline D3DXVECTOR3 fp_RenderIsoVolume::CalcNormal(
