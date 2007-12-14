@@ -142,6 +142,9 @@ fp_Fluid::fp_Fluid(
         m_NumParticles(NumParticlesX * NumParticlesY * NumParticlesZ),        
         m_Particles(new fp_FluidParticle[NumParticlesX * NumParticlesY * NumParticlesZ]),
         m_GlassPosition(Center),
+        m_LastGlassPosition(Center),
+        m_LastGlassVelocity(0.0f, 0.0f, 0.0f),
+        m_GlassVelocityChange(0.0f, 0.0f, 0.0f),
         m_GlassRadius(GlassRadius),
         m_GlassFloor(GlassFloor),
         m_Gravity(Gravity),
@@ -308,6 +311,7 @@ void fp_Fluid::Update(float ElapsedTime) {
                                     D3DXVECTOR3 toNeighbour = neighborParticle->m_Position
                                             - particle->m_Position;
                                     float distSq = D3DXVec3LengthSq(&toNeighbour);
+                                    assert(distSq > 0.0f);
                                     if(distSq < m_SmoothingLengthSq) {                                        
                                         ProcessParticlePair(particle, neighborParticle,
                                                 distSq);
@@ -320,6 +324,12 @@ void fp_Fluid::Update(float ElapsedTime) {
             }
         }        
     }
+
+    // For glass collision:
+    D3DXVECTOR3 glassVelocity = (m_GlassPosition - m_LastGlassPosition) / ElapsedTime;
+    m_GlassVelocityChange = glassVelocity - m_LastGlassVelocity;
+    m_LastGlassVelocity = glassVelocity;
+    m_LastGlassPosition = m_GlassPosition;
 
     // Move particles and clear fields
     for (int i = 0; i < m_NumParticles; i++) {
@@ -365,7 +375,7 @@ inline void fp_Fluid::HandleGlassCollision(fp_FluidParticle* Particle) {
         // Position particle on floor
         Particle->m_Position.y = minPositionY;
         // Invert it's velocity along y-Axis
-        Particle->m_Velocity.y = -Particle->m_Velocity.y;
+        Particle->m_Velocity.y = -Particle->m_Velocity.y + m_GlassVelocityChange.y;
     }
 
     // Handle collision with side
@@ -384,6 +394,8 @@ inline void fp_Fluid::HandleGlassCollision(fp_FluidParticle* Particle) {
         // R = -2 * (N*V) * N + V
         Particle->m_Velocity += -2.0f * D3DXVec3Dot(&normal, &Particle->m_Velocity)
                 * normal;
+        Particle->m_Velocity.x += m_GlassVelocityChange.x * abs(normal.x);
+        Particle->m_Velocity.z += m_GlassVelocityChange.z * abs(normal.z);
     }
 }
 

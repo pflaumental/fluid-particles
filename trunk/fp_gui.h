@@ -30,11 +30,12 @@
 #define IDC_MC_ISO_LEVEL_STATIC     16
 #define IDC_MC_VOXEL_SIZE           17
 #define IDC_MC_VOXEL_SIZE_STATIC    18
+#define IDC_MOVE_HORIZONTALLY       19
 
 #define FP_GUI_RENDER_TYPE_ISO_SURFACE  0
 #define FP_GUI_RENDER_TYPE_POINT_SPRITE 1
 
-#define FP_GUI_HEIGHT              525
+#define FP_GUI_HEIGHT              550
 
 //--------------------------------------------------------------------------------------
 // Fluid particles GUI
@@ -69,6 +70,7 @@ public:
             float& LightScale,
             float& ParticeScale,
             bool& ResetSim,
+            bool& MoveHorizontally,
             int& RenderType);
 
     // DX9 specific

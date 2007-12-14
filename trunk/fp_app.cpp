@@ -35,6 +35,7 @@ float                   g_LightScale;
 int                     g_NumActiveLights;
 int                     g_ActiveLight;
 int                     g_RenderType;
+bool                    g_MoveHorizontally;
 
 // Direct3D10 resources
 //CDXUTSDKMesh            g_Mesh10;
@@ -296,6 +297,13 @@ void CALLBACK FP_OnFrameMoveInitial(
 void CALLBACK FP_OnFrameMove( double Time, float ElapsedTime, void* UserContext ) {
     // Update the camera's position based on user input 
     g_Camera.FrameMove( ElapsedTime );
+    float mouseDragX, mouseDragY;
+    g_Camera.GetMouseDrag(mouseDragX, mouseDragY);
+    g_Sim->m_GlassPosition.x += 100.0f * mouseDragX;
+    if(g_MoveHorizontally)
+        g_Sim->m_GlassPosition.z -= 100.0f * mouseDragY;
+    else
+        g_Sim->m_GlassPosition.y -= 100.0f * mouseDragY;        
     g_Sim->Update(ElapsedTime);
     if(g_RenderType == FP_GUI_RENDER_TYPE_ISO_SURFACE) {
         g_IsoVolume->ConstructFromFluid();
@@ -348,7 +356,7 @@ void CALLBACK FP_OnGUIEvent(
     float mcVoxelSize = -1.0f, mcIsoLevel = -1.0f;
     g_GUI.OnGUIEvent(Event, ControlID, Control, g_ActiveLight, g_NumActiveLights,
             mcVoxelSize, mcIsoLevel, g_LightScale, g_RenderSprites->m_SpriteSize,
-            resetSim, g_RenderType);
+            resetSim, g_MoveHorizontally, g_RenderType);
     if(mcIsoLevel > 0.0f)
         g_RenderIsoVolume->m_IsoLevel = mcIsoLevel;
     if(mcVoxelSize > 0.0f && mcVoxelSize != g_IsoVolume->m_VoxelSize)
@@ -365,7 +373,6 @@ void CALLBACK FP_OnGUIEvent(
         g_IsoVolume = new fp_IsoVolume(g_Sim, mcVoxelSize);
         g_RenderSprites->m_Particles = g_Sim->m_Particles;
         g_RenderIsoVolume->m_IsoVolume = g_IsoVolume;
-        g_Camera.SetGlassPosition(&g_Sim->m_GlassPosition);
     }
 }
 
@@ -470,7 +477,6 @@ HRESULT CALLBACK FP_OnD3D10CreateDevice(
     D3DXVECTOR3 vecAt (0.0f, 0.0f, -0.0f);
     g_Camera.SetViewParams( &vecEye, &vecAt );
     g_Camera.SetRadius( FP_OBJECT_RADIUS*3.0f, FP_OBJECT_RADIUS*0.5f, FP_OBJECT_RADIUS*100.0f );
-    g_Camera.SetGlassPosition(&g_Sim->m_GlassPosition);
 
     return S_OK;
 }
