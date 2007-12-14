@@ -38,8 +38,11 @@ fp_GUI::fp_GUI()
 
     WCHAR sz[100];
     iY += 24;
+
+    m_SampleUI.AddCheckBox(IDC_MOVE_HORIZONTALLY, L"Move horizontally", 35, iY += 24, 125, 24);
+
     m_SampleUI.AddButton( IDC_RESET_SIM, L"Reset simulation (R)", 35, iY += 24,
-        125, 22, 'R' );
+        125, 22, 'R' );    
 
     CDXUTComboBox *comboBox;
     m_SampleUI.AddComboBox( IDC_SELECT_RENDER_TYPE, 35, iY += 24, 125, 24, L'S', false, &comboBox );
@@ -152,6 +155,7 @@ void fp_GUI::OnGUIEvent(
         float& LightScale,        
         float& ParticleScale,
         bool& ResetSim,
+        bool& MoveHorizontally,
         int& RenderType) {   
     WCHAR sz[100];
     ResetSim = false;
@@ -171,6 +175,10 @@ void fp_GUI::OnGUIEvent(
                 RenderType = (int) item->pData;            
             break;
         }
+
+        case IDC_MOVE_HORIZONTALLY: 
+            MoveHorizontally = m_SampleUI.GetCheckBox(IDC_MOVE_HORIZONTALLY)->GetChecked();
+            break;       
 
         case IDC_MC_VOXEL_SIZE: 
             MCVoxelSize = (float) (m_SampleUI.GetSlider(

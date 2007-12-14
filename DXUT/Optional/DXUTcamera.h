@@ -263,7 +263,7 @@ public:
     void SetWorldMatrix( D3DXMATRIX &mWorld ) { m_mWorld = mWorld; m_bDragSinceLastUpdate = true; }
 
     // Usercode
-    void SetGlassPosition(D3DXVECTOR3* GlassPosition);
+    void GetMouseDrag(float& MouseDragX, float& MouseDragY);
 
 protected:
     CD3DArcBall  m_WorldArcBall;
@@ -278,7 +278,8 @@ protected:
     int m_LastLeftButtonDragY;
     bool m_IsLeftButtonDrag;
     RECT m_DragRect;
-    D3DXVECTOR3* m_GlassPosition;
+    float m_MouseDragX;
+    float m_MouseDragY;
 
     int          m_nRotateModelButtonMask;
     int          m_nZoomButtonMask;

@@ -803,6 +803,7 @@ CModelViewerCamera::CModelViewerCamera()
 
     // User Implemented:
     m_IsLeftButtonDrag = false;
+    m_MouseDragX = m_MouseDragY = 0.0f;
 }
 
 
@@ -968,8 +969,10 @@ void CModelViewerCamera::SetViewParams( D3DXVECTOR3* pvEyePt, D3DXVECTOR3* pvLoo
     m_bDragSinceLastUpdate = true;
 }
 
-void CModelViewerCamera::SetGlassPosition(D3DXVECTOR3* GlassPosition) {
-    m_GlassPosition = GlassPosition;
+void CModelViewerCamera::GetMouseDrag(float& MouseDragX, float& MouseDragY) {
+    MouseDragX = m_MouseDragX;
+    MouseDragY = m_MouseDragY;
+    m_MouseDragX = m_MouseDragY = 0.0f;
 }
 
 
@@ -1009,12 +1012,10 @@ LRESULT CModelViewerCamera::HandleMessages( HWND hWnd, UINT uMsg, WPARAM wParam,
         int iMouseY = (short)HIWORD(lParam);        
         // Usercode
         if(m_IsLeftButtonDrag) {
-            float dragX = (iMouseX - m_LastLeftButtonDragX) / ((float)m_DragRect.right);
-            float dragY = (iMouseY - m_LastLeftButtonDragY) / ((float)m_DragRect.bottom);
+            m_MouseDragX = (iMouseX - m_LastLeftButtonDragX) / ((float)m_DragRect.right);
+            m_MouseDragY = (iMouseY - m_LastLeftButtonDragY) / ((float)m_DragRect.bottom);
             m_LastLeftButtonDragX = iMouseX;
             m_LastLeftButtonDragY = iMouseY;
-            m_GlassPosition->x += 100.0f * dragX;
-            m_GlassPosition->y -= 100.0f * dragY;
         }
         //m_WorldArcBall.OnMove( iMouseX, iMouseY );
         m_ViewArcBall.OnMove( iMouseX, iMouseY );

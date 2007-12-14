@@ -82,6 +82,9 @@ public:
     float m_GlassFloor;
     float m_GlassFloorPlusCollisionRadius;
     D3DXVECTOR3 m_GlassPosition;
+    D3DXVECTOR3 m_LastGlassPosition;
+    D3DXVECTOR3 m_LastGlassVelocity;
+    D3DXVECTOR3 m_GlassVelocityChange;
     
     D3DXVECTOR3 m_Gravity;
 

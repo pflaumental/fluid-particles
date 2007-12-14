@@ -186,7 +186,6 @@ HRESULT CALLBACK FP_OnD3D9CreateDevice(
     D3DXVECTOR3 vecAt (0.0f, 0.0f, -0.0f);
     g_Camera.SetViewParams( &vecEye, &vecAt );
     g_Camera.SetRadius( FP_OBJECT_RADIUS*3.0f, FP_OBJECT_RADIUS*0.5f, FP_OBJECT_RADIUS*100.0f );
-    g_Camera.SetGlassPosition(&g_Sim->m_GlassPosition);
 
     return S_OK;
 }

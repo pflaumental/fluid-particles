@@ -9,7 +9,9 @@ fp_RenderSprites::fp_RenderSprites(int NumParticles, fp_FluidParticle* Particles
         :
         m_NumParticles(NumParticles),
         m_Particles(Particles),
-        m_SpriteSize(FP_RENDER_DEFAULT_SPRITE_SIZE){
+        m_SpriteSize(FP_RENDER_DEFAULT_SPRITE_SIZE),
+		m_Texture9(NULL),
+		m_Texture10(NULL){
 }
 
 fp_RenderSprites::~fp_RenderSprites() {
