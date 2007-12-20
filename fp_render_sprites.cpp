@@ -2,6 +2,7 @@
 #include "SDKmisc.h"
 #include "fp_render_sprites.h"
 #include "fp_util.h"
+#include <tools/DX10Tools.h>
 
 const D3D10_INPUT_ELEMENT_DESC fp_SpriteVertex::Layout[] = { { "POSITION",  0,
         DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D10_INPUT_PER_VERTEX_DATA, 0 } };
@@ -144,19 +145,13 @@ HRESULT fp_RenderSprites::OnD3D10CreateDevice(
     D3DX10CreateShaderResourceViewFromFile(d3dDevice, str, NULL, NULL,
             &m_Texture10RV, NULL);
 
-    DWORD dwShaderFlags = D3D10_SHADER_ENABLE_STRICTNESS;
-    #if defined( DEBUG ) || defined( _DEBUG )
-    // Set the D3D10_SHADER_DEBUG flag to embed debug information in the shaders.
-    // Setting this flag improves the shader debugging experience, but still allows 
-    // the shaders to be optimized and to run exactly the way they will run in 
-    // the release configuration of this program.
-    dwShaderFlags |= D3D10_SHADER_DEBUG;
-    #endif
+
 
     // Read the D3DX effect file
-    V_RETURN( DXUTFindDXSDKMediaFileCch( str, MAX_PATH, L"fp_render_sprites10.fx" ) );
-    V_RETURN( D3DX10CreateEffectFromFile( str, NULL, NULL, "fx_4_0", dwShaderFlags, 
-            0, d3dDevice, NULL, NULL, &m_Effect10, NULL, NULL ) );
+    m_Effect10 = DX10Tools::EffectLoader(d3dDevice, L"fp_render_sprites.fx");
+    //V_RETURN( DXUTFindDXSDKMediaFileCch( str, MAX_PATH, L"fp_render_sprites.fx" ) );
+    //V_RETURN( D3DX10CreateEffectFromFile( str, NULL, NULL, "fx_4_0", dwShaderFlags, 
+    //        0, d3dDevice, NULL, NULL, &m_Effect10, NULL, NULL ) );
 
     // Obtain technique objects
     m_TechRenderSprites = m_Effect10->GetTechniqueByName(
