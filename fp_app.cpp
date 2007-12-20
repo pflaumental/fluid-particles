@@ -232,7 +232,8 @@ void FP_FinishApp() {
 }
 
 //--------------------------------------------------------------------------------------
-// Called right before creating a D3D9 or D3D10 device, allowing the app to modify the device settings as needed
+// Called right before creating a D3D9 or D3D10 device, allowing the app to modify the
+// device settings as needed
 //--------------------------------------------------------------------------------------
 bool CALLBACK FP_ModifyDeviceSettings( 
         DXUTDeviceSettings* DeviceSettings, 
@@ -240,7 +241,8 @@ bool CALLBACK FP_ModifyDeviceSettings(
     if( DXUT_D3D9_DEVICE == DeviceSettings->ver ) {
         D3DCAPS9 Caps;
         IDirect3D9 *pD3D = DXUTGetD3D9Object();
-        pD3D->GetDeviceCaps( DeviceSettings->d3d9.AdapterOrdinal, DeviceSettings->d3d9.DeviceType, &Caps );
+        pD3D->GetDeviceCaps( DeviceSettings->d3d9.AdapterOrdinal,
+                DeviceSettings->d3d9.DeviceType, &Caps );
 
         // If device doesn't support HW T&L or doesn't support 1.1 vertex shaders in HW 
         // then switch to SWVP.
@@ -268,13 +270,15 @@ bool CALLBACK FP_ModifyDeviceSettings(
         //pDeviceSettings->d3d10.CreateFlags |= D3D10_CREATE_DEVICE_DEBUG;
     }
 
-    // For the first device created if its a REF device, optionally display a warning dialog box
+    // For the first device created if its a REF device, optionally display a warning
+    // dialog box
     static bool s_bFirstTime = true;
     if( s_bFirstTime ) {
         s_bFirstTime = false;
-        if( (DXUT_D3D9_DEVICE == DeviceSettings->ver && DeviceSettings->d3d9.DeviceType == D3DDEVTYPE_REF) ||
-            (DXUT_D3D10_DEVICE == DeviceSettings->ver && DeviceSettings->d3d10.DriverType == D3D10_DRIVER_TYPE_REFERENCE) )
-            DXUTDisplaySwitchingToREFWarning( DeviceSettings->ver );
+        if( (DXUT_D3D9_DEVICE == DeviceSettings->ver && DeviceSettings->d3d9.DeviceType
+                == D3DDEVTYPE_REF) || (DXUT_D3D10_DEVICE == DeviceSettings->ver
+                && DeviceSettings->d3d10.DriverType == D3D10_DRIVER_TYPE_REFERENCE) )
+                DXUTDisplaySwitchingToREFWarning( DeviceSettings->ver );
     }
 
     return true;
@@ -290,7 +294,7 @@ void CALLBACK FP_OnFrameMoveInitial(
         void* UserContext ) {
     // Update the camera's position based on user input 
     g_Camera.FrameMove( ElapsedTime );
-    if(Time > 0.2)
+    if(Time > 0.1)
         DXUTSetCallbackFrameMove( FP_OnFrameMove );
 }
 
@@ -335,7 +339,7 @@ LRESULT CALLBACK FP_MsgProc(
 //--------------------------------------------------------------------------------------
 // Handle key presses
 //--------------------------------------------------------------------------------------
-void CALLBACK FP_OnKeyboard( UINT Char, bool KeyDown, bool AltDown, void* UserContext ) {
+void CALLBACK FP_OnKeyboard( UINT Char, bool KeyDown, bool AltDown, void* UserContext ){
     if( KeyDown ) {
         switch( Char ) {
             case VK_F1: g_GUI.m_ShowHelp = !g_GUI.m_ShowHelp; break;
@@ -354,9 +358,13 @@ void CALLBACK FP_OnGUIEvent(
         void* UserContext ) {   
     bool resetSim;
     float mcVoxelSize = -1.0f, mcIsoLevel = -1.0f;
+    float oldSpriteSize = g_RenderSprites->GetSpriteSize();
+    float newSpriteSize = oldSpriteSize;
     g_GUI.OnGUIEvent(Event, ControlID, Control, g_ActiveLight, g_NumActiveLights,
-            mcVoxelSize, mcIsoLevel, g_LightScale, g_RenderSprites->m_SpriteSize,
-            resetSim, g_MoveHorizontally, g_RenderType);
+            mcVoxelSize, mcIsoLevel, g_LightScale, newSpriteSize, resetSim,
+            g_MoveHorizontally, g_RenderType);
+    if(oldSpriteSize != newSpriteSize)
+        g_RenderSprites->SetSpriteSize(newSpriteSize);
     if(mcIsoLevel > 0.0f)
         g_RenderIsoVolume->m_IsoLevel = mcIsoLevel;
     if(mcVoxelSize > 0.0f && mcVoxelSize != g_IsoVolume->m_VoxelSize)
@@ -380,8 +388,13 @@ void CALLBACK FP_OnGUIEvent(
 //--------------------------------------------------------------------------------------
 // Reject any D3D10 devices that aren't acceptable by returning false
 //--------------------------------------------------------------------------------------
-bool CALLBACK FP_IsD3D10DeviceAcceptable( UINT Adapter, UINT Output, D3D10_DRIVER_TYPE DeviceType, DXGI_FORMAT BackBufferFormat, bool Windowed, void* UserContext )
-{
+bool CALLBACK FP_IsD3D10DeviceAcceptable(
+        UINT Adapter,
+        UINT Output, 
+        D3D10_DRIVER_TYPE DeviceType,
+        DXGI_FORMAT BackBufferFormat,
+        bool Windowed,
+        void* UserContext ) {
     return true;
 }
 
@@ -396,6 +409,17 @@ HRESULT CALLBACK FP_OnD3D10CreateDevice(
     HRESULT hr;
 
     g_GUI.OnD3D10CreateDevice(d3dDevice, BackBufferSurfaceDesc, UserContext);
+
+    DWORD dwShaderFlags = D3D10_SHADER_ENABLE_STRICTNESS;
+    #if defined( DEBUG ) || defined( _DEBUG )
+    // Set the D3D10_SHADER_DEBUG flag to embed debug information in the shaders.
+    // Setting this flag improves the shader debugging experience, but still allows 
+    // the shaders to be optimized and to run exactly the way they will run in 
+    // the release configuration of this program.
+    dwShaderFlags |= D3D10_SHADER_DEBUG;
+    #endif
+
+
     g_RenderSprites->OnD3D10CreateDevice(d3dDevice, BackBufferSurfaceDesc,
             UserContext);
     g_RenderIsoVolume->OnD3D10CreateDevice(d3dDevice, BackBufferSurfaceDesc,
@@ -471,6 +495,7 @@ HRESULT CALLBACK FP_OnD3D10CreateDevice(
     //D3DXCOLOR colorMtrlAmbient(0.35f, 0.35f, 0.35f, 0);
     //V_RETURN( g_MaterialAmbientColor->SetFloatVector( (float*)&colorMtrlAmbient ) );
     //V_RETURN( g_MaterialDiffuseColor->SetFloatVector( (float*)&colorMtrlDiffuse ) );
+
 
     // Setup the camera's view parameters
     D3DXVECTOR3 vecEye(0.0f, 0.0f, -15.0f);

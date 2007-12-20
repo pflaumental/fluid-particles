@@ -11,33 +11,25 @@
 // Fluid particles render technique: Point Sprites
 //--------------------------------------------------------------------------------------
 
-struct fp_SpriteVertex
-{
+struct fp_SpriteVertex {
     D3DXVECTOR3 m_Position;
-    D3DCOLOR    m_cColor;
+    D3DCOLOR    m_Color;
 
-	enum FVF
-	{
+	enum FVF {
 		FVF_Flags = D3DFVF_XYZ|D3DFVF_DIFFUSE
 	};
 
-    //static const D3D10_INPUT_ELEMENT_DESC layout[] = {
-    //    { "POSITION",  0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0,  
-    //            D3D10_INPUT_PER_VERTEX_DATA, 0 },
-    //    { "DIFFUSE",   0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, 
-    //            D3D10_INPUT_PER_VERTEX_DATA, 0 },
-    //    { "TEXCOORD",  0, DXGI_FORMAT_R32G32_FLOAT,    0, 24, 
-    //            D3D10_INPUT_PER_VERTEX_DATA, 0 },
-    //};
+    static const D3D10_INPUT_ELEMENT_DESC Layout[];
 };
 
 class fp_RenderSprites {
-public:
-    float m_SpriteSize;
+public:    
     fp_FluidParticle* m_Particles;
 
     fp_RenderSprites(int NumParticles, fp_FluidParticle* Particles);
     ~fp_RenderSprites();
+    float GetSpriteSize() const;
+    void SetSpriteSize(float SpriteSize);
 
     // DX9 specific
     HRESULT OnD3D9CreateDevice(
@@ -89,10 +81,21 @@ public:
             float LightScale); 
 
 private:
-    int m_NumParticles;    
+    int m_NumParticles;  
+    float m_SpriteSize;
+    D3DXCOLOR m_SpriteColor;
     LPDIRECT3DVERTEXBUFFER9 m_VertexBuffer9;
     LPDIRECT3DTEXTURE9 m_Texture9;
-    ID3D10Texture2D * m_Texture10;
+    ID3D10Buffer* m_VertexBuffer10;
+    ID3D10InputLayout* m_VertexLayout;
+    ID3D10ShaderResourceView * m_Texture10RV;
+    ID3D10Effect* m_Effect10;
+    ID3D10EffectTechnique*  m_TechRenderSprites;
+    ID3D10EffectScalarVariable* m_EffectSpriteSize;
+    ID3D10EffectVectorVariable* m_EffectSpriteColor;
+    ID3D10EffectShaderResourceVariable* m_EffectTexture;
+    ID3D10EffectMatrixVariable* m_EffectWorldViewProjection;
+    ID3D10EffectMatrixVariable* m_EffectWorld;    
 };
 
 #endif

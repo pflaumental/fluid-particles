@@ -3,22 +3,43 @@
 #include "fp_render_sprites.h"
 #include "fp_util.h"
 
-D3DCOLOR g_SpriteColor = D3DCOLOR_COLORVALUE(1.0f, 1.0f, 1.0f, 1.0f);
+const D3D10_INPUT_ELEMENT_DESC fp_SpriteVertex::Layout[] = { { "POSITION",  0,
+        DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D10_INPUT_PER_VERTEX_DATA, 0 } };
 
 fp_RenderSprites::fp_RenderSprites(int NumParticles, fp_FluidParticle* Particles)
         :
         m_NumParticles(NumParticles),
         m_Particles(Particles),
         m_SpriteSize(FP_RENDER_DEFAULT_SPRITE_SIZE),
+        m_SpriteColor(1.0f, 1.0f, 1.0f, 1.0f),
 		m_Texture9(NULL),
-		m_Texture10(NULL){
+        m_VertexBuffer10(NULL),
+		m_Texture10RV(NULL),
+        m_Effect10(NULL),
+        m_TechRenderSprites(NULL),
+        m_EffectSpriteSize(NULL),
+        m_EffectSpriteColor(NULL),
+        m_EffectTexture(NULL),
+        m_EffectWorldViewProjection(NULL),
+        m_EffectWorld(NULL),
+        m_VertexLayout(NULL){
 }
 
 fp_RenderSprites::~fp_RenderSprites() {
 	OnD3D9LostDevice(NULL);
 	OnD3D9DestroyDevice(NULL);
-    OnD3D10ResizedSwapChain(NULL, NULL, NULL, NULL);
+    OnD3D10ReleasingSwapChain(NULL);
     OnD3D10DestroyDevice(NULL);
+}
+
+float fp_RenderSprites::GetSpriteSize() const {
+    return m_SpriteSize;
+}
+
+void fp_RenderSprites::SetSpriteSize(float SpriteSize) {
+    m_SpriteSize = SpriteSize;
+    if(m_EffectSpriteSize != NULL)
+        m_EffectSpriteSize->SetFloat(SpriteSize);
 }
 
 HRESULT fp_RenderSprites::OnD3D9CreateDevice(
@@ -69,17 +90,15 @@ void fp_RenderSprites::OnD3D9FrameRender(
     d3dDevice->SetRenderState( D3DRS_POINTSCALE_C,  fp_Util::FtoDW(1.0f) );
 
 	fp_SpriteVertex *pSpriteVertices;
-
+    D3DCOLOR SpriteColor = D3DCOLOR_COLORVALUE(m_SpriteColor.r, m_SpriteColor.g,
+            m_SpriteColor.b, m_SpriteColor.a);
 	m_VertexBuffer9->Lock( 0, m_NumParticles * sizeof(fp_SpriteVertex),
-		                   (void**)&pSpriteVertices, D3DLOCK_DISCARD );
-
-	for( int i = 0; i < m_NumParticles; i++ )
-    {
+            (void**)&pSpriteVertices, D3DLOCK_DISCARD );
+	for( int i = 0; i < m_NumParticles; i++ ) {
         pSpriteVertices->m_Position = m_Particles[i].m_Position;
-        pSpriteVertices->m_cColor = D3DCOLOR_COLORVALUE(1.0f, 1.0f, 1.0f, 1.0f);
+        pSpriteVertices->m_Color = SpriteColor;
         pSpriteVertices++;
     }
-
     m_VertexBuffer9->Unlock();
 	
 	//
@@ -122,8 +141,41 @@ HRESULT fp_RenderSprites::OnD3D10CreateDevice(
     HRESULT hr;
     WCHAR str[MAX_PATH];
     V_RETURN( DXUTFindDXSDKMediaFileCch( str, MAX_PATH, L"Media/PointSprites/particle.bmp" ) );
-    D3DX10CreateTextureFromFile(d3dDevice, str, NULL, NULL,
-            (ID3D10Resource**)&m_Texture10, NULL);
+    D3DX10CreateShaderResourceViewFromFile(d3dDevice, str, NULL, NULL,
+            &m_Texture10RV, NULL);
+
+    DWORD dwShaderFlags = D3D10_SHADER_ENABLE_STRICTNESS;
+    #if defined( DEBUG ) || defined( _DEBUG )
+    // Set the D3D10_SHADER_DEBUG flag to embed debug information in the shaders.
+    // Setting this flag improves the shader debugging experience, but still allows 
+    // the shaders to be optimized and to run exactly the way they will run in 
+    // the release configuration of this program.
+    dwShaderFlags |= D3D10_SHADER_DEBUG;
+    #endif
+
+    // Read the D3DX effect file
+    V_RETURN( DXUTFindDXSDKMediaFileCch( str, MAX_PATH, L"fp_render_sprites10.fx" ) );
+    V_RETURN( D3DX10CreateEffectFromFile( str, NULL, NULL, "fx_4_0", dwShaderFlags, 
+            0, d3dDevice, NULL, NULL, &m_Effect10, NULL, NULL ) );
+
+    // Obtain technique objects
+    m_TechRenderSprites = m_Effect10->GetTechniqueByName(
+            "RenderSprites" );
+
+    // Obtain effect variables and set as needed
+    m_EffectSpriteSize = m_Effect10->GetVariableByName("m_EffectSpriteSize")->AsScalar();
+    m_EffectSpriteColor = m_Effect10->GetVariableByName("m_EffectSpriteColor")->AsVector();
+    V_RETURN(m_EffectSpriteColor->SetFloatVector((float*)&m_SpriteColor));
+    m_EffectTexture = m_Effect10->GetVariableByName( "m_EffectTexture" )->AsShaderResource();
+    V_RETURN(m_EffectTexture->SetResource(m_Texture10RV));
+    m_EffectWorldViewProjection = m_Effect10->GetVariableByName( "m_WorldViewProjection" )
+        ->AsMatrix();
+    m_EffectWorld = m_Effect10->GetVariableByName( "m_World" )->AsMatrix();
+
+    D3D10_PASS_DESC passDesc;
+    V_RETURN( m_TechRenderSprites->GetPassByIndex(0)->GetDesc(&passDesc));
+    V_RETURN( d3dDevice->CreateInputLayout(fp_SpriteVertex::Layout, 1, passDesc.pIAInputSignature, 
+            passDesc.IAInputSignatureSize, &m_VertexLayout ) );
 
     return S_OK;
 }
@@ -133,10 +185,19 @@ HRESULT fp_RenderSprites::OnD3D10ResizedSwapChain(
         IDXGISwapChain *SwapChain,
         const DXGI_SURFACE_DESC* BackBufferSurfaceDesc,
         void* UserContext ) {
-    //d3dDevice->CreateBuffer()
-    //d3dDevice->CreateVertexBuffer( m_NumParticles * sizeof(fp_SpriteVertex), 
-    //        D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY | D3DUSAGE_POINTS, 
-    //        fp_SpriteVertex::FVF_Flags, D3DPOOL_DEFAULT, &m_VertexBuffer, NULL );
+    HRESULT hr;
+    D3D10_BUFFER_DESC bufferDesc;
+    bufferDesc.Usage = D3D10_USAGE_DYNAMIC;
+    bufferDesc.ByteWidth = m_NumParticles * sizeof(fp_SpriteVertex);
+    bufferDesc.BindFlags = D3D10_BIND_VERTEX_BUFFER;
+    bufferDesc.CPUAccessFlags = D3D10_CPU_ACCESS_WRITE;
+    bufferDesc.MiscFlags = 0;
+    V_RETURN(d3dDevice->CreateBuffer(&bufferDesc, NULL, &m_VertexBuffer10));
+
+    // Set vertex buffer
+    UINT stride = sizeof(fp_SpriteVertex);
+    UINT offset = 0;
+    d3dDevice->IASetVertexBuffers(0, 1, &m_VertexBuffer10, &stride, &offset);
     return S_OK;
 }
 
@@ -205,9 +266,11 @@ void fp_RenderSprites::OnD3D10FrameRender(
 }
 
 void fp_RenderSprites::OnD3D10DestroyDevice( void* UserContext ) {
-    SAFE_RELEASE(m_Texture10);
+    SAFE_RELEASE(m_Texture10RV);
+    SAFE_RELEASE(m_Effect10);
+    SAFE_RELEASE(m_VertexLayout);
 }
 
 void fp_RenderSprites::OnD3D10ReleasingSwapChain( void* UserContext ) {   
-    //SAFE_RELEASE(m_VertexBuffer);
+    SAFE_RELEASE(m_VertexBuffer10);
 }
