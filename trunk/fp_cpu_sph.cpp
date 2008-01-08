@@ -433,7 +433,7 @@ inline void fp_Fluid::ProcessParticlePair(
     D3DXVECTOR3 pressureForce1Normalized, r1Normalized;
     D3DXVec3Normalize(&pressureForce1Normalized, &pressureForce1);
     D3DXVec3Normalize(&r1Normalized, &r1);
-    float testDot = D3DXVec3Dot(&pressureForce1Normalized, &r1Normalized);
+    //float testDot = D3DXVec3Dot(&pressureForce1Normalized, &r1Normalized);
     //assert(pressureForce1LenSq < 0.1f || pressureForce1LenSq > -0.1f
     //        || testDot > 0.99f);
     assert(m_OldDensities[particle1Index] >= m_InitialDensity);

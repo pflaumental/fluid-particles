@@ -120,18 +120,7 @@ public:
             IDirect3DDevice9* d3dDevice,
             const D3DSURFACE_DESC* BackBufferSurfaceDesc,
             void* UserContext );
-    void    OnD3D9FrameRender(
-            IDirect3DDevice9* d3dDevice,
-            double Time,
-            float ElapsedTime,
-            const D3DXVECTOR3* EyePt,
-            const D3DXMATRIX*  WorldViewProjection,
-            const D3DXMATRIX*  World,
-            const D3DXMATRIX*  View,
-            const D3DXMATRIX*  Proj,
-            int NumActiveLights,
-            int ActiveLight,
-            float LightScale);
+    void    OnD3D9FrameRender(IDirect3DDevice9* d3dDevice);
     void    OnD3D9LostDevice( void* UserContext );
     void    OnD3D9DestroyDevice( void* UserContext );
 

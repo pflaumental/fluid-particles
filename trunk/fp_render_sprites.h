@@ -13,10 +13,9 @@
 
 struct fp_SpriteVertex {
     D3DXVECTOR3 m_Position;
-    D3DCOLOR    m_Color;
 
 	enum FVF {
-		FVF_Flags = D3DFVF_XYZ|D3DFVF_DIFFUSE
+		FVF_Flags = D3DFVF_XYZ
 	};
 
     static const D3D10_INPUT_ELEMENT_DESC Layout[];
@@ -40,18 +39,7 @@ public:
             IDirect3DDevice9* d3dDevice,
             const D3DSURFACE_DESC* BackBufferSurfaceDesc,
             void* UserContext );
-    void    OnD3D9FrameRender(
-            IDirect3DDevice9* d3dDevice,
-            double Time,
-            float ElapsedTime,
-            const D3DXVECTOR3* EyePt,
-            const D3DXMATRIX*  WorldViewProjection,
-            const D3DXMATRIX*  World,
-            const D3DXMATRIX*  View,
-            const D3DXMATRIX*  Proj,
-            int NumActiveLights,
-            int ActiveLight,
-            float LightScale);
+    void    OnD3D9FrameRender(IDirect3DDevice9* d3dDevice);
     void    OnD3D9LostDevice( void* UserContext );
     void    OnD3D9DestroyDevice( void* UserContext );
 
@@ -69,21 +57,12 @@ public:
     void    OnD3D10DestroyDevice( void* UserContext );
     void    OnD3D10FrameRender(
             ID3D10Device* d3dDevice,
-            double Time,
-            float ElapsedTime,
-            const D3DXVECTOR3* EyePt,
-            const D3DXMATRIX*  WorldViewProjection,
-            const D3DXMATRIX*  World,
-            const D3DXMATRIX*  View,
-            const D3DXMATRIX*  Proj,
-            int NumActiveLights,
-            int ActiveLight,
-            float LightScale); 
+            const D3DXMATRIX*  WorldView,
+            const D3DXMATRIX*  Projection); 
 
 private:
     int m_NumParticles;  
     float m_SpriteSize;
-    D3DXCOLOR m_SpriteColor;
     LPDIRECT3DVERTEXBUFFER9 m_VertexBuffer9;
     LPDIRECT3DTEXTURE9 m_Texture9;
     ID3D10Buffer* m_VertexBuffer10;
@@ -92,10 +71,9 @@ private:
     ID3D10Effect* m_Effect10;
     ID3D10EffectTechnique*  m_TechRenderSprites;
     ID3D10EffectScalarVariable* m_EffectSpriteSize;
-    ID3D10EffectVectorVariable* m_EffectSpriteColor;
     ID3D10EffectShaderResourceVariable* m_EffectTexture;
-    ID3D10EffectMatrixVariable* m_EffectWorldViewProjection;
-    ID3D10EffectMatrixVariable* m_EffectWorld;    
+    ID3D10EffectMatrixVariable* m_EffectWorldView;
+    ID3D10EffectMatrixVariable* m_EffectProjection;    
 };
 
 #endif

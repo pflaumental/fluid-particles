@@ -1,132 +1,154 @@
 //--------------------------------------------------------------------------------------
-// File: Fluid particles.fx
-//
-// The effect file for the BasicHLSL sample.  
-// 
-// Copyright (c) Microsoft Corporation. All rights reserved.
+// File: fp_render_sprites.fx
 //--------------------------------------------------------------------------------------
 
+//--------------------------------------------------------------------------------------
+// Structs
+//--------------------------------------------------------------------------------------
+
+struct RenderSpritesVSIn {
+    float3 Pos            : POSITION;
+};
+
+struct RenderSpritesGSIn {
+    float3 Pos            : POSITION;
+};
+
+struct RenderSpritesPSIn {
+    float4 Pos			  : SV_POSITION;
+    float2 Tex			  : TEXCOORD0;
+};
+
+struct RenderSpritesPSOut {
+    float4 Color		  : SV_TARGET;
+};
 
 //--------------------------------------------------------------------------------------
 // Global variables
 //--------------------------------------------------------------------------------------
-//*float4 g_MaterialAmbientColor;      // Material's ambient color
-//*float4 g_MaterialDiffuseColor;      // Material's diffuse color
-//*int g_nNumLights;
-//*
-//*float3 g_LightDir[3];               // Light's direction in world space
-//*float4 g_LightDiffuse[3];           // Light's diffuse color
-//*float4 g_LightAmbient;              // Light's ambient color
-//*
-//*Texture2D g_MeshTexture;            // Color texture for mesh
-//*
-//*float    g_fTime;                   // App's time in seconds
-//*float4x4 g_mWorld;                  // World matrix for object
-//*float4x4 g_mWorldViewProjection;    // World * View * Projection matrix
 
-float m_EffectSpriteSize;
-float4 m_EffectSpriteColor;
-Texture2D m_EffectTexture;
-float4x4 m_WorldViewProjection;
-float4x4 m_World;
-
-//--------------------------------------------------------------------------------------
-// DepthStates
-//--------------------------------------------------------------------------------------
-DepthStencilState EnableDepth {
-    DepthEnable = TRUE;
-    DepthWriteMask = ALL;
-    DepthFunc = LESS_EQUAL;
+cbuffer cbPerObject {
+    matrix g_WorldView;
+    matrix g_Proj;
 };
+
+cbuffer cbUser {
+    float g_SpriteSize;
+};
+
+cbuffer cbImmutable {
+    float3 g_ParticlePositions[4] = {
+        float3( -1, 1, 0 ),
+        float3( 1, 1, 0 ),
+        float3( -1, -1, 0 ),
+        float3( 1, -1, 0 ),
+    };
+    float2 g_ParticleTexcoords[4] = { 
+        float2(0,0), 
+        float2(1,0),
+        float2(0,1),
+        float2(1,1),
+    };
+};
+
+//--------------------------------------------------------------------------------------
+// Textures
+//--------------------------------------------------------------------------------------
+
+Texture2D g_ParticleDiffuse;
 
 //--------------------------------------------------------------------------------------
 // Texture samplers
 //--------------------------------------------------------------------------------------
-SamplerState MeshTextureSampler {
+
+SamplerState g_LinearClamp {
     Filter = MIN_MAG_MIP_LINEAR;
-    AddressU = Wrap;
-    AddressV = Wrap;
-};
-
-
-//--------------------------------------------------------------------------------------
-// Vertex shader output structure
-//--------------------------------------------------------------------------------------
-struct VS_OUTPUT {
-    float4 Position   : SV_POSITION; // vertex position 
-    float4 Diffuse    : COLOR0;      // vertex diffuse color (note that COLOR0 is clamped from 0..1)
-    float2 TextureUV  : TEXCOORD0;   // vertex texture coords 
+    AddressU = Clamp;
+    AddressV = Clamp;
 };
 
 //--------------------------------------------------------------------------------------
-// This shader computes standard transform and lighting
+// BlendStates
 //--------------------------------------------------------------------------------------
-VS_OUTPUT RenderSpritesVS(
-        float4 vPos : POSITION,
-        float3 vNormal : NORMAL,
-        float2 vTexCoord0 : TEXCOORD,
-        uniform int nNumLights,
-        uniform bool bTexture,
-        uniform bool bAnimate ) {
-    VS_OUTPUT Output;
-    Output.Position = float4(0,0,0,0);
-    Output.Diffuse = float4(0,0,0,0);
-    Output.TextureUV = float2(0,0);
-    //*float3 vNormalWorldSpace;
-  //*
-    //*float4 vAnimatedPos = vPos;
-    //*
-    //*// Animation the vertex based on time and the vertex's object space position
-    //*if( bAnimate )
-		//*vAnimatedPos += float4(vNormal, 0) * (sin(g_fTime+5.5)+0.5)*5;
-    //*
-    //*// Transform the position from object space to homogeneous projection space
-    //*Output.Position = mul(vAnimatedPos, g_mWorldViewProjection);
-    //*
-    //*// Transform the normal from object space to world space    
-    //*vNormalWorldSpace = normalize(mul(vNormal, (float3x3)g_mWorld)); // normal (world space)
-    //*
-    //*// Compute simple directional lighting equation
-    //*float3 vTotalLightDiffuse = float3(0,0,0);
-    //*for(int i=0; i<nNumLights; i++ )
-        //*vTotalLightDiffuse += g_LightDiffuse[i] * max(0,dot(vNormalWorldSpace, g_LightDir[i]));
-        //*
-    //*Output.Diffuse.rgb = g_MaterialDiffuseColor * vTotalLightDiffuse + 
-                         //*g_MaterialAmbientColor * g_LightAmbient;   
-    //*Output.Diffuse.a = 1.0f; 
-    //*
-    //*// Just copy the texture coordinate through
-    //*if( bTexture ) 
-        //*Output.TextureUV = vTexCoord0; 
-    //*else
-        //*Output.TextureUV = 0; 
-    
-    return Output;    
+
+BlendState AlphaBlending {
+    AlphaToCoverageEnable = FALSE;
+    BlendEnable[0] = TRUE;
+    SrcBlend = SRC_ALPHA;
+    DestBlend = INV_SRC_ALPHA;
+    BlendOp = ADD;
+    SrcBlendAlpha = ZERO;
+    DestBlendAlpha = ZERO;
+    BlendOpAlpha = ADD;
+    RenderTargetWriteMask[0] = 0x0F;
+};
+
+BlendState NoBlending {
+    AlphaToCoverageEnable = FALSE;
+    BlendEnable[0] = FALSE;
+};
+
+//--------------------------------------------------------------------------------------
+// DepthStencilStates
+//--------------------------------------------------------------------------------------
+
+DepthStencilState EnableDepth {
+    DepthEnable = TRUE;
+    DepthWriteMask = ALL;
+};
+
+DepthStencilState DisableDepth {
+    DepthEnable = FALSE;
+    DepthWriteMask = ZERO;
+};
+
+DepthStencilState DisableDepthWrite {
+    DepthEnable = TRUE;
+    DepthWriteMask = ZERO;
+};
+
+DepthStencilState DisableDepthTest {
+    DepthEnable = TRUE;
+    DepthWriteMask = ALL;
+    DepthFunc = ALWAYS;
+};
+
+//--------------------------------------------------------------------------------------
+// Vertex shader for particles:
+// Transforms positions into view-space
+//--------------------------------------------------------------------------------------
+RenderSpritesGSIn RenderSpritesVS(RenderSpritesVSIn Input) {
+    RenderSpritesGSIn output;
+    output.Pos = mul(float4(Input.Pos,1), g_WorldView);
+    return output;    
 }
 
+//--------------------------------------------------------------------------------------
+// Geometry shader for particles:
+// Outputs 2 triangles with texture coordinates for each particle
+//--------------------------------------------------------------------------------------
+[maxvertexcount(4)]
+void RenderSpritesGS(
+		point RenderSpritesGSIn Input[1], 
+		inout TriangleStream<RenderSpritesPSIn> SpriteStream) {
+	RenderSpritesPSIn output;
+	[unroll] for(int i=0; i<4; i++) {
+		float3 outPosView = Input[0].Pos + g_ParticlePositions[i] * g_SpriteSize;
+		output.Pos = mul(float4(outPosView,1), g_Proj);
+		output.Tex = g_ParticleTexcoords[i];
+		SpriteStream.Append(output);
+	}
+	SpriteStream.RestartStrip();
+}	
 
 //--------------------------------------------------------------------------------------
-// Pixel shader output structure
+// Pixel shader for particles:
+// Lookups the diffuse color in particle texture
 //--------------------------------------------------------------------------------------
-struct PS_OUTPUT {
-    float4 RGBColor : SV_Target;  // Pixel color
-};
-
-
-//--------------------------------------------------------------------------------------
-// This shader outputs the pixel's color by modulating the texture's
-//       color with diffuse material color
-//--------------------------------------------------------------------------------------
-PS_OUTPUT RenderSpritesPS(VS_OUTPUT In, uniform bool bTexture )  { 
-    PS_OUTPUT Output;
-
-    //*// Lookup mesh texture and modulate it with diffuse
-    //*if( bTexture )
-        //*Output.RGBColor = g_MeshTexture.Sample(MeshTextureSampler, In.TextureUV) * In.Diffuse;
-    //*else
-        //*Output.RGBColor = In.Diffuse;
-
-    return Output;
+RenderSpritesPSOut RenderSpritesPS(RenderSpritesPSIn Input)  { 
+    RenderSpritesPSOut output;
+	output.Color = g_ParticleDiffuse.Sample(g_LinearClamp, Input.Tex);
+    return output;
 }
 
 
@@ -135,10 +157,11 @@ PS_OUTPUT RenderSpritesPS(VS_OUTPUT In, uniform bool bTexture )  {
 //--------------------------------------------------------------------------------------
 technique10 RenderSprites {
     pass P0 {
-        SetVertexShader( CompileShader( vs_4_0, RenderSpritesVS( 1, true, true ) ) );
-        SetGeometryShader( NULL );
-        SetPixelShader( CompileShader( ps_4_0, RenderSpritesPS( true ) ) );
+        SetVertexShader(CompileShader(vs_4_0, RenderSpritesVS()));
+        SetGeometryShader(CompileShader(gs_4_0, RenderSpritesGS()));
+        SetPixelShader(CompileShader(ps_4_0, RenderSpritesPS()));
 
-        SetDepthStencilState( EnableDepth, 0 );
+        SetBlendState(AlphaBlending, float4( 0.0f, 0.0f, 0.0f, 0.0f ), 0xFFFFFFFF );
+        SetDepthStencilState( DisableDepthWrite, 0 );
     }
 }
