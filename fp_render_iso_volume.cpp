@@ -342,7 +342,8 @@ fp_RenderIsoVolume::fp_RenderIsoVolume(
         float IsoLevel)
         :
         m_IsoVolume(IsoVolume),
-        m_IsoLevel(IsoLevel) {    
+        m_IsoLevel(IsoLevel),
+		m_VertexBuffer(NULL) {    
     D3DCOLORVALUE diffuse  = {0.5f, 0.6f, 1.0, 1.0f};
     D3DCOLORVALUE ambient  = {0.05f, 0.05f, 0.05f, 1.0f};
     D3DCOLORVALUE emmisive = {0.0f, 0.0f, 0.0f, 1.0f};
@@ -356,10 +357,14 @@ fp_RenderIsoVolume::fp_RenderIsoVolume(
 }
 
 fp_RenderIsoVolume::~fp_RenderIsoVolume() {
-	OnD3D9LostDevice(NULL);
-	OnD3D9DestroyDevice(NULL);
-    OnD3D10ReleasingSwapChain(NULL);
-    OnD3D10DestroyDevice(NULL);
+	if(DXUTIsAppRenderingWithD3D9()){
+		OnD3D9LostDevice(NULL);
+		OnD3D9DestroyDevice(NULL);
+	}
+	if(DXUTIsAppRenderingWithD3D10()){
+		OnD3D10ReleasingSwapChain(NULL);
+		OnD3D10DestroyDevice(NULL);
+	}
 }
 
 void fp_RenderIsoVolume::ConstructMesh() {
@@ -547,18 +552,7 @@ HRESULT fp_RenderIsoVolume::OnD3D9ResetDevice(
     return S_OK;
 }
 
-void fp_RenderIsoVolume::OnD3D9FrameRender(
-        IDirect3DDevice9* d3dDevice,
-        double Time,
-        float ElapsedTime,
-        const D3DXVECTOR3* EyePt,
-        const D3DXMATRIX*  WorldViewProjection,
-        const D3DXMATRIX*  World,
-        const D3DXMATRIX*  View,
-        const D3DXMATRIX*  Proj,
-        int NumActiveLights,
-        int ActiveLight,
-        float LightScale) {  
+void fp_RenderIsoVolume::OnD3D9FrameRender(IDirect3DDevice9* d3dDevice) {  
     d3dDevice->SetStreamSource(0, m_VertexBuffer, 0, sizeof(fp_MCVertex));
     d3dDevice->SetIndices(m_IndexBuffer);
 	d3dDevice->SetFVF(fp_MCVertex::FVF_Flags);

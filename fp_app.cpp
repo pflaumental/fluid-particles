@@ -556,16 +556,17 @@ void CALLBACK FP_OnD3D10FrameRender(
     d3dDevice->ClearDepthStencilView( pDSV, D3D10_CLEAR_DEPTH, 1.0, 0 );
 
     D3DXMATRIX  WorldViewProjection;
+	D3DXMATRIX  WorldView;
     D3DXMATRIX  World;
     D3DXMATRIX  View;
-    D3DXMATRIX  Proj;
+    D3DXMATRIX  Projection;
 
     // Get the projection & view matrix from the camera class
     World = g_CenterMesh * *g_Camera.GetWorldMatrix();
-    Proj = *g_Camera.GetProjMatrix();
+    Projection = *g_Camera.GetProjMatrix();
     View = *g_Camera.GetViewMatrix();
-
-    WorldViewProjection = World * View * Proj;
+    WorldView = World * View;
+	WorldViewProjection = WorldView * Projection;
 
     for (int i=0; i < FP_MAX_LIGHTS; i++) {
         g_RenderIsoVolume->m_Lights[i].Direction = g_GUI.m_LightDir[i];
@@ -574,94 +575,16 @@ void CALLBACK FP_OnD3D10FrameRender(
         g_RenderIsoVolume->m_Lights[i].Diffuse = diffuse;
     }
 
-   // V( g_LightDir->SetRawValue( g_GUI.m_LightDir, 0, sizeof(D3DXVECTOR3)
-   //         * FP_MAX_LIGHTS ) );
-   // V( g_LightDiffuse->SetFloatVectorArray( (float*)g_GUI.m_LightDiffuse, 0, 
-   //         FP_MAX_LIGHTS ) );
-   // for (int i=0; i < FP_MAX_LIGHTS; i++) {
-   //     g_RenderIsoVolume->m_Lights[i].Direction = g_GUI.m_LightDir[i];
-   //     D3DCOLORVALUE diffuse = { g_GUI.m_LightDiffuseColor->r,
-   //         g_GUI.m_LightDiffuseColor->g, g_GUI.m_LightDiffuseColor->b, 1.0f };
-   //     g_RenderIsoVolume->m_Lights[i].Diffuse = diffuse;
-   // }
-   // V( g_WorldViewProjection->SetMatrix( (float*)&mWorldViewProjection ) );
-   // V( g_World->SetMatrix( (float*)&mWorld ) );
-   // V( g_Time->SetFloat( (float)Time ) );
-   // V( g_NumLights->SetInt( g_NumActiveLights ) );
-
-   // // Render the scene with this technique as defined in the .fx file
-   // ID3D10EffectTechnique *pRenderTechnique;
-   // switch( g_NumActiveLights )
-   // {
-   //     case 1: pRenderTechnique = g_TechRenderSceneWithTexture1Light;
-			//break;
-   //     case 2: pRenderTechnique = g_TechRenderSceneWithTexture2Light;
-			//break;
-   //     case 3: pRenderTechnique = g_TechRenderSceneWithTexture3Light;
-			//break;
-   //     default: pRenderTechnique = g_TechRenderSceneWithTexture1Light;
-			//break;
-   // }
-
-   // //Get the mesh
-   // //IA setup
-   // d3dDevice->IASetInputLayout( g_VertexLayout );
-   // UINT Strides[1];
-   // UINT Offsets[1];
-   // ID3D10Buffer* pVB[1];
-   // pVB[0] = g_Mesh10.GetVB10(0,0);
-   // Strides[0] = (UINT)g_Mesh10.GetVertexStride(0,0);
-   // Offsets[0] = 0;
-   // d3dDevice->IASetVertexBuffers( 0, 1, pVB, Strides, Offsets );
-   // d3dDevice->IASetIndexBuffer( g_Mesh10.GetIB10(0), g_Mesh10.GetIBFormat10(0), 0 );
-
-   // //Render
-   // D3D10_TECHNIQUE_DESC techDesc;
-   // pRenderTechnique->GetDesc( &techDesc );
-   // SDKMESH_SUBSET* pSubset = NULL;
-   // ID3D10ShaderResourceView* pDiffuseRV = NULL;
-   // D3D10_PRIMITIVE_TOPOLOGY PrimType;
-
-   // for( UINT p = 0; p < techDesc.Passes; ++p )
-   // {
-   //     for( UINT subset = 0; subset < g_Mesh10.GetNumSubsets(0); ++subset )
-   //     {
-   //         // Get the subset
-   //         pSubset = g_Mesh10.GetSubset( 0, subset );
-
-   //         PrimType = CDXUTSDKMesh::GetPrimitiveType10( (SDKMESH_PRIMITIVE_TYPE)pSubset
-   //                 ->PrimitiveType );
-   //         d3dDevice->IASetPrimitiveTopology( PrimType );
-
-   //         pDiffuseRV = g_Mesh10.GetMaterial(pSubset->MaterialID)->pDiffuseRV10;
-   //         g_ptxDiffuse->SetResource( pDiffuseRV );
-
-   //         pRenderTechnique->GetPassByIndex( p )->Apply(0);
-   //         d3dDevice->DrawIndexed( (UINT)pSubset->IndexCount, 0, (UINT)pSubset
-   //                 ->VertexStart );
-   //     }
-   // }
-
-
-
-
-
-    //d3dDevice->SetTransform( D3DTS_WORLD, &World );
-    //d3dDevice->SetTransform( D3DTS_PROJECTION, &Proj );
-    //d3dDevice->SetTransform( D3DTS_VIEW, &View ); 
-
     if(g_RenderType == FP_GUI_RENDER_TYPE_POINT_SPRITE)
-        g_RenderSprites->OnD3D10FrameRender(d3dDevice, Time, ElapsedTime,
-                g_Camera.GetEyePt(), &WorldViewProjection, &World, &View, &Proj,
-                g_NumActiveLights, g_ActiveLight, g_LightScale);
+        g_RenderSprites->OnD3D10FrameRender(d3dDevice, &WorldView, &Projection);
     else if(g_RenderType == FP_GUI_RENDER_TYPE_ISO_SURFACE)
         g_RenderIsoVolume->OnD3D10FrameRender(d3dDevice, Time, ElapsedTime,
-                g_Camera.GetEyePt(), &WorldViewProjection, &World, &View, &Proj,
+                g_Camera.GetEyePt(), &WorldViewProjection, &World, &View, &Projection,
                 g_NumActiveLights, g_ActiveLight, g_LightScale);
 
     // Render GUI
-    g_GUI.OnD3D10FrameRender(d3dDevice, Time, ElapsedTime, g_Camera.GetEyePt(),
-            &WorldViewProjection, &World, &View, &Proj, g_NumActiveLights,
+    g_GUI.OnD3D10FrameRender(d3dDevice, ElapsedTime, g_Camera.GetEyePt(),
+            &View, &Projection, g_NumActiveLights,
             g_ActiveLight, g_LightScale);
 }
 

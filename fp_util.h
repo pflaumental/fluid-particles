@@ -16,6 +16,11 @@ public:
 
     // Generates a random vector where X,Y, and Z components are between -1.0 and 1.0
     static D3DXVECTOR3 GetRandomVector();
+
+	static ID3D10Effect* LoadEffect(
+			ID3D10Device* d3dDevice, 
+			const LPCWSTR Filename, 
+			const D3D10_SHADER_MACRO *ShaderMacros = NULL);
 };
 
 #endif

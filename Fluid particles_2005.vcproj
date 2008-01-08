@@ -748,26 +748,6 @@
 				>
 			</File>
 		</Filter>
-		<Filter
-			Name="Tools"
-			>
-			<File
-				RelativePath="..\Tools\include\tools\DX10Tools.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\Tools\include\tools\DX10Tools.h"
-				>
-			</File>
-			<File
-				RelativePath="..\Tools\include\tools\systools.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\Tools\include\tools\Systools.h"
-				>
-			</File>
-		</Filter>
 		<File
 			RelativePath=".\fp_app.cpp"
 			>

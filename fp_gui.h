@@ -84,11 +84,8 @@ public:
             void* UserContext );
     void    OnD3D9FrameRender(
             IDirect3DDevice9* d3dDevice,
-            double Time,
             float ElapsedTime,
             const D3DXVECTOR3* EyePt,
-            const D3DXMATRIX*  WorldViewProjection,
-            const D3DXMATRIX*  World,
             const D3DXMATRIX*  View,
             const D3DXMATRIX*  Proj,
             int NumActiveLights,
@@ -111,11 +108,8 @@ public:
     void    OnD3D10DestroyDevice( void* UserContext );
     void    OnD3D10FrameRender(
             ID3D10Device* d3dDevice,
-            double Time,
             float ElapsedTime,
             const D3DXVECTOR3* EyePt,
-            const D3DXMATRIX*  WorldViewProjection,
-            const D3DXMATRIX*  World,
             const D3DXMATRIX*  View,
             const D3DXMATRIX*  Proj,
             int NumActiveLights,

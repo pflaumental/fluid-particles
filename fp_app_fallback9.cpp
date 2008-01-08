@@ -121,66 +121,6 @@ HRESULT CALLBACK FP_OnD3D9CreateDevice(
     g_RenderSprites->OnD3D9CreateDevice(d3dDevice, BackBufferSurfaceDesc, UserContext);
     g_RenderIsoVolume->OnD3D9CreateDevice(d3dDevice, BackBufferSurfaceDesc, UserContext);
 
-    //// Load the mesh
-    //V_RETURN( FP_LoadMesh( d3dDevice, L"tiny\\tiny.x", &g_Mesh9 ) );
-
-    //D3DXVECTOR3* pData; 
-    //D3DXVECTOR3 vCenter;
-    //V( g_Mesh9->LockVertexBuffer( 0, (LPVOID*) &pData ) );
-    //float fDummy;
-    //V( D3DXComputeBoundingSphere( pData, g_Mesh9->GetNumVertices(), D3DXGetFVFVertexSize( g_Mesh9->GetFVF() ), &vCenter, &fDummy ) );
-    //V( g_Mesh9->UnlockVertexBuffer() );
-
-    //D3DXMatrixTranslation( &g_CenterMesh, -vCenter.x, -vCenter.y, -vCenter.z );
-    //D3DXMATRIXA16 m;
-    //D3DXMatrixRotationY( &m, D3DX_PI );
-    //g_CenterMesh *= m;
-    //D3DXMatrixRotationX( &m, D3DX_PI / 2.0f );
-    //g_CenterMesh *= m;
-
-    //// Read the D3DX effect file
-    //WCHAR str[MAX_PATH];
-    //DWORD dwShaderFlags = D3DXFX_NOT_CLONEABLE | D3DXSHADER_NO_PRESHADER | D3DXFX_LARGEADDRESSAWARE;
-    //#ifdef DEBUG_VS
-    //    dwShaderFlags |= D3DXSHADER_FORCE_VS_SOFTWARE_NOOPT;
-    //#endif
-    //#ifdef DEBUG_PS
-    //    dwShaderFlags |= D3DXSHADER_FORCE_PS_SOFTWARE_NOOPT;
-    //#endif
-    //V_RETURN( DXUTFindDXSDKMediaFileCch( str, MAX_PATH, L"fp_effect9.fx" ) );
-    //V_RETURN( D3DXCreateEffectFromFile( d3dDevice, str, NULL, NULL, dwShaderFlags, NULL, &g_Effect9, NULL ) );
-
-    //// Create the mesh texture from a file
-    //V_RETURN( DXUTFindDXSDKMediaFileCch( str, MAX_PATH, L"tiny\\tiny_skin.dds" ) );
-
-    //V_RETURN( D3DXCreateTextureFromFileEx( d3dDevice, str, D3DX_DEFAULT, D3DX_DEFAULT, 
-    //                                       D3DX_DEFAULT, 0, D3DFMT_UNKNOWN, D3DPOOL_MANAGED, 
-    //                                       D3DX_DEFAULT, D3DX_DEFAULT, 0, 
-    //                                       NULL, NULL, &g_MeshTexture9 ) );
-
-    //// Set effect variables as needed
-    //D3DXCOLOR colorMtrlDiffuse(1.0f, 1.0f, 1.0f, 1.0f);
-    //D3DXCOLOR colorMtrlAmbient(0.35f, 0.35f, 0.35f, 0);
-
-    //D3DXHANDLE hMaterialAmbientColor = g_Effect9->GetParameterByName(NULL,"g_MaterialAmbientColor");
-    //D3DXHANDLE hMaterialDiffuseColor = g_Effect9->GetParameterByName(NULL,"g_MaterialDiffuseColor");
-    //D3DXHANDLE hMeshTexture = g_Effect9->GetParameterByName(NULL,"g_MeshTexture");
-
-    //V_RETURN( g_Effect9->SetValue( hMaterialAmbientColor, &colorMtrlAmbient, sizeof(D3DXCOLOR) ) );
-    //V_RETURN( g_Effect9->SetValue( hMaterialDiffuseColor, &colorMtrlDiffuse, sizeof(D3DXCOLOR) ) );    
-    //V_RETURN( g_Effect9->SetTexture( hMeshTexture, g_MeshTexture9) );
-
-    //g_LightDir = g_Effect9->GetParameterByName(NULL,"g_LightDir");
-    //g_LightDiffuse = g_Effect9->GetParameterByName(NULL,"g_LightDiffuse");
-    //g_WorldViewProjection = g_Effect9->GetParameterByName(NULL,"g_WorldViewProjection");
-    //g_World = g_Effect9->GetParameterByName(NULL,"g_World");
-    //g_MaterialDiffuseColor = g_Effect9->GetParameterByName(NULL,"g_MaterialDiffuseColor");
-    //g_Time = g_Effect9->GetParameterByName(NULL,"g_Time");
-    //g_NumLights = g_Effect9->GetParameterByName(NULL,"g_NumLights");
-    //g_RenderSceneWithTexture1Light = g_Effect9->GetTechniqueByName("RenderSceneWithTexture1Light");
-    //g_RenderSceneWithTexture2Light = g_Effect9->GetTechniqueByName("RenderSceneWithTexture2Light");
-    //g_RenderSceneWithTexture3Light = g_Effect9->GetTechniqueByName("RenderSceneWithTexture3Light");
-
     // Setup the camera's view parameters
     D3DXVECTOR3 vecEye(0.0f, 0.0f, -15.0f);
     D3DXVECTOR3 vecAt (0.0f, 0.0f, -0.0f);
@@ -281,7 +221,6 @@ void CALLBACK FP_OnD3D9FrameRender(
 
     HRESULT hr;
     D3DXMATRIXA16 WorldViewProjection;
-    //UINT iPass, cPasses;
     D3DXMATRIXA16 World;
     D3DXMATRIXA16 View;
     D3DXMATRIXA16 Proj;
@@ -307,52 +246,16 @@ void CALLBACK FP_OnD3D9FrameRender(
             g_RenderIsoVolume->m_Lights[i].Diffuse = diffuse;
         }
 
-        //V( g_Effect9->SetValue( g_LightDir, g_GUI.m_LightDir, sizeof(D3DXVECTOR3)*FP_MAX_LIGHTS ) );
-        //V( g_Effect9->SetValue( g_LightDiffuse, g_GUI.m_cLightDiffuse, sizeof(D3DXCOLOR)*FP_MAX_LIGHTS ) );
-
-        //// Update the effect's variables.  Instead of using strings, it would 
-        //// be more efficient to cache a handle to the parameter by calling 
-        //// ID3DXEffect::GetParameterByName
-        //V( g_Effect9->SetMatrix( g_WorldViewProjection, &WorldViewProjection ) );
-        //V( g_Effect9->SetMatrix( g_World, &World ) );
-
-        //D3DXCOLOR vWhite = D3DXCOLOR(1,1,1,1);
-        //V( g_Effect9->SetValue(g_MaterialDiffuseColor, &vWhite, sizeof(D3DXCOLOR) ) );
-        //V( g_Effect9->SetFloat( g_Time, (float)fTime ) );      
-        //V( g_Effect9->SetInt( g_NumLights, g_NumActiveLights ) );
-
-        //// Render the scene with this technique as defined in the .fx file
-        //switch( g_NumActiveLights )
-        //{
-        //    case 1: V( g_Effect9->SetTechnique( g_RenderSceneWithTexture1Light ) ); break;
-        //    case 2: V( g_Effect9->SetTechnique( g_RenderSceneWithTexture2Light ) ); break;
-        //    case 3: V( g_Effect9->SetTechnique( g_RenderSceneWithTexture3Light ) ); break;
-        //}
-
-        //// Apply the technique contained in the effect and render the mesh
-        //V( g_Effect9->Begin(&cPasses, 0) );
-        //for (iPass = 0; iPass < cPasses; iPass++)
-        //{
-        //    V( g_Effect9->BeginPass(iPass) );
-        //    V( g_Mesh9->DrawSubset(0) );
-        //    V( g_Effect9->EndPass() );
-        //}
-        //V( g_Effect9->End() );
-
-        d3dDevice->SetTransform( D3DTS_WORLD, &World );
+		d3dDevice->SetTransform( D3DTS_WORLD, &World );
         d3dDevice->SetTransform( D3DTS_PROJECTION, &Proj );
         d3dDevice->SetTransform( D3DTS_VIEW, &View );        
        
         if(g_RenderType == FP_GUI_RENDER_TYPE_POINT_SPRITE)
-            g_RenderSprites->OnD3D9FrameRender(d3dDevice, Time, ElapsedTime,
-                    g_Camera.GetEyePt(), &WorldViewProjection, &World, &View, &Proj,
-                    g_NumActiveLights, g_ActiveLight, g_LightScale);
+            g_RenderSprites->OnD3D9FrameRender(d3dDevice);
         else if(g_RenderType == FP_GUI_RENDER_TYPE_ISO_SURFACE)
-            g_RenderIsoVolume->OnD3D9FrameRender(d3dDevice, Time, ElapsedTime,
-                    g_Camera.GetEyePt(), &WorldViewProjection, &World, &View, &Proj,
-                    g_NumActiveLights, g_ActiveLight, g_LightScale);
-        g_GUI.OnD3D9FrameRender(d3dDevice, Time, ElapsedTime, g_Camera.GetEyePt(),
-                &WorldViewProjection, &World, &View, &Proj, g_NumActiveLights,
+            g_RenderIsoVolume->OnD3D9FrameRender(d3dDevice);
+        g_GUI.OnD3D9FrameRender(d3dDevice, ElapsedTime, g_Camera.GetEyePt(),
+                &View, &Proj, g_NumActiveLights,
                 g_ActiveLight, g_LightScale);
 
         V( d3dDevice->EndScene() );
