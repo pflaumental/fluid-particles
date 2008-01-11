@@ -6,12 +6,8 @@
 // Structs
 //--------------------------------------------------------------------------------------
 
-struct RenderSpritesVSIn {
-    float3 PosWorldS      : POSITION;
-};
-
 struct RenderSpritesGSIn {
-    float3 PosViewS       : POSITION;
+    float3 PosWorldS       : POSITION;
 };
 
 struct RenderSpritesPSIn {
@@ -28,24 +24,14 @@ struct RenderSpritesPSOut {
 //--------------------------------------------------------------------------------------
 
 cbuffer cbPerObject {
-    float4x4 g_View;
-    float4x4 g_Proj;
     float4x4 g_ViewProj;
-    float4x4 g_InvView;
 };
 
 cbuffer cbUser {
-    float g_SpriteSize;
     float3 g_SpriteCornersWorldS[4];
 };
 
 cbuffer cbImmutable {
-	float3 g_SpriteCornersViewS[4] = {
-		float3(-1,1,0),
-		float3(1,1,0),
-		float3(-1,-1,0),
-		float3(1,-1,0)
-	};
     float2 g_SpriteTexCoords[4] = { 
         float2(0,0), 
         float2(1,0),
@@ -84,6 +70,15 @@ BlendState AlphaBlending {
     DestBlendAlpha = ZERO;
     BlendOpAlpha = ADD;
     RenderTargetWriteMask[0] = 0x0F;
+    //*AlphaToCoverageEnable = FALSE;
+    //*BlendEnable[0] = TRUE;
+    //*SrcBlend = SRC_ALPHA;
+    //*DestBlend = INV_SRC_ALPHA;
+    //*BlendOp = ADD;
+    //*SrcBlendAlpha = SRC_COLOR;
+    //*DestBlendAlpha = INV_SRC_COLOR;
+    //*BlendOpAlpha = ADD;
+    //*RenderTargetWriteMask[0] = 0x0F;
 };
 
 BlendState NoBlending {
@@ -117,16 +112,6 @@ DepthStencilState DisableDepthTest {
 };
 
 //--------------------------------------------------------------------------------------
-// Vertex shader for particles:
-// Transforms positions into view-space
-//--------------------------------------------------------------------------------------
-RenderSpritesGSIn RenderSpritesVS(RenderSpritesVSIn Input) {
-    RenderSpritesGSIn output;
-    output.PosViewS = Input.PosWorldS;//mul(float4(Input.PosWorldS,1), g_View).xyz;
-    return output;    
-}
-
-//--------------------------------------------------------------------------------------
 // Geometry shader for particles:
 // Outputs 2 triangles with texture coordinates for each particle
 //--------------------------------------------------------------------------------------
@@ -136,8 +121,8 @@ void RenderSpritesGS(
 		inout TriangleStream<RenderSpritesPSIn> SpriteStream) {				
 	RenderSpritesPSIn output;
 	[unroll] for(int i=0; i<4; i++) {					
-		float3 spriteCornerViewS = Input[0].PosViewS + g_SpriteCornersWorldS[i];	
-		output.PosClipS = mul(float4(spriteCornerViewS,1), g_ViewProj);		
+		float3 spriteCornerWorldS = Input[0].PosWorldS + g_SpriteCornersWorldS[i];	
+		output.PosClipS = mul(float4(spriteCornerWorldS,1), g_ViewProj);		
 		output.Tex = g_SpriteTexCoords[i];
 		SpriteStream.Append(output);
 	}	
@@ -160,7 +145,6 @@ RenderSpritesPSOut RenderSpritesPS(RenderSpritesPSIn Input)  {
 //--------------------------------------------------------------------------------------
 technique10 RenderSprites {
     pass P0 {
-        SetVertexShader(CompileShader(vs_4_0, RenderSpritesVS()));
         SetGeometryShader(CompileShader(gs_4_0, RenderSpritesGS()));
         SetPixelShader(CompileShader(ps_4_0, RenderSpritesPS()));
 

@@ -577,7 +577,7 @@ void CALLBACK FP_OnD3D10FrameRender(
     }
 
     if(g_RenderType == FP_GUI_RENDER_TYPE_POINT_SPRITE)
-        g_RenderSprites->OnD3D10FrameRender(d3dDevice, &view, &projection, &viewProjection, &invView);
+        g_RenderSprites->OnD3D10FrameRender(d3dDevice, &viewProjection, &invView);
     else if(g_RenderType == FP_GUI_RENDER_TYPE_ISO_SURFACE)
         g_RenderIsoVolume->OnD3D10FrameRender(d3dDevice, Time, ElapsedTime,
                 g_Camera.GetEyePt(), &worldViewProjection, &world, &view, &projection,
