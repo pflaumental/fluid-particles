@@ -2,6 +2,7 @@
 #ifndef FP_GLOBAL_H
 #define FP_GLOBAL_H
 
+#define FP_CLEAR_COLOR 0.0f, 0.05f, 0.15f, 0.55f
 #define FP_MAX_LIGHTS 3
 #define FP_OBJECT_RADIUS 20.0f
 #define FP_DEFAULT_LIGHT_SCALE 1.0f

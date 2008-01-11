@@ -226,14 +226,14 @@ void CALLBACK FP_OnD3D9FrameRender(
     D3DXMATRIXA16 Proj;
    
     // Clear the render target and the zbuffer 
-    V( d3dDevice->Clear(0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, D3DXCOLOR(0.0f,
-            0.05f,0.15f,0.55f), 1.0f, 0) );
+    V( d3dDevice->Clear(0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, D3DXCOLOR(
+			FP_CLEAR_COLOR), 1.0f, 0) );
 
     // Render the scene
     if( SUCCEEDED( d3dDevice->BeginScene() ) )
     {
         // Get the projection & view matrix from the camera class
-        World = /*g_CenterMesh * */*g_Camera.GetWorldMatrix();
+        World = *g_Camera.GetWorldMatrix();
         Proj = *g_Camera.GetProjMatrix();
         View = *g_Camera.GetViewMatrix();
 
