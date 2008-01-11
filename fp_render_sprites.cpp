@@ -18,8 +18,11 @@ fp_RenderSprites::fp_RenderSprites(int NumParticles, fp_FluidParticle* Particles
         m_TechRenderSprites(NULL),
         m_EffectSpriteSize(NULL),
         m_EffectTexture(NULL),
-        m_EffectWorldView(NULL),
-        m_EffectProjection(NULL),
+		m_EffectView(NULL),
+		m_EffectProjection(NULL),
+        m_EffectViewProjection(NULL),
+		m_EffectInvView(NULL),
+        m_EffectSpriteCornersWorldS(NULL),
         m_VertexLayout(NULL){
 }
 
@@ -143,8 +146,11 @@ HRESULT fp_RenderSprites::OnD3D10CreateDevice(
     m_EffectSpriteSize = m_Effect10->GetVariableByName("g_SpriteSize")->AsScalar();
     m_EffectTexture = m_Effect10->GetVariableByName("g_ParticleDiffuse")->AsShaderResource();
     V_RETURN(m_EffectTexture->SetResource(m_Texture10RV));
-    m_EffectWorldView = m_Effect10->GetVariableByName("g_WorldView")->AsMatrix();
-    m_EffectProjection = m_Effect10->GetVariableByName( "g_Proj" )->AsMatrix();
+	m_EffectView = m_Effect10->GetVariableByName( "g_View" )->AsMatrix();
+	m_EffectProjection = m_Effect10->GetVariableByName( "g_Proj" )->AsMatrix();
+    m_EffectViewProjection = m_Effect10->GetVariableByName( "g_ViewProj" )->AsMatrix();
+	m_EffectInvView = m_Effect10->GetVariableByName( "g_InvView" )->AsMatrix();
+    m_EffectSpriteCornersWorldS = m_Effect10->GetVariableByName( "g_SpriteCornersWorldS" )->AsVector();
 
     D3D10_PASS_DESC passDesc;
     V_RETURN( m_TechRenderSprites->GetPassByIndex(0)->GetDesc(&passDesc));
@@ -172,8 +178,11 @@ HRESULT fp_RenderSprites::OnD3D10ResizedSwapChain(
 
 void fp_RenderSprites::OnD3D10FrameRender(
         ID3D10Device* d3dDevice,
-        const D3DXMATRIX*  WorldView,
-        const D3DXMATRIX*  Projection) {
+		const D3DXMATRIX*  View,
+		const D3DXMATRIX*  Projection,
+        const D3DXMATRIX*  ViewProjection,
+		const D3DXMATRIX*  InvView) {
+    HRESULT hr;
      fp_SpriteVertex *pSpriteVertices;
      m_VertexBuffer10->Map(D3D10_MAP_WRITE_DISCARD, 0, (void**)&pSpriteVertices);
      for( int i = 0; i < m_NumParticles; i++ ) {
@@ -188,16 +197,31 @@ void fp_RenderSprites::OnD3D10FrameRender(
 	 d3dDevice->IASetVertexBuffers(0, 1, &m_VertexBuffer10, &stride, &offset);
 	 d3dDevice->IASetPrimitiveTopology( D3D10_PRIMITIVE_TOPOLOGY_POINTLIST );
 
-	 m_EffectTexture->SetResource(m_Texture10RV);
-	 m_EffectSpriteSize->SetFloat(m_SpriteSize);
-	 m_EffectWorldView->SetMatrix((float*) WorldView);
-	 m_EffectProjection->SetMatrix((float*) Projection);	 
+	 V(m_EffectTexture->SetResource(m_Texture10RV));
+	 V(m_EffectSpriteSize->SetFloat(m_SpriteSize));	 
+	 V(m_EffectView->SetMatrix((float*) View));
+	 V(m_EffectProjection->SetMatrix((float*) Projection));
+     V(m_EffectViewProjection->SetMatrix((float*) ViewProjection));
+	 V(m_EffectInvView->SetMatrix((float*) InvView));
+     D3DXVECTOR4 spriteCornersWorldS[4] = {
+         D3DXVECTOR4(-1,1,0,0),
+         D3DXVECTOR4(1,1,0,0),
+         D3DXVECTOR4(-1,-1,0,0),
+         D3DXVECTOR4(1,-1,0,0)
+     };
+     for(int i=0; i<4; i++) {
+         spriteCornersWorldS[i] *= m_SpriteSize;
+     }
+     D3DXVec3TransformNormalArray((D3DXVECTOR3*)spriteCornersWorldS, sizeof(D3DXVECTOR4),
+            (D3DXVECTOR3*)spriteCornersWorldS, sizeof(D3DXVECTOR4), InvView, 4);
+     V(m_EffectSpriteCornersWorldS->SetRawValue(spriteCornersWorldS, 0,
+            sizeof(D3DXVECTOR4)*4));
 
 	 D3D10_TECHNIQUE_DESC techDesc;
 	 m_TechRenderSprites->GetDesc( &techDesc );
 	 for( UINT iPass = 0; iPass < techDesc.Passes; ++iPass ) {
 		 m_TechRenderSprites->GetPassByIndex( iPass )->Apply(0);
-		 d3dDevice->DrawIndexed( m_NumParticles, 0, 0 );
+		 d3dDevice->Draw(m_NumParticles, 0);
 	 }
 }
 

@@ -30,7 +30,6 @@ fp_RenderSprites*   g_RenderSprites = NULL;
 fp_IsoVolume*       g_IsoVolume = NULL;
 fp_RenderIsoVolume* g_RenderIsoVolume = NULL;
 
-D3DXMATRIXA16           g_CenterMesh;
 float                   g_LightScale;
 int                     g_NumActiveLights;
 int                     g_ActiveLight;
@@ -549,24 +548,26 @@ void CALLBACK FP_OnD3D10FrameRender(
         return;   
 
     // Clear the render target and depth stencil
-    float ClearColor[4] = { 0.0f, 0.25f, 0.25f, 0.55f };
+    float ClearColor[4] = { FP_CLEAR_COLOR };
     ID3D10RenderTargetView* pRTV = DXUTGetD3D10RenderTargetView();
     d3dDevice->ClearRenderTargetView( pRTV, ClearColor );
     ID3D10DepthStencilView* pDSV = DXUTGetD3D10DepthStencilView();
     d3dDevice->ClearDepthStencilView( pDSV, D3D10_CLEAR_DEPTH, 1.0, 0 );
-
-    D3DXMATRIX  WorldViewProjection;
-	D3DXMATRIX  WorldView;
-    D3DXMATRIX  World;
-    D3DXMATRIX  View;
-    D3DXMATRIX  Projection;
+    
+    D3DXMATRIX  world;
+    D3DXMATRIX  view;
+    D3DXMATRIX  projection;
+	D3DXMATRIX  worldViewProjection;
+	D3DXMATRIX  viewProjection;
+	D3DXMATRIX  invView;
 
     // Get the projection & view matrix from the camera class
-    World = g_CenterMesh * *g_Camera.GetWorldMatrix();
-    Projection = *g_Camera.GetProjMatrix();
-    View = *g_Camera.GetViewMatrix();
-    WorldView = World * View;
-	WorldViewProjection = WorldView * Projection;
+    world = *g_Camera.GetWorldMatrix();
+    view = *g_Camera.GetViewMatrix();
+    projection = *g_Camera.GetProjMatrix();
+    viewProjection = view * projection;
+	worldViewProjection = world * viewProjection;
+	D3DXMatrixInverse(&invView, NULL, &view);
 
     for (int i=0; i < FP_MAX_LIGHTS; i++) {
         g_RenderIsoVolume->m_Lights[i].Direction = g_GUI.m_LightDir[i];
@@ -576,15 +577,15 @@ void CALLBACK FP_OnD3D10FrameRender(
     }
 
     if(g_RenderType == FP_GUI_RENDER_TYPE_POINT_SPRITE)
-        g_RenderSprites->OnD3D10FrameRender(d3dDevice, &WorldView, &Projection);
+        g_RenderSprites->OnD3D10FrameRender(d3dDevice, &view, &projection, &viewProjection, &invView);
     else if(g_RenderType == FP_GUI_RENDER_TYPE_ISO_SURFACE)
         g_RenderIsoVolume->OnD3D10FrameRender(d3dDevice, Time, ElapsedTime,
-                g_Camera.GetEyePt(), &WorldViewProjection, &World, &View, &Projection,
+                g_Camera.GetEyePt(), &worldViewProjection, &world, &view, &projection,
                 g_NumActiveLights, g_ActiveLight, g_LightScale);
 
     // Render GUI
     g_GUI.OnD3D10FrameRender(d3dDevice, ElapsedTime, g_Camera.GetEyePt(),
-            &View, &Projection, g_NumActiveLights,
+            &view, &projection, g_NumActiveLights,
             g_ActiveLight, g_LightScale);
 }
 

@@ -7,15 +7,15 @@
 //--------------------------------------------------------------------------------------
 
 struct RenderSpritesVSIn {
-    float3 Pos            : POSITION;
+    float3 PosWorldS      : POSITION;
 };
 
 struct RenderSpritesGSIn {
-    float3 Pos            : POSITION;
+    float3 PosViewS       : POSITION;
 };
 
 struct RenderSpritesPSIn {
-    float4 Pos			  : SV_POSITION;
+    float4 PosClipS  	  : SV_POSITION;
     float2 Tex			  : TEXCOORD0;
 };
 
@@ -28,22 +28,25 @@ struct RenderSpritesPSOut {
 //--------------------------------------------------------------------------------------
 
 cbuffer cbPerObject {
-    matrix g_WorldView;
-    matrix g_Proj;
+    float4x4 g_View;
+    float4x4 g_Proj;
+    float4x4 g_ViewProj;
+    float4x4 g_InvView;
 };
 
 cbuffer cbUser {
     float g_SpriteSize;
+    float3 g_SpriteCornersWorldS[4];
 };
 
 cbuffer cbImmutable {
-    float3 g_ParticlePositions[4] = {
-        float3( -1, 1, 0 ),
-        float3( 1, 1, 0 ),
-        float3( -1, -1, 0 ),
-        float3( 1, -1, 0 ),
-    };
-    float2 g_ParticleTexcoords[4] = { 
+	float3 g_SpriteCornersViewS[4] = {
+		float3(-1,1,0),
+		float3(1,1,0),
+		float3(-1,-1,0),
+		float3(1,-1,0)
+	};
+    float2 g_SpriteTexCoords[4] = { 
         float2(0,0), 
         float2(1,0),
         float2(0,1),
@@ -119,7 +122,7 @@ DepthStencilState DisableDepthTest {
 //--------------------------------------------------------------------------------------
 RenderSpritesGSIn RenderSpritesVS(RenderSpritesVSIn Input) {
     RenderSpritesGSIn output;
-    output.Pos = mul(float4(Input.Pos,1), g_WorldView);
+    output.PosViewS = Input.PosWorldS;//mul(float4(Input.PosWorldS,1), g_View).xyz;
     return output;    
 }
 
@@ -130,14 +133,14 @@ RenderSpritesGSIn RenderSpritesVS(RenderSpritesVSIn Input) {
 [maxvertexcount(4)]
 void RenderSpritesGS(
 		point RenderSpritesGSIn Input[1], 
-		inout TriangleStream<RenderSpritesPSIn> SpriteStream) {
+		inout TriangleStream<RenderSpritesPSIn> SpriteStream) {				
 	RenderSpritesPSIn output;
-	[unroll] for(int i=0; i<4; i++) {
-		float3 outPosView = Input[0].Pos + g_ParticlePositions[i] * g_SpriteSize;
-		output.Pos = mul(float4(outPosView,1), g_Proj);
-		output.Tex = g_ParticleTexcoords[i];
+	[unroll] for(int i=0; i<4; i++) {					
+		float3 spriteCornerViewS = Input[0].PosViewS + g_SpriteCornersWorldS[i];	
+		output.PosClipS = mul(float4(spriteCornerViewS,1), g_ViewProj);		
+		output.Tex = g_SpriteTexCoords[i];
 		SpriteStream.Append(output);
-	}
+	}	
 	SpriteStream.RestartStrip();
 }	
 
