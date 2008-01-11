@@ -3,6 +3,9 @@
 #include "fp_render_sprites.h"
 #include "fp_util.h"
 
+#define FP_RENDER_SPRITES_TEXTURE_FILE L"Media/PointSprites/particle.dds" 
+#define FP_RENDER_SPRITES_EFFECT_FILE L"fp_render_sprites.fx" 
+
 const D3D10_INPUT_ELEMENT_DESC fp_SpriteVertex::Layout[] = { { "POSITION",  0,
         DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D10_INPUT_PER_VERTEX_DATA, 0 } };
 
@@ -16,12 +19,8 @@ fp_RenderSprites::fp_RenderSprites(int NumParticles, fp_FluidParticle* Particles
 		m_Texture10RV(NULL),
         m_Effect10(NULL),
         m_TechRenderSprites(NULL),
-        m_EffectSpriteSize(NULL),
         m_EffectTexture(NULL),
-		m_EffectView(NULL),
-		m_EffectProjection(NULL),
         m_EffectViewProjection(NULL),
-		m_EffectInvView(NULL),
         m_EffectSpriteCornersWorldS(NULL),
         m_VertexLayout(NULL){
 }
@@ -43,8 +42,6 @@ float fp_RenderSprites::GetSpriteSize() const {
 
 void fp_RenderSprites::SetSpriteSize(float SpriteSize) {
     m_SpriteSize = SpriteSize;
-    if(m_EffectSpriteSize != NULL)
-        m_EffectSpriteSize->SetFloat(SpriteSize);
 }
 
 HRESULT fp_RenderSprites::OnD3D9CreateDevice(
@@ -53,7 +50,7 @@ HRESULT fp_RenderSprites::OnD3D9CreateDevice(
         void* UserContext ) {
     HRESULT hr;
     WCHAR str[MAX_PATH];
-    V_RETURN( DXUTFindDXSDKMediaFileCch( str, MAX_PATH, L"Media/PointSprites/particle.bmp" ) );
+    V_RETURN( DXUTFindDXSDKMediaFileCch( str, MAX_PATH, FP_RENDER_SPRITES_TEXTURE_FILE ) );
     D3DXCreateTextureFromFile( d3dDevice, str, &m_Texture9 );
     
     return S_OK;
@@ -131,25 +128,21 @@ HRESULT fp_RenderSprites::OnD3D10CreateDevice(
         void* UserContext ) {
     HRESULT hr;
     WCHAR str[MAX_PATH];
-    V_RETURN( DXUTFindDXSDKMediaFileCch( str, MAX_PATH, L"Media/PointSprites/particle.bmp" ) );
+    V_RETURN( DXUTFindDXSDKMediaFileCch( str, MAX_PATH, FP_RENDER_SPRITES_TEXTURE_FILE ) );
     D3DX10CreateShaderResourceViewFromFile(d3dDevice, str, NULL, NULL,
             &m_Texture10RV, NULL);
 
     // Read the D3DX effect file
-	m_Effect10 = fp_Util::LoadEffect(d3dDevice, L"fp_render_sprites.fx");
+	m_Effect10 = fp_Util::LoadEffect(d3dDevice, FP_RENDER_SPRITES_EFFECT_FILE);
 
     // Obtain technique objects
     m_TechRenderSprites = m_Effect10->GetTechniqueByName(
             "RenderSprites" );
 
     // Obtain effect variables and set as needed
-    m_EffectSpriteSize = m_Effect10->GetVariableByName("g_SpriteSize")->AsScalar();
     m_EffectTexture = m_Effect10->GetVariableByName("g_ParticleDiffuse")->AsShaderResource();
     V_RETURN(m_EffectTexture->SetResource(m_Texture10RV));
-	m_EffectView = m_Effect10->GetVariableByName( "g_View" )->AsMatrix();
-	m_EffectProjection = m_Effect10->GetVariableByName( "g_Proj" )->AsMatrix();
     m_EffectViewProjection = m_Effect10->GetVariableByName( "g_ViewProj" )->AsMatrix();
-	m_EffectInvView = m_Effect10->GetVariableByName( "g_InvView" )->AsMatrix();
     m_EffectSpriteCornersWorldS = m_Effect10->GetVariableByName( "g_SpriteCornersWorldS" )->AsVector();
 
     D3D10_PASS_DESC passDesc;
@@ -178,8 +171,6 @@ HRESULT fp_RenderSprites::OnD3D10ResizedSwapChain(
 
 void fp_RenderSprites::OnD3D10FrameRender(
         ID3D10Device* d3dDevice,
-		const D3DXMATRIX*  View,
-		const D3DXMATRIX*  Projection,
         const D3DXMATRIX*  ViewProjection,
 		const D3DXMATRIX*  InvView) {
     HRESULT hr;
@@ -198,11 +189,7 @@ void fp_RenderSprites::OnD3D10FrameRender(
 	 d3dDevice->IASetPrimitiveTopology( D3D10_PRIMITIVE_TOPOLOGY_POINTLIST );
 
 	 V(m_EffectTexture->SetResource(m_Texture10RV));
-	 V(m_EffectSpriteSize->SetFloat(m_SpriteSize));	 
-	 V(m_EffectView->SetMatrix((float*) View));
-	 V(m_EffectProjection->SetMatrix((float*) Projection));
      V(m_EffectViewProjection->SetMatrix((float*) ViewProjection));
-	 V(m_EffectInvView->SetMatrix((float*) InvView));
      D3DXVECTOR4 spriteCornersWorldS[4] = {
          D3DXVECTOR4(-1,1,0,0),
          D3DXVECTOR4(1,1,0,0),

@@ -57,8 +57,6 @@ public:
     void    OnD3D10DestroyDevice( void* UserContext );
     void    OnD3D10FrameRender(
             ID3D10Device* d3dDevice,
-			const D3DXMATRIX*  View,
-			const D3DXMATRIX*  Projection,
             const D3DXMATRIX*  ViewProjection,
 			const D3DXMATRIX*  InvView); 
 
@@ -72,12 +70,8 @@ private:
     ID3D10ShaderResourceView * m_Texture10RV;
     ID3D10Effect* m_Effect10;
     ID3D10EffectTechnique*  m_TechRenderSprites;
-    ID3D10EffectScalarVariable* m_EffectSpriteSize;
     ID3D10EffectShaderResourceVariable* m_EffectTexture;
-	ID3D10EffectMatrixVariable* m_EffectView;
     ID3D10EffectMatrixVariable* m_EffectViewProjection;
-	ID3D10EffectMatrixVariable* m_EffectProjection;
-	ID3D10EffectMatrixVariable* m_EffectInvView;
     ID3D10EffectVectorVariable* m_EffectSpriteCornersWorldS;
 };
 
