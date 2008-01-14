@@ -797,6 +797,14 @@
 			>
 		</File>
 		<File
+			RelativePath=".\fp_thread.cpp"
+			>
+		</File>
+		<File
+			RelativePath=".\fp_thread.h"
+			>
+		</File>
+		<File
 			RelativePath=".\fp_util.cpp"
 			>
 		</File>

@@ -70,15 +70,6 @@ BlendState AlphaBlending {
     DestBlendAlpha = ZERO;
     BlendOpAlpha = ADD;
     RenderTargetWriteMask[0] = 0x0F;
-    //*AlphaToCoverageEnable = FALSE;
-    //*BlendEnable[0] = TRUE;
-    //*SrcBlend = SRC_ALPHA;
-    //*DestBlend = INV_SRC_ALPHA;
-    //*BlendOp = ADD;
-    //*SrcBlendAlpha = SRC_COLOR;
-    //*DestBlendAlpha = INV_SRC_COLOR;
-    //*BlendOpAlpha = ADD;
-    //*RenderTargetWriteMask[0] = 0x0F;
 };
 
 BlendState NoBlending {
