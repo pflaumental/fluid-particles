@@ -200,8 +200,9 @@ fp_Fluid::fp_Fluid(
                         iY * SpacingY + startY, iZ * SpacingZ + startZ);
                 m_Particles[i].m_Velocity = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
                 m_Particles[i].m_Index = i;
-                m_PressureAndViscosityForces[i] = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
-                m_GradientColorField[i] = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
+                ((D3DXVECTOR3*)m_PressureAndViscosityForces)[i]
+                        = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
+                ((D3DXVECTOR3*)m_GradientColorField)[i] = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
                 m_LaplacianColorField[i] = 0.0f;
                 m_OldDensities[i] = m_InitialDensity;
                 m_NewDensities[i] = m_InitialDensity;
@@ -212,8 +213,8 @@ fp_Fluid::fp_Fluid(
     m_Grid->FillAndPrepare(m_Particles, m_NumParticles);
     // Calculate initial densities
     Update(0.0f);
-    float* tmpDensities = m_OldDensities;
-    m_OldDensities = m_NewDensities;
+    volatile float* tmpDensities = m_OldDensities;
+    m_OldDensities = (float*)m_NewDensities;
     for(int i=0; i<m_NumParticles; i++) {
         tmpDensities[i] = m_InitialDensity;
     }
@@ -302,7 +303,7 @@ void fp_Fluid::Update(float ElapsedTime) {
 
     // Prepare densities
     float* tmpDensities = m_OldDensities;
-    m_OldDensities = m_NewDensities;
+    m_OldDensities = (float*)m_NewDensities;
     m_NewDensities = tmpDensities;
 }
 
@@ -395,8 +396,8 @@ void fp_Fluid::MoveParticlesMT(int ThreadIdx) {
         D3DXVECTOR3 oldVelocity = m_Particles[i].m_Velocity;
         D3DXVECTOR3 oldVelocityContribution = oldVelocity
             * pow(m_DampingCoefficient, m_CurrentElapsedTime);
-        D3DXVECTOR3 totalForce = m_PressureAndViscosityForces[i];
-        D3DXVECTOR3 gradColorField = m_GradientColorField[i];
+        D3DXVECTOR3 totalForce = ((D3DXVECTOR3*)m_PressureAndViscosityForces)[i];
+        D3DXVECTOR3 gradColorField = ((D3DXVECTOR3*)m_GradientColorField)[i];
         float gradColorFieldLenSq = D3DXVec3LengthSq(&gradColorField);
         if(gradColorFieldLenSq >= m_GradientColorFieldThresholdSq) {
             D3DXVECTOR3 surfaceTensionForce = (-m_SurfaceTension *
@@ -411,8 +412,8 @@ void fp_Fluid::MoveParticlesMT(int ThreadIdx) {
 
         HandleGlassCollision(&m_Particles[i]);
 
-        m_PressureAndViscosityForces[i] = D3DXVECTOR3(0.0f, 0.0f, 0.0f);        
-        m_GradientColorField[i] = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
+        ((D3DXVECTOR3*)m_PressureAndViscosityForces)[i] = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
+        ((D3DXVECTOR3*)m_GradientColorField)[i] = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
         m_LaplacianColorField[i] = 0.0f;
         m_OldDensities[i] = m_RestDensity;
     }
@@ -508,10 +509,10 @@ inline void fp_Fluid::ProcessParticlePair(
     // Surface tension
     D3DXVECTOR3 gradWPoly6Value1 = GradientWPoly6(&r1, hSq_lenRSq);
     D3DXVECTOR3 commonGradientColorFieldTerm1 = m_ParticleMass * gradWPoly6Value1;
-    m_GradientColorField[particle1Index] += commonGradientColorFieldTerm1
-            / particle2Density;
-    m_GradientColorField[particle2Index] -= commonGradientColorFieldTerm1
-            / particle1Density;
+    ((D3DXVECTOR3*)m_GradientColorField)[particle1Index]
+            += commonGradientColorFieldTerm1 / particle2Density;
+    ((D3DXVECTOR3*)m_GradientColorField)[particle2Index]
+            -= commonGradientColorFieldTerm1 / particle1Density;
     float laplacianWPoly6Value1 = LaplacianWPoly6(DistanceSq, hSq_lenRSq);
     float commonLaplacianColorFieldTerm1 = m_ParticleMass * laplacianWPoly6Value1;
     m_LaplacianColorField[particle1Index] += commonLaplacianColorFieldTerm1
@@ -520,8 +521,8 @@ inline void fp_Fluid::ProcessParticlePair(
             / particle1Density;
 
     // Total forces
-    m_PressureAndViscosityForces[particle1Index] += pressureForce1 + viscosityForce1;
-    m_PressureAndViscosityForces[particle2Index] += pressureForce2 + viscosityForce2;
+    ((D3DXVECTOR3*)m_PressureAndViscosityForces)[particle1Index] += pressureForce1 + viscosityForce1;
+    ((D3DXVECTOR3*)m_PressureAndViscosityForces)[particle2Index] += pressureForce2 + viscosityForce2;
 
 }
 
