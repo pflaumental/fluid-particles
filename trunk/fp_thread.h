@@ -10,27 +10,42 @@
 typedef struct {
     void (*m_JobFunction)(void*);
     void* m_JobData;
-    CRITICAL_SECTION m_CurrentlyWorkingCritSect;
-    CRITICAL_SECTION m_JobAvailableCritSect;
+    HANDLE m_ReadyForNextJobEvent;
+    HANDLE m_JobAvailableEvent;
+    HANDLE m_JobFinishedEvent;
 } fp_Thread_Data;
 
-// It's reccomended to use each single worker thread from one thread only.
 class fp_WorkerThread {
+    friend class fp_WorkerThreadManager;
 public:
     fp_WorkerThread();
     ~fp_WorkerThread();
 
     // Causes the worker to start working on job and immediately returns. Blocks if
-    // thread is already in use.
-    void DoWork(void (*JobFunction)(void*), void* JobData);
+    // the thread is already in use.
+    void DoJob(void (*JobFunction)(void*), void* JobData);
 
-    // Blocks while thread is working. If other threads are waiting for their jobs to
-    // start it is undefined if the function returns before or after these jobs are
-    // done.
-    void WaitTillWorkDone();
+    void WaitTillJobFinished();
 private:
     fp_Thread_Data m_ThreadData;
     HANDLE m_SysThread;    
+};
+
+class fp_WorkerThreadManager {
+public:
+    fp_WorkerThread* m_WorkerThreads;
+    int m_NumWorkerThreads;
+    HANDLE* m_JobFinishedEvents;
+
+    // If 'NumWorkerThreads == 0' number of physical processor in system is used
+    fp_WorkerThreadManager(int NumWorkerThreads=0);
+    ~fp_WorkerThreadManager();
+
+    void DoJobOnAllThreads(
+            void (*JobFunction)(void*), 
+            void* JobDataArray, 
+            SIZE_T JobDataSize);
+    void WaitTillJobFinishedOnAllThreads();
 };
 
 #endif

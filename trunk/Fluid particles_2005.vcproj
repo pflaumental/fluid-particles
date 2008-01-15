@@ -748,6 +748,49 @@
 				>
 			</File>
 		</Filter>
+		<Filter
+			Name="CoreDetection"
+			>
+			<File
+				RelativePath=".\CoreDetection\cpuid64.asm"
+				>
+				<FileConfiguration
+					Name="Debug|x64"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+						CommandLine="&quot;$(VCInstallDir)bin\x86_amd64\ml64.exe&quot; /c /Fo&quot;$(IntDir)\$(InputName).obj&quot; &quot;$(InputPath)&quot;"
+						Outputs="$(IntDir)\$(InputName).obj"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|x64"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+						CommandLine="&quot;$(VCInstallDir)bin\x86_amd64\ml64.exe&quot; /c /Fo&quot;$(IntDir)\$(InputName).obj&quot; &quot;$(InputPath)&quot;"
+						Outputs="$(IntDir)\$(InputName).obj"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Profile|x64"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+						CommandLine="&quot;$(VCInstallDir)bin\x86_amd64\ml64.exe&quot; /c /Fo&quot;$(IntDir)\$(InputName).obj&quot; &quot;$(InputPath)&quot;"
+						Outputs="$(IntDir)\$(InputName).obj"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\CoreDetection\CpuTopology.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\CoreDetection\CpuTopology.h"
+				>
+			</File>
+		</Filter>
 		<File
 			RelativePath=".\fp_app.cpp"
 			>
