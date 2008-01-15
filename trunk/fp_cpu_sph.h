@@ -55,9 +55,13 @@ class fp_Fluid;
 typedef struct {
     fp_Fluid* m_Fluid;
     int m_ThreadIdx;
-} fp_FluidCalculateFluidStateMTData;
+    int m_NumThreads;
+} fp_FluidMTHelperData;
 
 class fp_Fluid {
+    friend void fp_FluidCalculateFluidStateMTWrapper(void*);
+    friend void fp_FluidMoveParticlesMTWrapper(void*);    
+
 public:
     fp_FluidParticle* m_Particles;
     int m_NumParticles;
@@ -118,8 +122,6 @@ public:
         float DampingCoefficient = FP_DEFAULT_FLUID_DAMPING_COEFFICIENT);
     ~fp_Fluid();
     void Update(float ElapsedTime);
-    // Internal function for MT don't use elsewhere
-    void CalculateFluidStateMT(int ThreadIdx);
     void SetCollisionRadius(float CollisionRadius);
     void SetSmoothingLength(float SmoothingLength);
     void SetParticleMass(float ParticleMass);
@@ -138,8 +140,11 @@ public:
     inline D3DXVECTOR3 GradientWSpiky(const D3DXVECTOR3* R, float LenR);
     inline float LaplacianWViscosity(float LenR);
 private:
+    // For multi threadding
     fp_WorkerThreadManager* m_WorkerThreadMgr;
-    fp_FluidCalculateFluidStateMTData* m_CalcFluidStateThreadData;
+    fp_FluidMTHelperData* m_MTData;
+    float m_CurrentElapsedTime;
+
     fp_Grid* m_Grid;
     float* m_OldDensities;
     float* m_NewDensities;
@@ -152,6 +157,9 @@ private:
             fp_FluidParticle* Particle1, 
             fp_FluidParticle* Particle2,
             float DistanceSq);
+
+    void CalculateFluidStateMT(int ThreadIdx);
+    void MoveParticlesMT(int ThreadIdx);
 };
 
 // Inline definitions
