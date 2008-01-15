@@ -356,24 +356,23 @@ void fp_Fluid::CalculateFluidStateMT(int ThreadIdx) {
 
                                     // For each particle in neighbor-cell
                                     for (fp_GridCellSize iNeighbourCellParticle = 0;
-                                        iNeighbourCellParticle < neighborCellSize;
-                                        iNeighbourCellParticle++) {
-                                           fp_FluidParticle* neighborParticle =
-                                                &(*neighborCell)[iNeighbourCellParticle];
-
-                                           // Process only "following" particles, otherwise particles
-                                           // would get evaluated twice
-                                           if(particle->m_Index <= neighborParticle->m_Index)
-                                               continue;
-
-                                            D3DXVECTOR3 toNeighbour = neighborParticle->m_Position
-                                                - particle->m_Position;
-                                            float distSq = D3DXVec3LengthSq(&toNeighbour);
-                                            assert(distSq > 0.0f);
-                                            if(distSq < m_SmoothingLengthSq) {                                        
-                                                ProcessParticlePair(particle, neighborParticle,
-                                                    distSq);
-                                            }
+                                            iNeighbourCellParticle < neighborCellSize;
+                                            iNeighbourCellParticle++) {
+                                        // Process only "following" particles, otherwise particles
+                                        // would get evaluated twice
+                                        if(cellIndex == neighborCellIndex
+                                                && iCellParticle <= iNeighbourCellParticle)
+                                            continue;
+                                        fp_FluidParticle* neighborParticle =
+                                        &(*neighborCell)[iNeighbourCellParticle];
+                                        D3DXVECTOR3 toNeighbour = neighborParticle->m_Position
+                                            - particle->m_Position;
+                                        float distSq = D3DXVec3LengthSq(&toNeighbour);
+                                        assert(distSq > 0.0f);
+                                        if(distSq < m_SmoothingLengthSq) {                                        
+                                            ProcessParticlePair(particle, neighborParticle,
+                                                distSq);
+                                        }
                                     }
                                 }
                             }                            
