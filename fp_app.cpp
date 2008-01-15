@@ -55,7 +55,7 @@ ID3D10EffectVectorVariable* g_MaterialDiffuseColor = NULL;
 ID3D10EffectVectorVariable* g_MaterialAmbientColor = NULL;
 ID3D10EffectScalarVariable* g_NumLights = NULL;
 
-fp_WorkerThreadManager g_WorkerThreadMgr(1);
+fp_WorkerThreadManager g_WorkerThreadMgr;
 
 //--------------------------------------------------------------------------------------
 // Forward declarations 

@@ -147,10 +147,10 @@ private:
 
     fp_Grid* m_Grid;
     float* m_OldDensities;
-    float* m_NewDensities;
-    D3DXVECTOR3* m_PressureAndViscosityForces;
-    D3DXVECTOR3* m_GradientColorField;
-    float* m_LaplacianColorField;
+    volatile float* m_NewDensities;
+    volatile D3DXVECTOR3* m_PressureAndViscosityForces;
+    volatile D3DXVECTOR3* m_GradientColorField;
+    volatile float* m_LaplacianColorField;
 
     inline void HandleGlassCollision(fp_FluidParticle* Particle);
     inline void ProcessParticlePair(
