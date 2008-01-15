@@ -24,7 +24,14 @@
 
 #define FP_DEFAULT_GRAVITY D3DXVECTOR3(0.0f, 1 * -9.81f, 0.0f)
 #define FP_DEFAULT_FLUID_SMOOTHING_LENGTH 3.0f//0.01f
-#define FP_DEFAULT_FLUID_COLLISION_RADIUS 3.0f
+
+// Controls the minimal distance that is used in glass-force-calculations
+// Lower values lead to higher push-back forces
+#define FP_DEFAULT_FLUID_GLASS_PUSHBACK_DISTANCE 0.2f
+
+// Controls how far a particle can leave the glass until "manual collision handling"
+// brings it back in
+#define FP_DEFAULT_FLUID_GLASS_ENFORCE_DISTANCE 0.0f
 #define FP_DEFAULT_FLUID_GAS_CONSTANT_K 300.0f
 #define FP_DEFAULT_FLUID_SURFACE_TENSION 0.0015f//0.0003f
 #define FP_DEFAULT_FLUID_GRADIENT_COLORFIELD_THRESHOLD 0.075f

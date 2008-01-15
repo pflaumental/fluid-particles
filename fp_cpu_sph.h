@@ -60,7 +60,9 @@ typedef struct {
 
 class fp_Fluid {
     friend void fp_FluidCalculateFluidStateMTWrapper(void*);
-    friend void fp_FluidMoveParticlesMTWrapper(void*);    
+    friend void fp_FluidCalculateGlassFluidStateChangeMTWrapper(void*);    
+    friend void fp_FluidMoveParticlesMTWrapper(void*);
+    friend void fp_FluidAbortDummy(void*);
 
 public:
     fp_FluidParticle* m_Particles;
@@ -73,8 +75,6 @@ public:
     float m_SmoothingLengthSq;
     float m_SmoothingLengthSqInv;
     float m_SmoothingLengthPow3Inv;
-    float m_CollisionRadius;
-    float m_CollisionRadiusSq;
     float m_InitialDensity;
     float m_RestDensity;
     float m_RestDensityCoefficient;
@@ -88,11 +88,13 @@ public:
     float m_LaplacianWViscosityCoefficient;
 
     float m_GlassRadius;
-    float m_GlassRadiusMinusCollisionRadius;
-    float m_GlassRadiusMinusCollisionRadiusSq;
+    float m_GlassRadiusPlusEnforceDistance;
+    float m_GlassRadiusPlusEnforceDistanceSq;
     float m_GlassFloor;
-    float m_GlassFloorPlusCollisionRadius;
-    D3DXVECTOR3 m_GlassPosition;
+    float m_GlassFloorPlusEnforceDistance;    
+    D3DXVECTOR3 m_CurrentGlassPosition;
+    float m_CurrentGlassFloorY;
+    float m_CurrentGlassEnforceMinY;
     D3DXVECTOR3 m_LastGlassPosition;
     D3DXVECTOR3 m_LastGlassVelocity;
     D3DXVECTOR3 m_GlassVelocityChange;
@@ -112,7 +114,7 @@ public:
         float GlassFloor,
         D3DXVECTOR3 Gravity = FP_DEFAULT_GRAVITY,
         float SmoothingLenght = FP_DEFAULT_FLUID_SMOOTHING_LENGTH,
-        float CollisionRadius = FP_DEFAULT_FLUID_COLLISION_RADIUS,
+        float GlassEnforceDistance = FP_DEFAULT_FLUID_GLASS_ENFORCE_DISTANCE,
         float GasConstantK = FP_DEFAULT_FLUID_GAS_CONSTANT_K,        
         float Viscosity = FP_DEFAULT_FLUID_VISCOSITY,
         float SurfaceTension = FP_DEFAULT_FLUID_SURFACE_TENSION,
@@ -122,7 +124,7 @@ public:
         float DampingCoefficient = FP_DEFAULT_FLUID_DAMPING_COEFFICIENT);
     ~fp_Fluid();
     void Update(float ElapsedTime);
-    void SetCollisionRadius(float CollisionRadius);
+    void SetGlassEnforceDistance(float GlassEnforceDistance);
     void SetSmoothingLength(float SmoothingLength);
     void SetParticleMass(float ParticleMass);
     float* GetDensities();
@@ -151,14 +153,15 @@ private:
     volatile D3DXVECTOR3* m_PressureAndViscosityForces;
     volatile D3DXVECTOR3* m_GradientColorField;
     volatile float* m_LaplacianColorField;
-
-    inline void HandleGlassCollision(fp_FluidParticle* Particle);
+    
+    inline void EnforceGlass(fp_FluidParticle* Particle);
     inline void ProcessParticlePair(
             fp_FluidParticle* Particle1, 
             fp_FluidParticle* Particle2,
             float DistanceSq);
-
+    
     void CalculateFluidStateMT(int ThreadIdx);
+    void CalculateGlassFluidStateChangeMT(int ThreadIdx);
     void MoveParticlesMT(int ThreadIdx);
 };
 
