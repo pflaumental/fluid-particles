@@ -296,11 +296,11 @@ void CALLBACK FP_OnFrameMove( double Time, float ElapsedTime, void* UserContext 
     g_Camera.FrameMove( ElapsedTime );
     float mouseDragX, mouseDragY;
     g_Camera.GetMouseDrag(mouseDragX, mouseDragY);
-    g_Sim->m_GlassPosition.x += 100.0f * mouseDragX;
+    g_Sim->m_CurrentGlassPosition.x += 100.0f * mouseDragX;
     if(g_MoveHorizontally)
-        g_Sim->m_GlassPosition.z -= 100.0f * mouseDragY;
+        g_Sim->m_CurrentGlassPosition.z -= 100.0f * mouseDragY;
     else
-        g_Sim->m_GlassPosition.y -= 100.0f * mouseDragY;        
+        g_Sim->m_CurrentGlassPosition.y -= 100.0f * mouseDragY;        
     g_Sim->Update(ElapsedTime);
     if(g_RenderType == FP_GUI_RENDER_TYPE_ISO_SURFACE) {
         g_IsoVolume->ConstructFromFluid();
