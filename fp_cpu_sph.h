@@ -8,8 +8,7 @@
 #pragma warning(default:4995)
 
 #include "fp_global.h"
-
-
+#include "fp_thread.h"
 
 typedef struct {
     D3DXVECTOR3 m_Position;
@@ -50,6 +49,14 @@ private:
     inline void SetBounds(fp_FluidParticle* Particles, int NumParticles);
 };
 
+class fp_Fluid;
+
+// Internal structure, don't use elsewhere
+typedef struct {
+    fp_Fluid* m_Fluid;
+    int m_ThreadIdx;
+} fp_FluidCalculateFluidStateMTData;
+
 class fp_Fluid {
 public:
     fp_FluidParticle* m_Particles;
@@ -89,6 +96,7 @@ public:
     D3DXVECTOR3 m_Gravity;
 
     fp_Fluid(
+        fp_WorkerThreadManager* WorkerThreadMgr,
         int NumParticlesX,
         int NumParticlesY,
         int NumParticlesZ,
@@ -110,6 +118,8 @@ public:
         float DampingCoefficient = FP_DEFAULT_FLUID_DAMPING_COEFFICIENT);
     ~fp_Fluid();
     void Update(float ElapsedTime);
+    // Internal function for MT don't use elsewhere
+    void CalculateFluidStateMT(int ThreadIdx);
     void SetCollisionRadius(float CollisionRadius);
     void SetSmoothingLength(float SmoothingLength);
     void SetParticleMass(float ParticleMass);
@@ -128,6 +138,8 @@ public:
     inline D3DXVECTOR3 GradientWSpiky(const D3DXVECTOR3* R, float LenR);
     inline float LaplacianWViscosity(float LenR);
 private:
+    fp_WorkerThreadManager* m_WorkerThreadMgr;
+    fp_FluidCalculateFluidStateMTData* m_CalcFluidStateThreadData;
     fp_Grid* m_Grid;
     float* m_OldDensities;
     float* m_NewDensities;

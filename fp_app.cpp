@@ -12,6 +12,7 @@
 #include "fp_cpu_sph.h"
 #include "fp_render_sprites.h"
 #include "fp_render_iso_volume.h"
+#include "fp_thread.h"
 
 //#define DEBUG_VS   // Uncomment this line to debug D3D9 vertex shaders 
 //#define DEBUG_PS   // Uncomment this line to debug D3D9 pixel shaders 
@@ -54,6 +55,7 @@ ID3D10EffectVectorVariable* g_MaterialDiffuseColor = NULL;
 ID3D10EffectVectorVariable* g_MaterialAmbientColor = NULL;
 ID3D10EffectScalarVariable* g_NumLights = NULL;
 
+fp_WorkerThreadManager g_WorkerThreadMgr;
 
 //--------------------------------------------------------------------------------------
 // Forward declarations 
@@ -195,9 +197,9 @@ void FP_InitApp() {
     g_NumActiveLights = 1;
     g_LightScale = FP_DEFAULT_LIGHT_SCALE;
     D3DXVECTOR3 center(0.0f, 0.0f, 0.0f);
-    g_Sim = new fp_Fluid(FP_NUM_PARTICLES_X, FP_NUM_PARTICLES_Y, FP_NUM_PARTICLES_Z,
-            FP_PARTICLE_SPACING_X, FP_PARTICLE_SPACING_Y, FP_PARTICLE_SPACING_Z, center,
-			FP_GLASS_RADIUS, FP_GLASS_FLOOR);
+    g_Sim = new fp_Fluid(&g_WorkerThreadMgr, FP_NUM_PARTICLES_X, FP_NUM_PARTICLES_Y,
+            FP_NUM_PARTICLES_Z, FP_PARTICLE_SPACING_X, FP_PARTICLE_SPACING_Y,
+            FP_PARTICLE_SPACING_Z, center, FP_GLASS_RADIUS, FP_GLASS_FLOOR);
     g_RenderSprites = new fp_RenderSprites(FP_NUM_PARTICLES, g_Sim->m_Particles);
     g_IsoVolume = new fp_IsoVolume(g_Sim);
     g_RenderIsoVolume = new fp_RenderIsoVolume(g_IsoVolume, 3);
@@ -374,9 +376,9 @@ void CALLBACK FP_OnGUIEvent(
         delete g_Sim;
         delete g_IsoVolume;
         D3DXVECTOR3 center(0.0f, 0.0f, 0.0f);
-        g_Sim = new fp_Fluid(FP_NUM_PARTICLES_X, FP_NUM_PARTICLES_Y, FP_NUM_PARTICLES_Z,
-            FP_PARTICLE_SPACING_X, FP_PARTICLE_SPACING_Y, FP_PARTICLE_SPACING_Z, center,
-			FP_GLASS_RADIUS, FP_GLASS_FLOOR);
+        g_Sim = new fp_Fluid(&g_WorkerThreadMgr, FP_NUM_PARTICLES_X, FP_NUM_PARTICLES_Y,
+            FP_NUM_PARTICLES_Z, FP_PARTICLE_SPACING_X, FP_PARTICLE_SPACING_Y,
+            FP_PARTICLE_SPACING_Z, center, FP_GLASS_RADIUS, FP_GLASS_FLOOR);
         g_IsoVolume = new fp_IsoVolume(g_Sim, mcVoxelSize);
         g_RenderSprites->m_Particles = g_Sim->m_Particles;
         g_RenderIsoVolume->m_IsoVolume = g_IsoVolume;
