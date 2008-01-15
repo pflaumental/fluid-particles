@@ -38,14 +38,6 @@ int                     g_RenderType;
 bool                    g_MoveHorizontally;
 
 // Direct3D10 resources
-//CDXUTSDKMesh            g_Mesh10;
-//ID3D10InputLayout*      g_VertexLayout = NULL;
-
-//ID3D10Effect*           g_Effect10 = NULL;
-//ID3D10EffectTechnique*  g_TechRenderSceneWithTexture1Light = NULL;
-//ID3D10EffectTechnique*  g_TechRenderSceneWithTexture2Light = NULL;
-//ID3D10EffectTechnique*  g_TechRenderSceneWithTexture3Light = NULL;
-//ID3D10EffectShaderResourceVariable* g_ptxDiffuse = NULL;
 ID3D10EffectVectorVariable* g_LightDir = NULL;
 ID3D10EffectVectorVariable* g_LightDiffuse = NULL;
 ID3D10EffectMatrixVariable* g_WorldViewProjection = NULL;
