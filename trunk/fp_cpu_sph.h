@@ -62,7 +62,7 @@ class fp_Fluid {
     friend void fp_FluidCalculateFluidStateMTWrapper(void*);
     friend void fp_FluidCalculateGlassFluidStateChangeMTWrapper(void*);    
     friend void fp_FluidMoveParticlesMTWrapper(void*);
-    friend void fp_FluidAbortDummy(void*);
+    friend void fp_FluidDummyFunc(void*);
 
 public:
     fp_FluidParticle* m_Particles;
