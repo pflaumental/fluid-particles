@@ -21,7 +21,7 @@ void fp_FluidMoveParticlesMTWrapper(void* Data) {
     mtData->m_Fluid->MoveParticlesMT(mtData->m_ThreadIdx);
 }
 
-void fp_FluidAbortDummy(void* Data) {
+void fp_FluidDummyFunc(void* Data) {
     ;
 }
 
@@ -178,7 +178,6 @@ fp_Fluid::fp_Fluid(
         m_GradientColorFieldThresholdSq(GradientColorFieldThreshold
                 * GradientColorFieldThreshold),
         m_DampingCoefficient(DampingCoefficient) {
-
     m_WorkerThreadMgr = WorkerThreadMgr;
     int numWorkerThreads = m_WorkerThreadMgr->m_NumWorkerThreads;
     m_MTData = new fp_FluidMTHelperData[numWorkerThreads];
@@ -232,7 +231,7 @@ fp_Fluid::fp_Fluid(
 }
 
 fp_Fluid::~fp_Fluid() {
-    m_WorkerThreadMgr->DoJobOnAllThreads(fp_FluidAbortDummy, NULL, 0);
+    m_WorkerThreadMgr->DoJobOnAllThreads(fp_FluidDummyFunc, NULL, 0);
     m_WorkerThreadMgr->WaitTillJobFinishedOnAllThreads();
     delete[] m_Particles;
     delete[] m_MTData;
@@ -305,14 +304,14 @@ void fp_Fluid::Update(float ElapsedTime) {
     m_LastGlassPosition = m_CurrentGlassPosition;
     
     // Calculate densities changes, pressure forces and viscosity forces produced by
-    // glass    
+    // glass
+    m_CurrentGlassFloorY = m_GlassFloor + m_CurrentGlassPosition.y;
     m_WorkerThreadMgr->DoJobOnAllThreads(
             fp_FluidCalculateGlassFluidStateChangeMTWrapper, m_MTData,
             sizeof(fp_FluidMTHelperData));
     m_WorkerThreadMgr->WaitTillJobFinishedOnAllThreads();
 
-    // Move particles and clear fields
-    m_CurrentGlassFloorY = m_GlassFloor + m_CurrentGlassPosition.y;
+    // Move particles and clear fields    
     m_CurrentGlassEnforceMinY = m_GlassFloorPlusEnforceDistance + m_CurrentGlassPosition.y;
     m_WorkerThreadMgr->DoJobOnAllThreads(fp_FluidMoveParticlesMTWrapper, m_MTData,
         sizeof(fp_FluidMTHelperData));
