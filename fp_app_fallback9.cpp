@@ -15,10 +15,6 @@
 //#define DEBUG_VS   // Uncomment this line to debug D3D9 vertex shaders 
 //#define DEBUG_PS   // Uncomment this line to debug D3D9 pixel shaders 
 
-#define IDC_NUM_LIGHTS          6
-#define IDC_NUM_LIGHTS_STATIC   7
-#define IDC_ACTIVE_LIGHT        8
-
 //--------------------------------------------------------------------------------------
 // Global variables
 //--------------------------------------------------------------------------------------
@@ -240,10 +236,10 @@ void CALLBACK FP_OnD3D9FrameRender(
         WorldViewProjection = World * View * Proj;
 
         for (int i=0; i < FP_MAX_LIGHTS; i++) {
-            g_RenderIsoVolume->m_Lights[i].Direction = g_GUI.m_LightDir[i];
+            g_RenderIsoVolume->m_Lights9[i].Direction = g_GUI.m_LightDir[i];
             D3DCOLORVALUE diffuse = { g_GUI.m_LightDiffuseColor->r,
                 g_GUI.m_LightDiffuseColor->g, g_GUI.m_LightDiffuseColor->b, 1.0f };
-            g_RenderIsoVolume->m_Lights[i].Diffuse = diffuse;
+            g_RenderIsoVolume->m_Lights9[i].Diffuse = diffuse;
         }
 
 		d3dDevice->SetTransform( D3DTS_WORLD, &World );

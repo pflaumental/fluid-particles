@@ -20,6 +20,8 @@ struct fp_MCVertex
 	{
 		FVF_Flags = D3DFVF_XYZ|D3DFVF_NORMAL
 	};
+
+    static const D3D10_INPUT_ELEMENT_DESC Layout[];
     
     fp_MCVertex(D3DXVECTOR3 Position, D3DXVECTOR3 Normal) :
             m_Position(Position),
@@ -100,8 +102,9 @@ public:
     float m_IsoLevel;
     int m_NumVertices;
     int m_NumTriangles;
+    int m_NumLights;
     int m_NumActiveLights;
-    D3DLIGHT9* m_Lights;
+    D3DLIGHT9* m_Lights9;
 
     fp_RenderIsoVolume(
             fp_IsoVolume* IsoVolume,
@@ -111,7 +114,7 @@ public:
 
     void ConstructMesh();
 
-    // DX9 specific
+    // D3D9 specific
     HRESULT OnD3D9CreateDevice(
             IDirect3DDevice9* d3dDevice,
             const D3DSURFACE_DESC* BackBufferSurfaceDesc,
@@ -124,7 +127,7 @@ public:
     void    OnD3D9LostDevice( void* UserContext );
     void    OnD3D9DestroyDevice( void* UserContext );
 
-    // DX10 specific
+    // D3D10 specific
     HRESULT OnD3D10CreateDevice(
             ID3D10Device* d3dDevice,
             const DXGI_SURFACE_DESC* BackBufferSurfaceDesc,
@@ -138,22 +141,30 @@ public:
     void    OnD3D10DestroyDevice( void* UserContext );
     void    OnD3D10FrameRender(
             ID3D10Device* d3dDevice,
-            double Time,
-            float ElapsedTime,
-            const D3DXVECTOR3* EyePt,
-            const D3DXMATRIX*  WorldViewProjection,
-            const D3DXMATRIX*  World,
-            const D3DXMATRIX*  View,
-            const D3DXMATRIX*  Proj,
-            int NumActiveLights,
-            int ActiveLight,
-            float LightScale); 
+            const D3DXMATRIX*  WorldViewProjection); 
 
 private:
-    LPDIRECT3DVERTEXBUFFER9 m_VertexBuffer;
-    LPDIRECT3DINDEXBUFFER9 m_IndexBuffer;
-    D3DMATERIAL9 m_Material;
+    // D3D9 resources
+    LPDIRECT3DVERTEXBUFFER9 m_VertexBuffer9;
+    LPDIRECT3DINDEXBUFFER9 m_IndexBuffer9;
+    D3DMATERIAL9 m_Material9;
     //LPDIRECT3DTEXTURE9 m_Texture;
+
+    // D3D10 resources
+    ID3D10Buffer* m_VertexBuffer10;
+    ID3D10Buffer* m_IndexBuffer10;
+    ID3D10Effect* m_Effect10;
+    ID3D10EffectTechnique* m_TechRenderIsoVolume1Light;
+    ID3D10EffectTechnique* m_TechRenderIsoVolume2Lights;
+    ID3D10EffectTechnique* m_TechRenderIsoVolume3Lights;
+    ID3D10EffectVectorVariable* m_EffectVarLightDir;
+    ID3D10EffectVectorVariable* m_EffectVarLightDiffuse;
+    ID3D10EffectVectorVariable* m_EffectVarLightAmbient;
+    ID3D10EffectMatrixVariable* m_EffectVarWorldViewProjection;
+    ID3D10EffectVectorVariable* m_EffectVarMaterialDiffuseColor;
+    ID3D10EffectVectorVariable* m_EffectVarMaterialAmbientColor;
+    ID3D10InputLayout* m_VertexLayout;
+
     static int s_EdgeTable[256];
     static int s_TriTable[256][16];
 

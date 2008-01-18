@@ -200,13 +200,13 @@ void FP_InitApp() {
             g_GUI.m_LightDiffuseColor->g, g_GUI.m_LightDiffuseColor->b, 1.0f };
     D3DCOLORVALUE ambient  = { 0.05f, 0.05f, 0.05f, 1.0f };
     D3DCOLORVALUE specular = { 0.8f, 0.8f, 0.8f, 1.0f };
-    ZeroMemory( g_RenderIsoVolume->m_Lights, sizeof(D3DLIGHT9) * FP_MAX_LIGHTS );
+    ZeroMemory( g_RenderIsoVolume->m_Lights9, sizeof(D3DLIGHT9) * FP_MAX_LIGHTS );
     for (int i=0; i < FP_MAX_LIGHTS; i++) {
-        g_RenderIsoVolume->m_Lights[i].Type = D3DLIGHT_DIRECTIONAL;
-        g_RenderIsoVolume->m_Lights[i].Direction = g_GUI.m_LightDir[i];
-        g_RenderIsoVolume->m_Lights[i].Diffuse = diffuse;
-        g_RenderIsoVolume->m_Lights[i].Ambient = ambient;
-        g_RenderIsoVolume->m_Lights[i].Specular = specular;
+        g_RenderIsoVolume->m_Lights9[i].Type = D3DLIGHT_DIRECTIONAL;
+        g_RenderIsoVolume->m_Lights9[i].Direction = g_GUI.m_LightDir[i];
+        g_RenderIsoVolume->m_Lights9[i].Diffuse = diffuse;
+        g_RenderIsoVolume->m_Lights9[i].Ambient = ambient;
+        g_RenderIsoVolume->m_Lights9[i].Specular = specular;
     }
 }
 
@@ -418,78 +418,6 @@ HRESULT CALLBACK FP_OnD3D10CreateDevice(
     g_RenderIsoVolume->OnD3D10CreateDevice(d3dDevice, BackBufferSurfaceDesc,
             UserContext);
 
-    //D3DXVECTOR3 vCenter( 0.25767413f, -28.503521f, 111.00689f );
-
-    //D3DXMatrixTranslation( &g_CenterMesh, -vCenter.x, -vCenter.y, -vCenter.z );
-    //D3DXMATRIXA16 m;
-    //D3DXMatrixRotationY( &m, D3DX_PI );
-    //g_CenterMesh *= m;
-    //D3DXMatrixRotationX( &m, D3DX_PI / 2.0f );
-    //g_CenterMesh *= m;
-
-    //DWORD dwShaderFlags = D3D10_SHADER_ENABLE_STRICTNESS;
-    //#if defined( DEBUG ) || defined( _DEBUG )
-    //// Set the D3D10_SHADER_DEBUG flag to embed debug information in the shaders.
-    //// Setting this flag improves the shader debugging experience, but still allows 
-    //// the shaders to be optimized and to run exactly the way they will run in 
-    //// the release configuration of this program.
-    //dwShaderFlags |= D3D10_SHADER_DEBUG;
-    //#endif
-
-    //// Read the D3DX effect file
-    //WCHAR str[MAX_PATH];
-    //V_RETURN( DXUTFindDXSDKMediaFileCch( str, MAX_PATH, L"fp_effect10.fx" ) );
-    //V_RETURN( D3DX10CreateEffectFromFile( str, NULL, NULL, "fx_4_0", dwShaderFlags, 
-    //        0, d3dDevice, NULL, NULL, &g_Effect10, NULL, NULL ) );
-
-    //// Obtain technique objects
-    //g_TechRenderSceneWithTexture1Light = g_Effect10->GetTechniqueByName(
-    //        "RenderSceneWithTexture1Light" );
-    //g_TechRenderSceneWithTexture2Light = g_Effect10->GetTechniqueByName( 
-    //        "RenderSceneWithTexture2Light" );
-    //g_TechRenderSceneWithTexture3Light = g_Effect10->GetTechniqueByName( 
-    //        "RenderSceneWithTexture3Light" );
-
-    //// Obtain variables
-    //g_ptxDiffuse = g_Effect10->GetVariableByName( "g_MeshTexture" )->AsShaderResource();
-    //g_LightDir = g_Effect10->GetVariableByName( "g_LightDir" )->AsVector();
-    //g_LightDiffuse = g_Effect10->GetVariableByName( "g_LightDiffuse" )->AsVector();
-    //g_WorldViewProjection = g_Effect10->GetVariableByName( "g_mWorldViewProjection" )
-    //        ->AsMatrix();
-    //g_World = g_Effect10->GetVariableByName( "g_mWorld" )->AsMatrix();
-    //g_Time = g_Effect10->GetVariableByName( "g_fTime" )->AsScalar();
-    //g_MaterialAmbientColor = g_Effect10->GetVariableByName("g_MaterialAmbientColor")
-    //        ->AsVector();
-    //g_MaterialDiffuseColor = g_Effect10->GetVariableByName( "g_MaterialDiffuseColor" )
-    //        ->AsVector();
-    //g_NumLights = g_Effect10->GetVariableByName( "g_NumLights" )->AsScalar();
-
-    //// Create our vertex input layout
-    //const D3D10_INPUT_ELEMENT_DESC layout[] = {
-    //    { "POSITION",  0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0,  
-    //            D3D10_INPUT_PER_VERTEX_DATA, 0 },
-    //    { "NORMAL",    0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, 
-    //            D3D10_INPUT_PER_VERTEX_DATA, 0 },
-    //    { "TEXCOORD",  0, DXGI_FORMAT_R32G32_FLOAT,    0, 24, 
-    //            D3D10_INPUT_PER_VERTEX_DATA, 0 },
-    //};
-
-    //D3D10_PASS_DESC PassDesc;
-    //V_RETURN( g_TechRenderSceneWithTexture1Light->GetPassByIndex( 0 )->GetDesc(
-    //        &PassDesc ) );
-    //V_RETURN( d3dDevice->CreateInputLayout( layout, 3, PassDesc.pIAInputSignature, 
-    //        PassDesc.IAInputSignatureSize, &g_VertexLayout ) );
-
-    //// Load the mesh
-    //V_RETURN( g_Mesh10.Create( d3dDevice, L"tiny\\tiny.sdkmesh", true ) );
-
-    //// Set effect variables as needed
-    //D3DXCOLOR colorMtrlDiffuse(1.0f, 1.0f, 1.0f, 1.0f);
-    //D3DXCOLOR colorMtrlAmbient(0.35f, 0.35f, 0.35f, 0);
-    //V_RETURN( g_MaterialAmbientColor->SetFloatVector( (float*)&colorMtrlAmbient ) );
-    //V_RETURN( g_MaterialDiffuseColor->SetFloatVector( (float*)&colorMtrlDiffuse ) );
-
-
     // Setup the camera's view parameters
     D3DXVECTOR3 vecEye(0.0f, 0.0f, -15.0f);
     D3DXVECTOR3 vecAt (0.0f, 0.0f, -0.0f);
@@ -564,18 +492,16 @@ void CALLBACK FP_OnD3D10FrameRender(
 	D3DXMatrixInverse(&invView, NULL, &view);
 
     for (int i=0; i < FP_MAX_LIGHTS; i++) {
-        g_RenderIsoVolume->m_Lights[i].Direction = g_GUI.m_LightDir[i];
+        g_RenderIsoVolume->m_Lights9[i].Direction = g_GUI.m_LightDir[i];
         D3DCOLORVALUE diffuse = { g_GUI.m_LightDiffuseColor->r,
             g_GUI.m_LightDiffuseColor->g, g_GUI.m_LightDiffuseColor->b, 1.0f };
-        g_RenderIsoVolume->m_Lights[i].Diffuse = diffuse;
+        g_RenderIsoVolume->m_Lights9[i].Diffuse = diffuse;
     }
 
     if(g_RenderType == FP_GUI_RENDER_TYPE_POINT_SPRITE)
         g_RenderSprites->OnD3D10FrameRender(d3dDevice, &viewProjection, &invView);
     else if(g_RenderType == FP_GUI_RENDER_TYPE_ISO_SURFACE)
-        g_RenderIsoVolume->OnD3D10FrameRender(d3dDevice, Time, ElapsedTime,
-                g_Camera.GetEyePt(), &worldViewProjection, &world, &view, &projection,
-                g_NumActiveLights, g_ActiveLight, g_LightScale);
+        g_RenderIsoVolume->OnD3D10FrameRender(d3dDevice, &worldViewProjection);
 
     // Render GUI
     g_GUI.OnD3D10FrameRender(d3dDevice, ElapsedTime, g_Camera.GetEyePt(),

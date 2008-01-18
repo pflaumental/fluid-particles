@@ -759,7 +759,7 @@
 					>
 					<Tool
 						Name="VCCustomBuildTool"
-						CommandLine="&quot;$(VCInstallDir)bin\x86_amd64\ml64.exe&quot; /c /Fo&quot;$(IntDir)\$(InputName).obj&quot; &quot;$(InputPath)&quot;"
+						CommandLine="&quot;$(VCInstallDir)bin\x86_amd64\ml64.exe&quot; /c /Fo&quot;$(IntDir)\$(InputName).obj&quot; &quot;$(InputPath)&quot;&#x0D;&#x0A;"
 						Outputs="$(IntDir)\$(InputName).obj"
 					/>
 				</FileConfiguration>
@@ -768,7 +768,7 @@
 					>
 					<Tool
 						Name="VCCustomBuildTool"
-						CommandLine="&quot;$(VCInstallDir)bin\x86_amd64\ml64.exe&quot; /c /Fo&quot;$(IntDir)\$(InputName).obj&quot; &quot;$(InputPath)&quot;"
+						CommandLine="&quot;$(VCInstallDir)bin\x86_amd64\ml64.exe&quot; /c /Fo&quot;$(IntDir)\$(InputName).obj&quot; &quot;$(InputPath)&quot;&#x0D;&#x0A;"
 						Outputs="$(IntDir)\$(InputName).obj"
 					/>
 				</FileConfiguration>
@@ -777,7 +777,7 @@
 					>
 					<Tool
 						Name="VCCustomBuildTool"
-						CommandLine="&quot;$(VCInstallDir)bin\x86_amd64\ml64.exe&quot; /c /Fo&quot;$(IntDir)\$(InputName).obj&quot; &quot;$(InputPath)&quot;"
+						CommandLine="&quot;$(VCInstallDir)bin\x86_amd64\ml64.exe&quot; /c /Fo&quot;$(IntDir)\$(InputName).obj&quot; &quot;$(InputPath)&quot;&#x0D;&#x0A;"
 						Outputs="$(IntDir)\$(InputName).obj"
 					/>
 				</FileConfiguration>
@@ -821,6 +821,10 @@
 		</File>
 		<File
 			RelativePath=".\fp_render_iso_volume.cpp"
+			>
+		</File>
+		<File
+			RelativePath=".\fp_render_iso_volume.fx"
 			>
 		</File>
 		<File

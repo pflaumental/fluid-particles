@@ -1,7 +1,15 @@
 #include "DXUT.h"
 //#include "SDKmisc.h"
 #include "fp_render_iso_volume.h"
-//#include "fp_util.h"
+#include "fp_util.h"
+
+#define FP_RENDER_ISO_VOLUME_EFFECT_FILE L"fp_render_iso_volume.fx" 
+
+const D3D10_INPUT_ELEMENT_DESC fp_MCVertex::Layout[] = {
+    { "POSITION",  0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0,
+            D3D10_INPUT_PER_VERTEX_DATA, 0 },
+    { "NORMAL",    0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12,
+            D3D10_INPUT_PER_VERTEX_DATA, 0 }, };
 
 fp_VolumeIndex operator+(
         const fp_VolumeIndex& A,
@@ -343,17 +351,33 @@ fp_RenderIsoVolume::fp_RenderIsoVolume(
         :
         m_IsoVolume(IsoVolume),
         m_IsoLevel(IsoLevel),
-		m_VertexBuffer(NULL) {    
+        m_NumLights(NumLights),
+        m_NumTriangles(0),
+        m_NumVertices(0),
+		m_VertexBuffer9(NULL),
+        m_IndexBuffer9(NULL),
+        m_VertexBuffer10(NULL),
+        m_IndexBuffer10(NULL),
+        m_Effect10(NULL),
+        m_TechRenderIsoVolume1Light(NULL),
+        m_TechRenderIsoVolume2Lights(NULL),
+        m_TechRenderIsoVolume3Lights(NULL),
+        m_EffectVarLightDir(NULL),
+        m_EffectVarLightDiffuse(NULL),
+        m_EffectVarWorldViewProjection(NULL),
+        m_EffectVarMaterialDiffuseColor(NULL),
+        m_EffectVarMaterialAmbientColor(NULL),
+        m_VertexLayout(NULL) {    
     D3DCOLORVALUE diffuse  = {0.5f, 0.6f, 1.0, 1.0f};
     D3DCOLORVALUE ambient  = {0.05f, 0.05f, 0.05f, 1.0f};
     D3DCOLORVALUE emmisive = {0.0f, 0.0f, 0.0f, 1.0f};
     D3DCOLORVALUE specular = {0.5f, 0.5f, 0.5f, 1.0f};
-    ZeroMemory( &m_Material, sizeof(D3DMATERIAL9) );
-    m_Material.Diffuse = diffuse;
-    m_Material.Ambient = ambient;
-    m_Material.Emissive = emmisive;
-    m_Material.Specular = specular;
-    m_Lights = new D3DLIGHT9[NumLights];
+    ZeroMemory( &m_Material9, sizeof(D3DMATERIAL9) );
+    m_Material9.Diffuse = diffuse;
+    m_Material9.Ambient = ambient;
+    m_Material9.Emissive = emmisive;
+    m_Material9.Specular = specular;
+    m_Lights9 = new D3DLIGHT9[NumLights];
 }
 
 fp_RenderIsoVolume::~fp_RenderIsoVolume() {
@@ -368,7 +392,9 @@ fp_RenderIsoVolume::~fp_RenderIsoVolume() {
 }
 
 void fp_RenderIsoVolume::ConstructMesh() {
-    if(m_VertexBuffer == NULL) // TODO:
+    bool isRenderingWithD3D10 = DXUTIsAppRenderingWithD3D10();
+
+    if(!isRenderingWithD3D10 && m_VertexBuffer9 == NULL) // TODO:
         return; 
 
     m_NumVertices = 0;
@@ -390,10 +416,16 @@ void fp_RenderIsoVolume::ConstructMesh() {
     std::vector<D3DXVECTOR3>* gradientIsoValues = &m_IsoVolume->m_GradientIsoValues;
 
     fp_MCVertex *mcVertices;
-    m_VertexBuffer->Lock( 0, FP_MC_MAX_VETICES * sizeof(fp_MCVertex),
-        (void**)&mcVertices, D3DLOCK_DISCARD );
-    int* mcIndizes;
-    m_IndexBuffer->Lock(0, FP_MC_MAX_TRIANGLES * 3, (void**)&mcIndizes, D3DLOCK_DISCARD);
+    unsigned int* mcIndizes;
+
+    if(isRenderingWithD3D10) {
+        m_VertexBuffer10->Map(D3D10_MAP_WRITE_DISCARD, 0, (void**)&mcVertices);
+        m_IndexBuffer10->Map(D3D10_MAP_WRITE_DISCARD, 0, (void**)&mcIndizes);
+    } else {
+        m_VertexBuffer9->Lock( 0, FP_MC_MAX_VETICES * sizeof(fp_MCVertex),
+            (void**)&mcVertices, D3DLOCK_DISCARD );    
+        m_IndexBuffer9->Lock(0, FP_MC_MAX_TRIANGLES * 3, (void**)&mcIndizes, D3DLOCK_DISCARD);
+    }
 
     for(int cubeX=0; cubeX < xEnd; cubeX++) {
         for(int cubeY=0; cubeY < yEnd; cubeY++) {
@@ -525,8 +557,14 @@ void fp_RenderIsoVolume::ConstructMesh() {
         }        
     }
     m_NumTriangles = indexIndex / 3;
-    m_IndexBuffer->Unlock();
-    m_VertexBuffer->Unlock();
+
+    if(isRenderingWithD3D10){
+        m_IndexBuffer10->Unmap();
+        m_VertexBuffer10->Unmap();
+    } else {
+        m_IndexBuffer9->Unlock();
+        m_VertexBuffer9->Unlock();
+    }
 }
 
 
@@ -545,21 +583,21 @@ HRESULT fp_RenderIsoVolume::OnD3D9ResetDevice(
         void* UserContext ) {
     d3dDevice->CreateVertexBuffer( FP_MC_MAX_VETICES * sizeof(fp_MCVertex), 
             D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY, 
-            fp_MCVertex::FVF_Flags, D3DPOOL_DEFAULT, &m_VertexBuffer, NULL );
-    d3dDevice->CreateIndexBuffer(FP_MC_MAX_TRIANGLES * 3,
+            fp_MCVertex::FVF_Flags, D3DPOOL_DEFAULT, &m_VertexBuffer9, NULL );
+    d3dDevice->CreateIndexBuffer(FP_MC_MAX_TRIANGLES * 3 * sizeof(int),
             D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY,
-            D3DFMT_INDEX32, D3DPOOL_DEFAULT, &m_IndexBuffer, NULL );
+            D3DFMT_INDEX32, D3DPOOL_DEFAULT, &m_IndexBuffer9, NULL );
     return S_OK;
 }
 
 void fp_RenderIsoVolume::OnD3D9FrameRender(IDirect3DDevice9* d3dDevice) {  
-    d3dDevice->SetStreamSource(0, m_VertexBuffer, 0, sizeof(fp_MCVertex));
-    d3dDevice->SetIndices(m_IndexBuffer);
+    d3dDevice->SetStreamSource(0, m_VertexBuffer9, 0, sizeof(fp_MCVertex));
+    d3dDevice->SetIndices(m_IndexBuffer9);
 	d3dDevice->SetFVF(fp_MCVertex::FVF_Flags);
-    d3dDevice->SetMaterial(&m_Material);
+    d3dDevice->SetMaterial(&m_Material9);
     int i;
     for (i=0; i < m_NumActiveLights; i++) {        
-        d3dDevice->SetLight(i, &m_Lights[i]);
+        d3dDevice->SetLight(i, &m_Lights9[i]);
         d3dDevice->LightEnable(i, TRUE);
     }
     d3dDevice->LightEnable(i, FALSE);
@@ -576,8 +614,8 @@ void fp_RenderIsoVolume::OnD3D9DestroyDevice(void* UserContext) {
 }
 
 void fp_RenderIsoVolume::OnD3D9LostDevice(void* UserContext) {     
-    SAFE_RELEASE(m_VertexBuffer);    
-    SAFE_RELEASE(m_IndexBuffer);
+    SAFE_RELEASE(m_VertexBuffer9);    
+    SAFE_RELEASE(m_IndexBuffer9);
 }
 
 
@@ -587,7 +625,57 @@ HRESULT fp_RenderIsoVolume::OnD3D10CreateDevice(
         ID3D10Device* d3dDevice,
         const DXGI_SURFACE_DESC* BackBufferSurfaceDesc,
         void* UserContext ) {
-    //HRESULT hr;
+    HRESULT hr;
+
+    // Read the D3DX effect file
+    m_Effect10 = fp_Util::LoadEffect(d3dDevice, FP_RENDER_ISO_VOLUME_EFFECT_FILE);
+
+    // Obtain technique objects
+    m_TechRenderIsoVolume1Light = m_Effect10->GetTechniqueByName(
+        "RenderIsoVolume1Light" );
+    m_TechRenderIsoVolume2Lights = m_Effect10->GetTechniqueByName(
+        "RenderIsoVolume2Lights" );
+    m_TechRenderIsoVolume3Lights = m_Effect10->GetTechniqueByName(
+        "RenderIsoVolume3Lights" );
+
+    // Obtain effect variables
+    m_EffectVarLightDir = m_Effect10->GetVariableByName( "g_LightDir" )->AsVector();
+    m_EffectVarLightDiffuse = m_Effect10->GetVariableByName( "g_LightDiffuse" )
+        ->AsVector();
+    m_EffectVarLightAmbient = m_Effect10->GetVariableByName(
+        "g_LightAmbient" )->AsVector();
+    m_EffectVarWorldViewProjection = m_Effect10->GetVariableByName(
+        "g_WorldViewProjection" )->AsMatrix();
+    m_EffectVarMaterialAmbientColor = m_Effect10->GetVariableByName(
+        "g_MaterialAmbientColor")->AsVector();
+    m_EffectVarMaterialDiffuseColor = m_Effect10->GetVariableByName(
+        "g_MaterialDiffuseColor" )->AsVector();
+
+    // Set effect variables as needed
+    V_RETURN( m_EffectVarMaterialAmbientColor->SetFloatVector(
+        (float*)&m_Material9.Ambient) );
+    V_RETURN( m_EffectVarMaterialDiffuseColor->SetFloatVector(
+        (float*)&m_Material9.Diffuse) );
+
+    // Create vertex buffer
+    D3D10_BUFFER_DESC bufferDesc;
+    bufferDesc.Usage = D3D10_USAGE_DYNAMIC;
+    bufferDesc.ByteWidth = FP_MC_MAX_VETICES * sizeof(fp_MCVertex);
+    bufferDesc.BindFlags = D3D10_BIND_VERTEX_BUFFER;
+    bufferDesc.CPUAccessFlags = D3D10_CPU_ACCESS_WRITE;
+    bufferDesc.MiscFlags = 0;
+    V_RETURN(d3dDevice->CreateBuffer(&bufferDesc, NULL, &m_VertexBuffer10));
+
+    D3D10_PASS_DESC passDesc;
+    V_RETURN( m_TechRenderIsoVolume1Light->GetPassByIndex(0)->GetDesc(&passDesc));
+    V_RETURN( d3dDevice->CreateInputLayout(fp_MCVertex::Layout, 2,
+            passDesc.pIAInputSignature, passDesc.IAInputSignatureSize,
+            &m_VertexLayout ) );
+
+    // Create index buffer
+    bufferDesc.ByteWidth = FP_MC_MAX_TRIANGLES * 3 * sizeof(int);
+    bufferDesc.BindFlags = D3D10_BIND_INDEX_BUFFER;
+    V_RETURN(d3dDevice->CreateBuffer(&bufferDesc, NULL, &m_IndexBuffer10));
 
     return S_OK;
 }
@@ -597,53 +685,71 @@ HRESULT fp_RenderIsoVolume::OnD3D10ResizedSwapChain(
         IDXGISwapChain *SwapChain,
         const DXGI_SURFACE_DESC* BackBufferSurfaceDesc,
         void* UserContext ) {
-    //d3dDevice->CreateVertexBuffer( FP_MC_MAX_VETICES * sizeof(fp_MCVertex), 
-    //    D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY, 
-    //    fp_MCVertex::FVF_Flags, D3DPOOL_DEFAULT, &m_VertexBuffer, NULL );
-    //d3dDevice->CreateIndexBuffer(FP_MC_MAX_TRIANGLES * 3,
-    //    D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY,
-    //    D3DFMT_INDEX32, D3DPOOL_DEFAULT, &m_IndexBuffer, NULL );
     return S_OK;
 }
 
 void fp_RenderIsoVolume::OnD3D10FrameRender(
         ID3D10Device* d3dDevice,
-        double Time,
-        float ElapsedTime,
-        const D3DXVECTOR3* EyePt,
-        const D3DXMATRIX*  WorldViewProjection,
-        const D3DXMATRIX*  World,
-        const D3DXMATRIX*  View,
-        const D3DXMATRIX*  Proj,
-        int NumActiveLights,
-        int ActiveLight,
-        float LightScale) {  
-   //d3dDevice->SetStreamSource(0, m_VertexBuffer, 0, sizeof(fp_MCVertex));
-   //d3dDevice->SetIndices(m_IndexBuffer);
-   //d3dDevice->SetFVF(fp_MCVertex::FVF_Flags);
-   //d3dDevice->SetMaterial(&m_Material);
-   //int i;
-   //for (i=0; i < m_NumActiveLights; i++) {        
-   //    d3dDevice->SetLight(i, &m_Lights[i]);
-   //    d3dDevice->LightEnable(i, TRUE);
-   //}
-   //d3dDevice->LightEnable(i, FALSE);
-   //d3dDevice->SetRenderState(D3DRS_LIGHTING, TRUE);
+        const D3DXMATRIX*  WorldViewProjection) {  
+    HRESULT hr;
 
-   //d3dDevice->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, m_NumVertices, 0, m_NumTriangles);
+    D3DXVECTOR4* lightsDir = new D3DXVECTOR4[m_NumLights];
+    D3DXVECTOR4* lightsDiffuse = new D3DXVECTOR4[m_NumLights];
+    D3DXVECTOR4 lightsAmbient;
+    for(int i=0; i<m_NumLights; i++) {
+        lightsDir[i] = -D3DXVECTOR4(m_Lights9[i].Direction, 0.0f);
+        lightsDiffuse[i] = D3DXVECTOR4((float*)&m_Lights9[i].Diffuse);
+        if(i < m_NumActiveLights)
+            lightsAmbient += D3DXVECTOR4((float*)&m_Lights9[i].Ambient);
+    }
+    V( m_EffectVarLightDir->SetFloatVectorArray((float*)lightsDir, 0, m_NumLights) );
+    V( m_EffectVarLightDiffuse->SetFloatVectorArray((float*)lightsDiffuse, 0, 
+            m_NumLights));
+    V( m_EffectVarLightAmbient->SetFloatVector((float*)&lightsAmbient));
+    V( m_EffectVarWorldViewProjection->SetMatrix((float*)WorldViewProjection ));
+    delete[] lightsDir;
+    delete[] lightsDiffuse;
 
-   //d3dDevice->SetRenderState(D3DRS_LIGHTING, FALSE);
-   //d3dDevice->LightEnable(0, FALSE);
+    // Render the scene with this technique as defined in the .fx file
+    ID3D10EffectTechnique *renderTechnique;
+    switch( m_NumActiveLights ) {
+    case 1: renderTechnique = m_TechRenderIsoVolume1Light;
+        break;
+    case 2: renderTechnique = m_TechRenderIsoVolume2Lights;
+        break;
+    case 3: renderTechnique = m_TechRenderIsoVolume3Lights;
+        break;
+    default: renderTechnique = m_TechRenderIsoVolume1Light;
+        break;
+    }
+
+    //IA setup
+    d3dDevice->IASetInputLayout(m_VertexLayout);
+    UINT stride = sizeof(fp_MCVertex);
+    UINT offset = 0;
+    d3dDevice->IASetVertexBuffers(0, 1, &m_VertexBuffer10, &stride, &offset);
+    d3dDevice->IASetIndexBuffer(m_IndexBuffer10, DXGI_FORMAT_R32_UINT, 0);
+
+    //Render
+    d3dDevice->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+    D3D10_TECHNIQUE_DESC techDesc;
+    renderTechnique->GetDesc( &techDesc );
+    for( UINT iPass = 0; iPass < techDesc.Passes; ++iPass ) {
+        renderTechnique->GetPassByIndex( iPass )->Apply(0);
+        d3dDevice->DrawIndexed(m_NumTriangles * 3, 0, 0);
+    }
 }
 
 void fp_RenderIsoVolume::OnD3D10DestroyDevice( void* UserContext ) {
-    ;
+    SAFE_RELEASE(m_VertexBuffer10);    
+    SAFE_RELEASE(m_IndexBuffer10);
+    SAFE_RELEASE(m_Effect10);
+    SAFE_RELEASE(m_VertexLayout);
 }
 
 void fp_RenderIsoVolume::OnD3D10ReleasingSwapChain( void* UserContext ) {
     ;
-    //SAFE_RELEASE(m_VertexBuffer);    
-    //SAFE_RELEASE(m_IndexBuffer);
 }
 
 inline D3DXVECTOR3 fp_RenderIsoVolume::CalcNormal(

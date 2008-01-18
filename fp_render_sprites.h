@@ -63,16 +63,20 @@ public:
 private:
     int m_NumParticles;  
     float m_SpriteSize;
+
+    // D3D9 resources
     LPDIRECT3DVERTEXBUFFER9 m_VertexBuffer9;
     LPDIRECT3DTEXTURE9 m_Texture9;
+
+    // D3D10 resources
     ID3D10Buffer* m_VertexBuffer10;
     ID3D10InputLayout* m_VertexLayout;
     ID3D10ShaderResourceView * m_Texture10RV;
     ID3D10Effect* m_Effect10;
     ID3D10EffectTechnique*  m_TechRenderSprites;
     ID3D10EffectShaderResourceVariable* m_EffectTexture;
-    ID3D10EffectMatrixVariable* m_EffectViewProjection;
-    ID3D10EffectVectorVariable* m_EffectSpriteCornersWorldS;
+    ID3D10EffectMatrixVariable* m_EffectVarViewProjection;
+    ID3D10EffectVectorVariable* m_EffectVarSpriteCornersWorldS;
 };
 
 #endif
