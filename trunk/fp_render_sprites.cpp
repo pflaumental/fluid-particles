@@ -20,8 +20,8 @@ fp_RenderSprites::fp_RenderSprites(int NumParticles, fp_FluidParticle* Particles
         m_Effect10(NULL),
         m_TechRenderSprites(NULL),
         m_EffectTexture(NULL),
-        m_EffectViewProjection(NULL),
-        m_EffectSpriteCornersWorldS(NULL),
+        m_EffectVarViewProjection(NULL),
+        m_EffectVarSpriteCornersWorldS(NULL),
         m_VertexLayout(NULL){
 }
 
@@ -142,13 +142,22 @@ HRESULT fp_RenderSprites::OnD3D10CreateDevice(
     // Obtain effect variables and set as needed
     m_EffectTexture = m_Effect10->GetVariableByName("g_ParticleDiffuse")->AsShaderResource();
     V_RETURN(m_EffectTexture->SetResource(m_Texture10RV));
-    m_EffectViewProjection = m_Effect10->GetVariableByName( "g_ViewProj" )->AsMatrix();
-    m_EffectSpriteCornersWorldS = m_Effect10->GetVariableByName( "g_SpriteCornersWorldS" )->AsVector();
+    m_EffectVarViewProjection = m_Effect10->GetVariableByName( "g_ViewProj" )->AsMatrix();
+    m_EffectVarSpriteCornersWorldS = m_Effect10->GetVariableByName( "g_SpriteCornersWorldS" )->AsVector();
 
+    // Create vertex buffer
     D3D10_PASS_DESC passDesc;
     V_RETURN( m_TechRenderSprites->GetPassByIndex(0)->GetDesc(&passDesc));
     V_RETURN( d3dDevice->CreateInputLayout(fp_SpriteVertex::Layout, 1, passDesc.pIAInputSignature, 
             passDesc.IAInputSignatureSize, &m_VertexLayout ) );
+    
+    D3D10_BUFFER_DESC bufferDesc;
+    bufferDesc.Usage = D3D10_USAGE_DYNAMIC;
+    bufferDesc.ByteWidth = m_NumParticles * sizeof(fp_SpriteVertex);
+    bufferDesc.BindFlags = D3D10_BIND_VERTEX_BUFFER;
+    bufferDesc.CPUAccessFlags = D3D10_CPU_ACCESS_WRITE;
+    bufferDesc.MiscFlags = 0;
+    V_RETURN(d3dDevice->CreateBuffer(&bufferDesc, NULL, &m_VertexBuffer10));
 
     return S_OK;
 }
@@ -158,14 +167,6 @@ HRESULT fp_RenderSprites::OnD3D10ResizedSwapChain(
         IDXGISwapChain *SwapChain,
         const DXGI_SURFACE_DESC* BackBufferSurfaceDesc,
         void* UserContext ) {
-    HRESULT hr;
-    D3D10_BUFFER_DESC bufferDesc;
-    bufferDesc.Usage = D3D10_USAGE_DYNAMIC;
-    bufferDesc.ByteWidth = m_NumParticles * sizeof(fp_SpriteVertex);
-    bufferDesc.BindFlags = D3D10_BIND_VERTEX_BUFFER;
-    bufferDesc.CPUAccessFlags = D3D10_CPU_ACCESS_WRITE;
-    bufferDesc.MiscFlags = 0;
-    V_RETURN(d3dDevice->CreateBuffer(&bufferDesc, NULL, &m_VertexBuffer10));
     return S_OK;
 }
 
@@ -174,11 +175,11 @@ void fp_RenderSprites::OnD3D10FrameRender(
         const D3DXMATRIX*  ViewProjection,
 		const D3DXMATRIX*  InvView) {
     HRESULT hr;
-     fp_SpriteVertex *pSpriteVertices;
-     m_VertexBuffer10->Map(D3D10_MAP_WRITE_DISCARD, 0, (void**)&pSpriteVertices);
+     fp_SpriteVertex *spriteVertices;
+     m_VertexBuffer10->Map(D3D10_MAP_WRITE_DISCARD, 0, (void**)&spriteVertices);
      for( int i = 0; i < m_NumParticles; i++ ) {
-         pSpriteVertices->m_Position = m_Particles[i].m_Position;
-         pSpriteVertices++;
+         spriteVertices->m_Position = m_Particles[i].m_Position;
+         spriteVertices++;
      }
      m_VertexBuffer10->Unmap();
 
@@ -189,7 +190,7 @@ void fp_RenderSprites::OnD3D10FrameRender(
 	 d3dDevice->IASetPrimitiveTopology( D3D10_PRIMITIVE_TOPOLOGY_POINTLIST );
 
 	 V(m_EffectTexture->SetResource(m_Texture10RV));
-     V(m_EffectViewProjection->SetMatrix((float*) ViewProjection));
+     V(m_EffectVarViewProjection->SetMatrix((float*) ViewProjection));
      D3DXVECTOR4 spriteCornersWorldS[4] = {
          D3DXVECTOR4(-1,1,0,0),
          D3DXVECTOR4(1,1,0,0),
@@ -201,7 +202,7 @@ void fp_RenderSprites::OnD3D10FrameRender(
      }
      D3DXVec3TransformNormalArray((D3DXVECTOR3*)spriteCornersWorldS, sizeof(D3DXVECTOR4),
             (D3DXVECTOR3*)spriteCornersWorldS, sizeof(D3DXVECTOR4), InvView, 4);
-     V(m_EffectSpriteCornersWorldS->SetRawValue(spriteCornersWorldS, 0,
+     V(m_EffectVarSpriteCornersWorldS->SetRawValue(spriteCornersWorldS, 0,
             sizeof(D3DXVECTOR4)*4));
 
 	 D3D10_TECHNIQUE_DESC techDesc;
@@ -216,8 +217,8 @@ void fp_RenderSprites::OnD3D10DestroyDevice( void* UserContext ) {
     SAFE_RELEASE(m_Texture10RV);
     SAFE_RELEASE(m_Effect10);
     SAFE_RELEASE(m_VertexLayout);
+    SAFE_RELEASE(m_VertexBuffer10);
 }
 
-void fp_RenderSprites::OnD3D10ReleasingSwapChain( void* UserContext ) {   
-    SAFE_RELEASE(m_VertexBuffer10);
+void fp_RenderSprites::OnD3D10ReleasingSwapChain( void* UserContext ) {  
 }

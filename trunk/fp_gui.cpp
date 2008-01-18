@@ -259,10 +259,6 @@ HRESULT fp_GUI::OnD3D10CreateDevice(
     V_RETURN( D3DX10CreateSprite( d3dDevice, 512, &m_Sprite10 ) );
     m_TxtHelper = new CDXUTTextHelper( m_Font9, m_Sprite9, m_Font10, m_Sprite10,
             15 );
-
-    m_SampleUI.GetStatic( IDC_NUM_LIGHTS_STATIC )->SetVisible( false );
-    m_SampleUI.GetSlider( IDC_NUM_LIGHTS )->SetVisible( false );
-    m_SampleUI.GetButton( IDC_ACTIVE_LIGHT )->SetVisible( false );
     
     V_RETURN( CDXUTDirectionWidget::StaticOnD3D10CreateDevice( d3dDevice ) );
     for( int i=0; i<FP_MAX_LIGHTS; i++ )
@@ -317,7 +313,7 @@ void fp_GUI::OnD3D10FrameRender(
                 : D3DXVECTOR4(1,1,1,1);
         V( m_LightControl[i].OnRender10( arrowColor, View, Proj, EyePt ) );
         m_LightDir[i] = m_LightControl[i].GetLightDirection();
-        m_LightDiffuse[i] = LightScale * D3DXVECTOR4(1,1,1,1);
+        m_LightDiffuseColor[i] = LightScale * D3DXCOLOR(1,1,1,1);
     }
 
     DXUT_BeginPerfEvent( DXUT_PERFEVENTCOLOR, L"HUD / Stats" );
