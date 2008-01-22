@@ -143,7 +143,7 @@ private:
     std::vector<CDXUTControl*> m_SpriteSpecificControls;
 
     void    RenderText();
-    void ChooseControls();
+    int ChooseControls();
 };
 
 #endif
