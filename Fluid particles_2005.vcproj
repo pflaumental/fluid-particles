@@ -820,15 +820,27 @@
 			>
 		</File>
 		<File
-			RelativePath=".\fp_render_iso_volume.cpp"
+			RelativePath=".\fp_render_marching_cubes.cpp"
 			>
 		</File>
 		<File
-			RelativePath=".\fp_render_iso_volume.fx"
+			RelativePath=".\fp_render_marching_cubes.fx"
 			>
 		</File>
 		<File
-			RelativePath=".\fp_render_iso_volume.h"
+			RelativePath=".\fp_render_marching_cubes.h"
+			>
+		</File>
+		<File
+			RelativePath=".\fp_render_raycast.cpp"
+			>
+		</File>
+		<File
+			RelativePath=".\fp_render_raycast.fx"
+			>
+		</File>
+		<File
+			RelativePath=".\fp_render_raycast.h"
 			>
 		</File>
 		<File

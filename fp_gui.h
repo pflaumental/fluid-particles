@@ -7,6 +7,9 @@
 #include "DXUTgui.h"
 #include "DXUTsettingsDlg.h"
 #include "SDKmisc.h"
+#pragma warning(disable:4995)
+#include <vector>
+#pragma warning(default:4995)
 
 #include "fp_global.h"
 
@@ -32,14 +35,17 @@
 #define IDC_MC_VOXEL_SIZE_STATIC    18
 #define IDC_MOVE_HORIZONTALLY       19
 
-#define FP_GUI_RENDER_TYPE_ISO_SURFACE  0
-#define FP_GUI_RENDER_TYPE_POINT_SPRITE 1
-
 #define FP_GUI_HEIGHT              550
 
 //--------------------------------------------------------------------------------------
 // Fluid particles GUI
 //--------------------------------------------------------------------------------------
+
+enum fp_GUIRenderType {
+    FP_GUI_RENDERTYPE_RAYCAST = 0,
+    FP_GUI_RENDERTYPE_MARCHING_CUBES,
+    FP_GUI_RENDERTYPE_SPRITE
+};
 
 class fp_GUI {
 public:
@@ -132,7 +138,12 @@ private:
     ID3DX10Font*            m_Font10;       
     ID3DX10Sprite*          m_Sprite10;
 
+    std::vector<CDXUTControl*> m_RaycastSpecificControls;
+    std::vector<CDXUTControl*> m_MCSpecificControls;
+    std::vector<CDXUTControl*> m_SpriteSpecificControls;
+
     void    RenderText();
+    void ChooseControls();
 };
 
 #endif

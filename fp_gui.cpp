@@ -28,62 +28,99 @@ fp_GUI::fp_GUI()
     m_HUD.Init( &m_DialogResourceManager );
     m_SampleUI.Init( &m_DialogResourceManager );
 
-    m_HUD.SetCallback( FP_OnGUIEvent ); int iY = 10; 
-    m_HUD.AddButton( IDC_TOGGLEFULLSCREEN, L"Toggle full screen", 35, iY, 125, 22 );
-    m_HUD.AddButton( IDC_TOGGLEREF, L"Toggle REF (F3)", 35, iY += 24, 125, 22, VK_F3 );
-    m_HUD.AddButton( IDC_CHANGEDEVICE, L"Change device (F2)", 35, iY += 24, 125, 22,
+    int iYCommon = 10;
+
+    m_HUD.SetCallback( FP_OnGUIEvent );
+    m_HUD.AddButton( IDC_TOGGLEFULLSCREEN, L"Toggle full screen", 35, iYCommon, 125, 22 );
+    m_HUD.AddButton( IDC_TOGGLEREF, L"Toggle REF (F3)", 35, iYCommon += 24, 125, 22, VK_F3 );
+    m_HUD.AddButton( IDC_CHANGEDEVICE, L"Change device (F2)", 35, iYCommon += 24, 125, 22,
             VK_F2 );
 
-    m_SampleUI.SetCallback( FP_OnGUIEvent ); iY = 10; 
+    m_SampleUI.SetCallback( FP_OnGUIEvent );
+    
+    iYCommon = 10; 
 
     WCHAR sz[100];
-    iY += 24;
+    iYCommon += 24;
 
-    m_SampleUI.AddCheckBox(IDC_MOVE_HORIZONTALLY, L"Move horizontally", 35, iY += 24, 125, 24);
+    m_SampleUI.AddCheckBox(IDC_MOVE_HORIZONTALLY, L"Move horizontally", 35, iYCommon += 24, 125, 24);
 
-    m_SampleUI.AddButton( IDC_RESET_SIM, L"Reset simulation (R)", 35, iY += 24,
+    m_SampleUI.AddButton( IDC_RESET_SIM, L"Reset simulation (R)", 35, iYCommon += 24,
         125, 22, 'R' );    
 
     CDXUTComboBox *comboBox;
-    m_SampleUI.AddComboBox( IDC_SELECT_RENDER_TYPE, 35, iY += 24, 125, 24, L'S', false, &comboBox );
+    m_SampleUI.AddComboBox( IDC_SELECT_RENDER_TYPE, 35, iYCommon += 24, 125, 24, L'S', false, &comboBox );
     if( comboBox ) {
         comboBox->SetDropHeight( 100 );
-        comboBox->AddItem( L"Iso surface MC (S)", (LPVOID)0 );
-        comboBox->AddItem( L"Point sprites (S)", (LPVOID)1 );        
+        comboBox->AddItem( L"Raycast (S)", (LPVOID)FP_GUI_RENDERTYPE_RAYCAST );
+        comboBox->AddItem( L"Marching cubes (S)", (LPVOID)FP_GUI_RENDERTYPE_MARCHING_CUBES );
+        comboBox->AddItem( L"Point sprites (S)", (LPVOID)FP_GUI_RENDERTYPE_SPRITE );        
     }
 
-    iY += 24;
-    StringCchPrintf( sz, 100, L"MC voxel size: %0.1f", FP_DEFAULT_ISOVOLUME_VOXELSIZE ); 
-    m_SampleUI.AddStatic( IDC_MC_VOXEL_SIZE_STATIC, sz, 35, iY += 24, 125, 22 );
-    m_SampleUI.AddSlider( IDC_MC_VOXEL_SIZE, 50, iY += 24, 100, 22, 1, 100,
-        (int) (FP_DEFAULT_ISOVOLUME_VOXELSIZE * 10.0f) );
+    int iYRaycast, iYMC, iYSprite;
+    iYRaycast = iYMC = iYSprite = iYCommon;
 
-    iY += 24;
-    StringCchPrintf( sz, 100, L"MC iso level: %0.3f", FP_DEFAULT_MC_ISO_LEVEL ); 
-    m_SampleUI.AddStatic( IDC_MC_ISO_LEVEL_STATIC, sz, 35, iY += 24, 125, 22 );
-    m_SampleUI.AddSlider( IDC_MC_ISO_LEVEL, 50, iY += 24, 100, 22, 1, 100,
-        (int) (FP_DEFAULT_MC_ISO_LEVEL * 500.0f) );
+    // Raycast controls
 
-    iY += 24;
-    StringCchPrintf( sz, 100, L"Sprite size: %0.2f", FP_RENDER_DEFAULT_SPRITE_SIZE ); 
-    m_SampleUI.AddStatic( IDC_PARTICLE_SCALE_STATIC, sz, 35, iY += 24, 125, 22 );
-    m_SampleUI.AddSlider( IDC_PARTICLE_SCALE, 50, iY += 24, 100, 22, 1, 100,
-            (int) (FP_RENDER_DEFAULT_SPRITE_SIZE * 50.0f) );
 
-    iY += 24;
+
+    // Marching cubes controls
+
+    iYMC += 24;    
+    StringCchPrintf( sz, 100, L"Voxel size: %0.1f", FP_DEFAULT_ISOVOLUME_VOXELSIZE ); 
+    m_MCSpecificControls.push_back(NULL);
+    m_SampleUI.AddStatic( IDC_MC_VOXEL_SIZE_STATIC, sz, 35, iYMC += 24, 125, 22, false,
+            (CDXUTStatic**)&m_MCSpecificControls.back());
+    m_MCSpecificControls.push_back(NULL);
+    m_SampleUI.AddSlider( IDC_MC_VOXEL_SIZE, 50, iYMC += 24, 100, 22, 1, 100,
+            (int) (FP_DEFAULT_ISOVOLUME_VOXELSIZE * 10.0f), false, (CDXUTSlider**)
+            &m_MCSpecificControls.back());
+    
+    iYMC += 24;
+    StringCchPrintf( sz, 100, L"Iso level: %0.3f", FP_DEFAULT_MC_ISO_LEVEL ); 
+    m_MCSpecificControls.push_back(NULL);
+    m_SampleUI.AddStatic( IDC_MC_ISO_LEVEL_STATIC, sz, 35, iYMC += 24, 125, 22, false,
+            (CDXUTStatic**)&m_MCSpecificControls.back());
+    m_MCSpecificControls.push_back(NULL);
+    m_SampleUI.AddSlider( IDC_MC_ISO_LEVEL, 50, iYMC += 24, 100, 22, 1, 100,
+            (int) (FP_DEFAULT_MC_ISO_LEVEL * 500.0f), false, (CDXUTSlider**)
+            &m_MCSpecificControls.back() );
+
+    iYMC += 24;
     StringCchPrintf( sz, 100, L"# Lights: %d", 1 ); 
-    m_SampleUI.AddStatic( IDC_NUM_LIGHTS_STATIC, sz, 35, iY += 24, 125, 22 );
-    m_SampleUI.AddSlider( IDC_NUM_LIGHTS, 50, iY += 24, 100, 22, 1, FP_MAX_LIGHTS, 1 );
+    m_MCSpecificControls.push_back(NULL);
+    m_SampleUI.AddStatic( IDC_NUM_LIGHTS_STATIC, sz, 35, iYMC += 24, 125, 22, false,
+            (CDXUTStatic**)&m_MCSpecificControls.back());
+    m_MCSpecificControls.push_back(NULL);
+    m_SampleUI.AddSlider( IDC_NUM_LIGHTS, 50, iYMC += 24, 100, 22, 1, FP_MAX_LIGHTS, 1,
+            false, (CDXUTSlider**)&m_MCSpecificControls.back() );
 
-    iY += 24;
+    iYMC += 24;
     StringCchPrintf( sz, 100, L"Light scale: %0.2f", FP_DEFAULT_LIGHT_SCALE ); 
-    m_SampleUI.AddStatic( IDC_LIGHT_SCALE_STATIC, sz, 35, iY += 24, 125, 22 );
-    m_SampleUI.AddSlider( IDC_LIGHT_SCALE, 50, iY += 24, 100, 22, 0, 20,
-            (int) (FP_DEFAULT_LIGHT_SCALE * 10.0f) );
+    m_MCSpecificControls.push_back(NULL);
+    m_SampleUI.AddStatic( IDC_LIGHT_SCALE_STATIC, sz, 35, iYMC += 24, 125, 22, false,
+            (CDXUTStatic**)&m_MCSpecificControls.back() );
+    m_MCSpecificControls.push_back(NULL);
+    m_SampleUI.AddSlider( IDC_LIGHT_SCALE, 50, iYMC += 24, 100, 22, 0, 20,
+            (int) (FP_DEFAULT_LIGHT_SCALE * 10.0f), false, (CDXUTSlider**)
+            &m_MCSpecificControls.back() );
 
-    iY += 24;
-    m_SampleUI.AddButton( IDC_ACTIVE_LIGHT, L"Change active light (K)", 35, iY += 24,
-            125, 22, 'K' );
+    iYMC += 24;
+    m_MCSpecificControls.push_back(NULL);
+    m_SampleUI.AddButton( IDC_ACTIVE_LIGHT, L"Change active light (K)", 35, iYMC += 24,
+            125, 22, 'K', false, (CDXUTButton**)&m_MCSpecificControls.back() );
+
+    // Sprite controls
+
+    iYSprite += 24;
+    StringCchPrintf( sz, 100, L"Sprite size: %0.2f", FP_RENDER_DEFAULT_SPRITE_SIZE );
+    m_SpriteSpecificControls.push_back(NULL);
+    m_SampleUI.AddStatic( IDC_PARTICLE_SCALE_STATIC, sz, 35, iYSprite += 24, 125, 22,
+            false, (CDXUTStatic**)&m_SpriteSpecificControls.back());
+    m_SpriteSpecificControls.push_back(NULL);
+    m_SampleUI.AddSlider( IDC_PARTICLE_SCALE, 50, iYSprite += 24, 100, 22, 1, 100,
+            (int) (FP_RENDER_DEFAULT_SPRITE_SIZE * 50.0f), false, (CDXUTSlider**)
+            &m_SpriteSpecificControls.back() );
 }
 
 bool fp_GUI::RenderSettingsDialog(float ElapsedTime) {
@@ -172,7 +209,9 @@ void fp_GUI::OnGUIEvent(
         case IDC_SELECT_RENDER_TYPE: {
             DXUTComboBoxItem *item = ((CDXUTComboBox*)Control)->GetSelectedItem();
             if( item ) 
-                RenderType = (int) item->pData;            
+                #pragma warning( disable : 4311)
+                RenderType = (int)item->pData;
+                #pragma warning( default : 4311)
             break;
         }
 
@@ -317,7 +356,8 @@ void fp_GUI::OnD3D10FrameRender(
     }
 
     DXUT_BeginPerfEvent( DXUT_PERFEVENTCOLOR, L"HUD / Stats" );
-    m_HUD.OnRender( ElapsedTime ); 
+    m_HUD.OnRender( ElapsedTime );
+    ChooseControls();
     m_SampleUI.OnRender( ElapsedTime );
     RenderText();
     DXUT_EndPerfEvent();
@@ -439,6 +479,7 @@ void fp_GUI::OnD3D9FrameRender(
     }
 
     m_HUD.OnRender( ElapsedTime );
+    ChooseControls();
     m_SampleUI.OnRender( ElapsedTime );
 
     RenderText();
@@ -510,3 +551,53 @@ void fp_GUI::RenderText() {
     m_TxtHelper->End();
 }
 
+typedef std::vector<CDXUTControl*>::iterator fp_GUIControlIterator;
+
+//--------------------------------------------------------------------------------------
+// Activate only the controls for the specified rendertype
+//--------------------------------------------------------------------------------------
+void fp_GUI::ChooseControls() {
+    int renderType = 0;
+    DXUTComboBoxItem *item = m_SampleUI.GetComboBox(IDC_SELECT_RENDER_TYPE)
+            ->GetSelectedItem();    
+    if(item) 
+        #pragma warning( disable : 4311)
+        renderType = (int)item->pData;
+        #pragma warning( default : 4311)
+    fp_GUIControlIterator it;
+    switch(renderType) {
+        case FP_GUI_RENDERTYPE_RAYCAST:
+            for(it = m_RaycastSpecificControls.begin();
+                    it != m_RaycastSpecificControls.end(); it++)
+                (*it)->SetVisible(true);
+            for(it = m_MCSpecificControls.begin();
+                it != m_MCSpecificControls.end(); it++)
+                (*it)->SetVisible(false);
+            for(it = m_SpriteSpecificControls.begin();
+                it != m_SpriteSpecificControls.end(); it++)
+                (*it)->SetVisible(false);
+            break;
+        case FP_GUI_RENDERTYPE_MARCHING_CUBES:
+            for(it = m_RaycastSpecificControls.begin();
+                it != m_RaycastSpecificControls.end(); it++)
+                (*it)->SetVisible(false);
+            for(it = m_MCSpecificControls.begin();
+                it != m_MCSpecificControls.end(); it++)
+                (*it)->SetVisible(true);
+            for(it = m_SpriteSpecificControls.begin();
+                it != m_SpriteSpecificControls.end(); it++)
+                (*it)->SetVisible(false);
+            break;
+        case FP_GUI_RENDERTYPE_SPRITE:
+            for(it = m_RaycastSpecificControls.begin();
+                it != m_RaycastSpecificControls.end(); it++)
+                (*it)->SetVisible(false);
+            for(it = m_MCSpecificControls.begin();
+                it != m_MCSpecificControls.end(); it++)
+                (*it)->SetVisible(false);
+            for(it = m_SpriteSpecificControls.begin();
+                it != m_SpriteSpecificControls.end(); it++)
+                (*it)->SetVisible(true);
+            break;
+    }
+}

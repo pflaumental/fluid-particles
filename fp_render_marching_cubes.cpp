@@ -1,9 +1,9 @@
 #include "DXUT.h"
 //#include "SDKmisc.h"
-#include "fp_render_iso_volume.h"
+#include "fp_render_marching_cubes.h"
 #include "fp_util.h"
 
-#define FP_RENDER_ISO_VOLUME_EFFECT_FILE L"fp_render_iso_volume.fx" 
+#define FP_RENDER_ISO_VOLUME_EFFECT_FILE L"fp_render_marching_cubes.fx" 
 
 const D3D10_INPUT_ELEMENT_DESC fp_MCVertex::Layout[] = {
     { "POSITION",  0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0,
@@ -21,7 +21,7 @@ fp_VolumeIndex operator+(
     return result;
 }
 
-fp_IsoVolume::fp_IsoVolume(fp_Fluid* Fluid, float VoxelSize, float IsoVolumeBorder) 
+fp_CPUIsoVolume::fp_CPUIsoVolume(fp_Fluid* Fluid, float VoxelSize, float IsoVolumeBorder) 
         :
         m_Fluid(Fluid),
         m_LastMinX(0.0f),
@@ -50,7 +50,7 @@ fp_IsoVolume::fp_IsoVolume(fp_Fluid* Fluid, float VoxelSize, float IsoVolumeBord
     m_GradientIsoValues.reserve(FP_INITIAL_ISOVOLUME_CAPACITY);
 }
 
-void fp_IsoVolume::UpdateSmoothingLength() {
+void fp_CPUIsoVolume::UpdateSmoothingLength() {
     if(m_VoxelSize > 0.0f) {
         if(m_StampValues != NULL)
             DestroyStamp();
@@ -58,7 +58,7 @@ void fp_IsoVolume::UpdateSmoothingLength() {
     }
 }
 
-void fp_IsoVolume::SetVoxelSize(float VoxelSize) {
+void fp_CPUIsoVolume::SetVoxelSize(float VoxelSize) {
     m_VoxelSize = VoxelSize;
     m_HalfVoxelSize = VoxelSize / 2.0f;
     if(m_StampValues != NULL)
@@ -66,7 +66,7 @@ void fp_IsoVolume::SetVoxelSize(float VoxelSize) {
     CreateStamp();
 }
 
-void fp_IsoVolume::ConstructFromFluid() {
+void fp_CPUIsoVolume::ConstructFromFluid() {
     float minX = m_LastMinX, minY = m_LastMinY, minZ = m_LastMinZ;
     float maxX = m_LastMaxX, maxY = m_LastMaxY, maxZ = m_LastMaxZ;
 
@@ -146,7 +146,7 @@ void fp_IsoVolume::ConstructFromFluid() {
     }
 }
 
-inline void fp_IsoVolume::DistributeParticle(
+inline void fp_CPUIsoVolume::DistributeParticle(
         D3DXVECTOR3 ParticlePosition,
         float ParticleMassDensityQuotient,
         float MinX,
@@ -211,7 +211,7 @@ inline void fp_IsoVolume::DistributeParticle(
     }
 }
 
-inline void fp_IsoVolume::DistributeParticleWithStamp(
+inline void fp_CPUIsoVolume::DistributeParticleWithStamp(
         D3DXVECTOR3 ParticlePosition,
         float ParticleMassDensityQuotient,
         float MinX,
@@ -250,7 +250,7 @@ inline void fp_IsoVolume::DistributeParticleWithStamp(
     }
 }
 
-void fp_IsoVolume::CreateStamp() {
+void fp_CPUIsoVolume::CreateStamp() {
     int stampRadius = (int)ceil((m_Fluid->m_SmoothingLength - m_HalfVoxelSize) 
             / m_VoxelSize);
     int stampSideLength = 1 + 2 * stampRadius;
@@ -336,7 +336,7 @@ void fp_IsoVolume::CreateStamp() {
     }
 }
 
-void fp_IsoVolume::DestroyStamp() {
+void fp_CPUIsoVolume::DestroyStamp() {
     delete[] m_StampRowLengths;
     delete[] m_StampRowStartOffsets;
     delete[] m_StampRowValueStarts;
@@ -344,8 +344,8 @@ void fp_IsoVolume::DestroyStamp() {
     delete[] m_GradientStampValues;
 }
 
-fp_RenderIsoVolume::fp_RenderIsoVolume(
-        fp_IsoVolume* IsoVolume, 
+fp_RenderMarchingCubes::fp_RenderMarchingCubes(
+        fp_CPUIsoVolume* IsoVolume, 
         int NumLights, 
         float IsoLevel)
         :
@@ -380,7 +380,7 @@ fp_RenderIsoVolume::fp_RenderIsoVolume(
     m_Lights9 = new D3DLIGHT9[NumLights];
 }
 
-fp_RenderIsoVolume::~fp_RenderIsoVolume() {
+fp_RenderMarchingCubes::~fp_RenderMarchingCubes() {
 	if(DXUTIsAppRenderingWithD3D9()){
 		OnD3D9LostDevice(NULL);
 		OnD3D9DestroyDevice(NULL);
@@ -391,7 +391,7 @@ fp_RenderIsoVolume::~fp_RenderIsoVolume() {
 	}
 }
 
-void fp_RenderIsoVolume::ConstructMesh() {
+void fp_RenderMarchingCubes::ConstructMesh() {
     bool isRenderingWithD3D10 = DXUTIsAppRenderingWithD3D10();
 
     if(!isRenderingWithD3D10 && m_VertexBuffer9 == NULL) // TODO:
@@ -568,7 +568,7 @@ void fp_RenderIsoVolume::ConstructMesh() {
 }
 
 
-HRESULT fp_RenderIsoVolume::OnD3D9CreateDevice(
+HRESULT fp_RenderMarchingCubes::OnD3D9CreateDevice(
         IDirect3DDevice9* d3dDevice,
         const D3DSURFACE_DESC* BackBufferSurfaceDesc,
         void* UserContext ) {
@@ -577,7 +577,7 @@ HRESULT fp_RenderIsoVolume::OnD3D9CreateDevice(
     return S_OK;
 }
 
-HRESULT fp_RenderIsoVolume::OnD3D9ResetDevice(
+HRESULT fp_RenderMarchingCubes::OnD3D9ResetDevice(
         IDirect3DDevice9* d3dDevice,
         const D3DSURFACE_DESC* BackBufferSurfaceDesc,
         void* UserContext ) {
@@ -590,7 +590,7 @@ HRESULT fp_RenderIsoVolume::OnD3D9ResetDevice(
     return S_OK;
 }
 
-void fp_RenderIsoVolume::OnD3D9FrameRender(IDirect3DDevice9* d3dDevice) {  
+void fp_RenderMarchingCubes::OnD3D9FrameRender(IDirect3DDevice9* d3dDevice) {  
     d3dDevice->SetStreamSource(0, m_VertexBuffer9, 0, sizeof(fp_MCVertex));
     d3dDevice->SetIndices(m_IndexBuffer9);
 	d3dDevice->SetFVF(fp_MCVertex::FVF_Flags);
@@ -609,11 +609,11 @@ void fp_RenderIsoVolume::OnD3D9FrameRender(IDirect3DDevice9* d3dDevice) {
     d3dDevice->LightEnable(0, FALSE);
 }
 
-void fp_RenderIsoVolume::OnD3D9DestroyDevice(void* UserContext) {
+void fp_RenderMarchingCubes::OnD3D9DestroyDevice(void* UserContext) {
 
 }
 
-void fp_RenderIsoVolume::OnD3D9LostDevice(void* UserContext) {     
+void fp_RenderMarchingCubes::OnD3D9LostDevice(void* UserContext) {     
     SAFE_RELEASE(m_VertexBuffer9);    
     SAFE_RELEASE(m_IndexBuffer9);
 }
@@ -621,7 +621,7 @@ void fp_RenderIsoVolume::OnD3D9LostDevice(void* UserContext) {
 
 
 
-HRESULT fp_RenderIsoVolume::OnD3D10CreateDevice(
+HRESULT fp_RenderMarchingCubes::OnD3D10CreateDevice(
         ID3D10Device* d3dDevice,
         const DXGI_SURFACE_DESC* BackBufferSurfaceDesc,
         void* UserContext ) {
@@ -680,7 +680,7 @@ HRESULT fp_RenderIsoVolume::OnD3D10CreateDevice(
     return S_OK;
 }
 
-HRESULT fp_RenderIsoVolume::OnD3D10ResizedSwapChain(
+HRESULT fp_RenderMarchingCubes::OnD3D10ResizedSwapChain(
         ID3D10Device* d3dDevice,
         IDXGISwapChain *SwapChain,
         const DXGI_SURFACE_DESC* BackBufferSurfaceDesc,
@@ -688,7 +688,7 @@ HRESULT fp_RenderIsoVolume::OnD3D10ResizedSwapChain(
     return S_OK;
 }
 
-void fp_RenderIsoVolume::OnD3D10FrameRender(
+void fp_RenderMarchingCubes::OnD3D10FrameRender(
         ID3D10Device* d3dDevice,
         const D3DXMATRIX*  WorldViewProjection) {  
     HRESULT hr;
@@ -741,18 +741,18 @@ void fp_RenderIsoVolume::OnD3D10FrameRender(
     }
 }
 
-void fp_RenderIsoVolume::OnD3D10DestroyDevice( void* UserContext ) {
+void fp_RenderMarchingCubes::OnD3D10DestroyDevice( void* UserContext ) {
     SAFE_RELEASE(m_VertexBuffer10);    
     SAFE_RELEASE(m_IndexBuffer10);
     SAFE_RELEASE(m_Effect10);
     SAFE_RELEASE(m_VertexLayout);
 }
 
-void fp_RenderIsoVolume::OnD3D10ReleasingSwapChain( void* UserContext ) {
+void fp_RenderMarchingCubes::OnD3D10ReleasingSwapChain( void* UserContext ) {
     ;
 }
 
-inline D3DXVECTOR3 fp_RenderIsoVolume::CalcNormal(
+inline D3DXVECTOR3 fp_RenderMarchingCubes::CalcNormal(
         const D3DXVECTOR3* gradient1, 
         const D3DXVECTOR3* gradient2, 
         float s) {
@@ -762,7 +762,7 @@ inline D3DXVECTOR3 fp_RenderIsoVolume::CalcNormal(
     return result;
 }
 
-int fp_RenderIsoVolume::s_EdgeTable[256] = {
+int fp_RenderMarchingCubes::s_EdgeTable[256] = {
         0x0  , 0x109, 0x203, 0x30a, 0x406, 0x50f, 0x605, 0x70c,
         0x80c, 0x905, 0xa0f, 0xb06, 0xc0a, 0xd03, 0xe09, 0xf00,
         0x190, 0x99 , 0x393, 0x29a, 0x596, 0x49f, 0x795, 0x69c,
@@ -796,7 +796,7 @@ int fp_RenderIsoVolume::s_EdgeTable[256] = {
         0xf00, 0xe09, 0xd03, 0xc0a, 0xb06, 0xa0f, 0x905, 0x80c,
         0x70c, 0x605, 0x50f, 0x406, 0x30a, 0x203, 0x109, 0x0 };
 
-int fp_RenderIsoVolume::s_TriTable[256][16] = {
+int fp_RenderMarchingCubes::s_TriTable[256][16] = {
         {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
         {0, 8, 3, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
         {0, 1, 9, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
