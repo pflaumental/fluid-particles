@@ -8,7 +8,8 @@
 #include "fp_cpu_sph.h"
 
 //--------------------------------------------------------------------------------------
-// Fluid particles render technique: Iso volume via marching cubes
+// Fluid particles render technique: (CPU generated) iso volume via (CPU generated)
+// marching cubes
 //--------------------------------------------------------------------------------------
 
 struct fp_MCVertex
@@ -40,7 +41,7 @@ struct fp_VolumeIndex {
 
 fp_VolumeIndex operator+(const fp_VolumeIndex& A, const fp_VolumeIndex& B);
 
-class fp_IsoVolume {
+class fp_CPUIsoVolume {
 public:
     fp_Fluid* m_Fluid;
     std::vector<float> m_IsoValues;
@@ -62,7 +63,7 @@ public:
     D3DXVECTOR3 m_VolumeStart;
     D3DXVECTOR3 m_VolumeCellOffset;
     
-    fp_IsoVolume(
+    fp_CPUIsoVolume(
             fp_Fluid* Fluid, 
             float VoxelSize = FP_DEFAULT_ISOVOLUME_VOXELSIZE, 
             float IsoVolumeBorder = FP_DEFAULT_ISO_VOLUME_BORDER);
@@ -96,9 +97,9 @@ private:
     void DestroyStamp();
 };
 
-class fp_RenderIsoVolume {
+class fp_RenderMarchingCubes {
 public:
-    fp_IsoVolume* m_IsoVolume;    
+    fp_CPUIsoVolume* m_IsoVolume;    
     float m_IsoLevel;
     int m_NumVertices;
     int m_NumTriangles;
@@ -106,11 +107,11 @@ public:
     int m_NumActiveLights;
     D3DLIGHT9* m_Lights9;
 
-    fp_RenderIsoVolume(
-            fp_IsoVolume* IsoVolume,
+    fp_RenderMarchingCubes(
+            fp_CPUIsoVolume* IsoVolume,
             int NumLights,
             float IsoLevel = FP_DEFAULT_MC_ISO_LEVEL);
-    ~fp_RenderIsoVolume();
+    ~fp_RenderMarchingCubes();
 
     void ConstructMesh();
 

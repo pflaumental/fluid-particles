@@ -1,5 +1,5 @@
 //--------------------------------------------------------------------------------------
-// File: fp_render_sprites.fx
+// File: fp_render_marching_cubes.fx
 //--------------------------------------------------------------------------------------
 
 //--------------------------------------------------------------------------------------
@@ -71,7 +71,7 @@ DepthStencilState EnableDepth {
 };
 
 //--------------------------------------------------------------------------------------
-// Vertex shader for iso volume:
+// Vertex shader for marching cubes:
 //--------------------------------------------------------------------------------------
 RenderIsoVolumePSIn RenderIsoVolumeVS(
         in RenderIsoVolumeVSIn Input,
@@ -94,7 +94,7 @@ RenderIsoVolumePSIn RenderIsoVolumeVS(
 }	
 
 //--------------------------------------------------------------------------------------
-// Pixel shader for iso volume:
+// Pixel shader for marching cubes:
 //--------------------------------------------------------------------------------------
 RenderIsoVolumePSOut RenderIsoVolumePS(RenderIsoVolumePSIn Input)  { 
     RenderIsoVolumePSOut output;

@@ -11,7 +11,7 @@
 #include "fp_util.h"
 #include "fp_cpu_sph.h"
 #include "fp_render_sprites.h"
-#include "fp_render_iso_volume.h"
+#include "fp_render_marching_cubes.h"
 #include "fp_thread.h"
 
 //#define DEBUG_VS   // Uncomment this line to debug D3D9 vertex shaders 
@@ -26,10 +26,10 @@
 CModelViewerCamera      g_Camera;               // A model viewing camera
 fp_GUI                  g_GUI;
 
-fp_Fluid*           g_Sim = NULL;
-fp_RenderSprites*   g_RenderSprites = NULL;
-fp_IsoVolume*       g_IsoVolume = NULL;
-fp_RenderIsoVolume* g_RenderIsoVolume = NULL;
+fp_Fluid*               g_Sim = NULL;
+fp_RenderSprites*       g_RenderSprites = NULL;
+fp_CPUIsoVolume*        g_CPUIsoVolume = NULL;
+fp_RenderMarchingCubes* g_RenderMarchingCubes = NULL;
 
 float                   g_LightScale;
 int                     g_NumActiveLights;
@@ -193,20 +193,20 @@ void FP_InitApp() {
             FP_NUM_PARTICLES_Z, FP_PARTICLE_SPACING_X, FP_PARTICLE_SPACING_Y,
             FP_PARTICLE_SPACING_Z, center, FP_GLASS_RADIUS, FP_GLASS_FLOOR);
     g_RenderSprites = new fp_RenderSprites(FP_NUM_PARTICLES, g_Sim->m_Particles);
-    g_IsoVolume = new fp_IsoVolume(g_Sim);
-    g_RenderIsoVolume = new fp_RenderIsoVolume(g_IsoVolume, 3);
-    g_RenderIsoVolume->m_NumActiveLights = g_NumActiveLights;
+    g_CPUIsoVolume = new fp_CPUIsoVolume(g_Sim);
+    g_RenderMarchingCubes = new fp_RenderMarchingCubes(g_CPUIsoVolume, 3);
+    g_RenderMarchingCubes->m_NumActiveLights = g_NumActiveLights;
     D3DCOLORVALUE diffuse  = { g_GUI.m_LightDiffuseColor->r,
             g_GUI.m_LightDiffuseColor->g, g_GUI.m_LightDiffuseColor->b, 1.0f };
     D3DCOLORVALUE ambient  = { 0.05f, 0.05f, 0.05f, 1.0f };
     D3DCOLORVALUE specular = { 0.8f, 0.8f, 0.8f, 1.0f };
-    ZeroMemory( g_RenderIsoVolume->m_Lights9, sizeof(D3DLIGHT9) * FP_MAX_LIGHTS );
+    ZeroMemory( g_RenderMarchingCubes->m_Lights9, sizeof(D3DLIGHT9) * FP_MAX_LIGHTS );
     for (int i=0; i < FP_MAX_LIGHTS; i++) {
-        g_RenderIsoVolume->m_Lights9[i].Type = D3DLIGHT_DIRECTIONAL;
-        g_RenderIsoVolume->m_Lights9[i].Direction = g_GUI.m_LightDir[i];
-        g_RenderIsoVolume->m_Lights9[i].Diffuse = diffuse;
-        g_RenderIsoVolume->m_Lights9[i].Ambient = ambient;
-        g_RenderIsoVolume->m_Lights9[i].Specular = specular;
+        g_RenderMarchingCubes->m_Lights9[i].Type = D3DLIGHT_DIRECTIONAL;
+        g_RenderMarchingCubes->m_Lights9[i].Direction = g_GUI.m_LightDir[i];
+        g_RenderMarchingCubes->m_Lights9[i].Diffuse = diffuse;
+        g_RenderMarchingCubes->m_Lights9[i].Ambient = ambient;
+        g_RenderMarchingCubes->m_Lights9[i].Specular = specular;
     }
 }
 
@@ -218,10 +218,10 @@ void FP_FinishApp() {
     g_Sim = NULL;
     delete g_RenderSprites;
     g_RenderSprites = NULL;
-    delete g_IsoVolume;
-    g_IsoVolume = NULL;
-    delete g_RenderIsoVolume;
-    g_RenderIsoVolume = NULL;
+    delete g_CPUIsoVolume;
+    g_CPUIsoVolume = NULL;
+    delete g_RenderMarchingCubes;
+    g_RenderMarchingCubes = NULL;
 }
 
 //--------------------------------------------------------------------------------------
@@ -302,9 +302,9 @@ void CALLBACK FP_OnFrameMove( double Time, float ElapsedTime, void* UserContext 
     else
         g_Sim->m_CurrentGlassPosition.y -= 100.0f * mouseDragY;        
     g_Sim->Update(ElapsedTime);
-    if(g_RenderType == FP_GUI_RENDER_TYPE_ISO_SURFACE) {
-        g_IsoVolume->ConstructFromFluid();
-        g_RenderIsoVolume->ConstructMesh();
+    if(g_RenderType == FP_GUI_RENDERTYPE_MARCHING_CUBES) {
+        g_CPUIsoVolume->ConstructFromFluid();
+        g_RenderMarchingCubes->ConstructMesh();
     }
 }
 
@@ -359,21 +359,21 @@ void CALLBACK FP_OnGUIEvent(
     if(oldSpriteSize != newSpriteSize)
         g_RenderSprites->SetSpriteSize(newSpriteSize);
     if(mcIsoLevel > 0.0f)
-        g_RenderIsoVolume->m_IsoLevel = mcIsoLevel;
-    if(mcVoxelSize > 0.0f && mcVoxelSize != g_IsoVolume->m_VoxelSize)
-        g_IsoVolume->SetVoxelSize(mcVoxelSize);
-    g_RenderIsoVolume->m_NumActiveLights = g_NumActiveLights;
+        g_RenderMarchingCubes->m_IsoLevel = mcIsoLevel;
+    if(mcVoxelSize > 0.0f && mcVoxelSize != g_CPUIsoVolume->m_VoxelSize)
+        g_CPUIsoVolume->SetVoxelSize(mcVoxelSize);
+    g_RenderMarchingCubes->m_NumActiveLights = g_NumActiveLights;
     if(resetSim) {
-		mcVoxelSize = g_IsoVolume->m_VoxelSize;
+		mcVoxelSize = g_CPUIsoVolume->m_VoxelSize;
         delete g_Sim;
-        delete g_IsoVolume;
+        delete g_CPUIsoVolume;
         D3DXVECTOR3 center(0.0f, 0.0f, 0.0f);
         g_Sim = new fp_Fluid(&g_WorkerThreadMgr, FP_NUM_PARTICLES_X, FP_NUM_PARTICLES_Y,
             FP_NUM_PARTICLES_Z, FP_PARTICLE_SPACING_X, FP_PARTICLE_SPACING_Y,
             FP_PARTICLE_SPACING_Z, center, FP_GLASS_RADIUS, FP_GLASS_FLOOR);
-        g_IsoVolume = new fp_IsoVolume(g_Sim, mcVoxelSize);
+        g_CPUIsoVolume = new fp_CPUIsoVolume(g_Sim, mcVoxelSize);
         g_RenderSprites->m_Particles = g_Sim->m_Particles;
-        g_RenderIsoVolume->m_IsoVolume = g_IsoVolume;
+        g_RenderMarchingCubes->m_IsoVolume = g_CPUIsoVolume;
     }
 }
 
@@ -399,7 +399,7 @@ HRESULT CALLBACK FP_OnD3D10CreateDevice(
         ID3D10Device* d3dDevice, 
         const DXGI_SURFACE_DESC *BackBufferSurfaceDesc, 
         void* UserContext ) {
-    HRESULT hr;
+    //HRESULT hr;
 
     g_GUI.OnD3D10CreateDevice(d3dDevice, BackBufferSurfaceDesc, UserContext);
 
@@ -415,7 +415,7 @@ HRESULT CALLBACK FP_OnD3D10CreateDevice(
 
     g_RenderSprites->OnD3D10CreateDevice(d3dDevice, BackBufferSurfaceDesc,
             UserContext);
-    g_RenderIsoVolume->OnD3D10CreateDevice(d3dDevice, BackBufferSurfaceDesc,
+    g_RenderMarchingCubes->OnD3D10CreateDevice(d3dDevice, BackBufferSurfaceDesc,
             UserContext);
 
     // Setup the camera's view parameters
@@ -440,7 +440,7 @@ HRESULT CALLBACK FP_OnD3D10ResizedSwapChain(
             UserContext);
     g_RenderSprites->OnD3D10ResizedSwapChain(d3dDevice, SwapChain, BackBufferSurfaceDesc,
             UserContext);
-    g_RenderIsoVolume->OnD3D10ResizedSwapChain(d3dDevice, SwapChain, BackBufferSurfaceDesc,
+    g_RenderMarchingCubes->OnD3D10ResizedSwapChain(d3dDevice, SwapChain, BackBufferSurfaceDesc,
             UserContext);
 
     // Setup the camera's projection parameters
@@ -462,7 +462,7 @@ void CALLBACK FP_OnD3D10FrameRender(
         double Time, 
         float ElapsedTime, 
         void* UserContext ) {
-    HRESULT hr;    
+    //HRESULT hr;    
 
     // If the settings dialog is being shown, then render it instead of rendering the
     // app's scene
@@ -492,16 +492,16 @@ void CALLBACK FP_OnD3D10FrameRender(
 	D3DXMatrixInverse(&invView, NULL, &view);
 
     for (int i=0; i < FP_MAX_LIGHTS; i++) {
-        g_RenderIsoVolume->m_Lights9[i].Direction = g_GUI.m_LightDir[i];
+        g_RenderMarchingCubes->m_Lights9[i].Direction = g_GUI.m_LightDir[i];
         D3DCOLORVALUE diffuse = { g_GUI.m_LightDiffuseColor->r,
             g_GUI.m_LightDiffuseColor->g, g_GUI.m_LightDiffuseColor->b, 1.0f };
-        g_RenderIsoVolume->m_Lights9[i].Diffuse = diffuse;
+        g_RenderMarchingCubes->m_Lights9[i].Diffuse = diffuse;
     }
 
-    if(g_RenderType == FP_GUI_RENDER_TYPE_POINT_SPRITE)
+    if(g_RenderType == FP_GUI_RENDERTYPE_SPRITE)
         g_RenderSprites->OnD3D10FrameRender(d3dDevice, &viewProjection, &invView);
-    else if(g_RenderType == FP_GUI_RENDER_TYPE_ISO_SURFACE)
-        g_RenderIsoVolume->OnD3D10FrameRender(d3dDevice, &worldViewProjection);
+    else if(g_RenderType == FP_GUI_RENDERTYPE_MARCHING_CUBES)
+        g_RenderMarchingCubes->OnD3D10FrameRender(d3dDevice, &worldViewProjection);
 
     // Render GUI
     g_GUI.OnD3D10FrameRender(d3dDevice, ElapsedTime, g_Camera.GetEyePt(),
@@ -516,7 +516,7 @@ void CALLBACK FP_OnD3D10FrameRender(
 void CALLBACK FP_OnD3D10ReleasingSwapChain( void* UserContext ) {
     g_GUI.OnD3D10ReleasingSwapChain(UserContext);
     if(g_RenderSprites) g_RenderSprites->OnD3D10ReleasingSwapChain(UserContext);
-    if(g_RenderIsoVolume) g_RenderIsoVolume->OnD3D10ReleasingSwapChain(UserContext);
+    if(g_RenderMarchingCubes) g_RenderMarchingCubes->OnD3D10ReleasingSwapChain(UserContext);
     //if(g_Effect10) g_Effect10->OnD3D10ReleasingSwapChain(UserContext);  
 }
 
@@ -527,7 +527,7 @@ void CALLBACK FP_OnD3D10ReleasingSwapChain( void* UserContext ) {
 void CALLBACK FP_OnD3D10DestroyDevice( void* UserContext ) {
     g_GUI.OnD3D10DestroyDevice(UserContext);
     if(g_RenderSprites) g_RenderSprites->OnD3D10DestroyDevice(UserContext);
-    if(g_RenderIsoVolume) g_RenderIsoVolume->OnD3D10DestroyDevice(UserContext);
+    if(g_RenderMarchingCubes) g_RenderMarchingCubes->OnD3D10DestroyDevice(UserContext);
     DXUTGetGlobalResourceCache().OnDestroyDevice();
 
     //SAFE_RELEASE( g_Effect10 );
