@@ -12,6 +12,7 @@
 #include "fp_cpu_sph.h"
 #include "fp_render_sprites.h"
 #include "fp_render_marching_cubes.h"
+#include "fp_render_raycast.h"
 #include "fp_thread.h"
 
 //#define DEBUG_VS   // Uncomment this line to debug D3D9 vertex shaders 
@@ -30,6 +31,7 @@ fp_Fluid*               g_Sim = NULL;
 fp_RenderSprites*       g_RenderSprites = NULL;
 fp_CPUIsoVolume*        g_CPUIsoVolume = NULL;
 fp_RenderMarchingCubes* g_RenderMarchingCubes = NULL;
+fp_RenderRaycast*       g_RenderRaycast = NULL;
 
 float                   g_LightScale;
 int                     g_NumActiveLights;
@@ -417,6 +419,8 @@ HRESULT CALLBACK FP_OnD3D10CreateDevice(
             UserContext);
     g_RenderMarchingCubes->OnD3D10CreateDevice(d3dDevice, BackBufferSurfaceDesc,
             UserContext);
+    g_RenderRaycast->OnD3D10CreateDevice(d3dDevice, BackBufferSurfaceDesc,
+        UserContext);
 
     // Setup the camera's view parameters
     D3DXVECTOR3 vecEye(0.0f, 0.0f, -15.0f);
@@ -442,6 +446,8 @@ HRESULT CALLBACK FP_OnD3D10ResizedSwapChain(
             UserContext);
     g_RenderMarchingCubes->OnD3D10ResizedSwapChain(d3dDevice, SwapChain, BackBufferSurfaceDesc,
             UserContext);
+    g_RenderRaycast->OnD3D10ResizedSwapChain(d3dDevice, SwapChain, BackBufferSurfaceDesc,
+        UserContext);
 
     // Setup the camera's projection parameters
     float fAspectRatio = BackBufferSurfaceDesc->Width / (float)BackBufferSurfaceDesc
@@ -502,6 +508,8 @@ void CALLBACK FP_OnD3D10FrameRender(
         g_RenderSprites->OnD3D10FrameRender(d3dDevice, &viewProjection, &invView);
     else if(g_RenderType == FP_GUI_RENDERTYPE_MARCHING_CUBES)
         g_RenderMarchingCubes->OnD3D10FrameRender(d3dDevice, &worldViewProjection);
+    else if(g_RenderType == FP_GUI_RENDERTYPE_RAYCAST)
+        g_RenderRaycast->OnD3D10FrameRender(d3dDevice);
 
     // Render GUI
     g_GUI.OnD3D10FrameRender(d3dDevice, ElapsedTime, g_Camera.GetEyePt(),
@@ -516,8 +524,9 @@ void CALLBACK FP_OnD3D10FrameRender(
 void CALLBACK FP_OnD3D10ReleasingSwapChain( void* UserContext ) {
     g_GUI.OnD3D10ReleasingSwapChain(UserContext);
     if(g_RenderSprites) g_RenderSprites->OnD3D10ReleasingSwapChain(UserContext);
-    if(g_RenderMarchingCubes) g_RenderMarchingCubes->OnD3D10ReleasingSwapChain(UserContext);
-    //if(g_Effect10) g_Effect10->OnD3D10ReleasingSwapChain(UserContext);  
+    if(g_RenderMarchingCubes) g_RenderMarchingCubes->OnD3D10ReleasingSwapChain(
+            UserContext);
+    if(g_RenderRaycast) g_RenderRaycast->OnD3D10ReleasingSwapChain(UserContext);    
 }
 
 
@@ -528,9 +537,6 @@ void CALLBACK FP_OnD3D10DestroyDevice( void* UserContext ) {
     g_GUI.OnD3D10DestroyDevice(UserContext);
     if(g_RenderSprites) g_RenderSprites->OnD3D10DestroyDevice(UserContext);
     if(g_RenderMarchingCubes) g_RenderMarchingCubes->OnD3D10DestroyDevice(UserContext);
+    if(g_RenderRaycast) g_RenderRaycast->OnD3D10DestroyDevice(UserContext);
     DXUTGetGlobalResourceCache().OnDestroyDevice();
-
-    //SAFE_RELEASE( g_Effect10 );
-    //SAFE_RELEASE( g_VertexLayout );
-    //g_Mesh10.Destroy();
 }
