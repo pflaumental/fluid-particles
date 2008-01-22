@@ -344,20 +344,21 @@ void fp_GUI::OnD3D10FrameRender(
         int ActiveLight,
         float LightScale) {
     HRESULT hr;
-
-    // Render the light arrow so the user can visually see the light dir
-    for( int i=0; i<NumActiveLights; i++ ) {
-        D3DXCOLOR arrowColor = ( i == ActiveLight )
-                ? D3DXVECTOR4(1,1,0,1)
-                : D3DXVECTOR4(1,1,1,1);
-        V( m_LightControl[i].OnRender10( arrowColor, View, Proj, EyePt ) );
-        m_LightDir[i] = m_LightControl[i].GetLightDirection();
-        m_LightDiffuseColor[i] = LightScale * D3DXCOLOR(1,1,1,1);
-    }
+    
+    int renderType = ChooseControls();
+    if(renderType == (int)FP_GUI_RENDERTYPE_MARCHING_CUBES)
+        // Render the light arrow so the user can visually see the light dir
+        for( int i=0; i<NumActiveLights; i++ ) {
+            D3DXCOLOR arrowColor = ( i == ActiveLight )
+                    ? D3DXVECTOR4(1,1,0,1)
+                    : D3DXVECTOR4(1,1,1,1);
+            V( m_LightControl[i].OnRender10( arrowColor, View, Proj, EyePt ) );
+            m_LightDir[i] = m_LightControl[i].GetLightDirection();
+            m_LightDiffuseColor[i] = LightScale * D3DXCOLOR(1,1,1,1);
+        }
 
     DXUT_BeginPerfEvent( DXUT_PERFEVENTCOLOR, L"HUD / Stats" );
     m_HUD.OnRender( ElapsedTime );
-    ChooseControls();
     m_SampleUI.OnRender( ElapsedTime );
     RenderText();
     DXUT_EndPerfEvent();
@@ -470,16 +471,17 @@ void fp_GUI::OnD3D9FrameRender(
    
     // Render the GUI
 
-    // Render the light arrow so the user can visually see the light dir
-    for( int i=0; i<NumActiveLights; i++ ) {
-        D3DXCOLOR arrowColor = ( i == ActiveLight ) ? D3DXCOLOR(1,1,0,1) : D3DXCOLOR(1,1,1,1);
-        V( m_LightControl[i].OnRender9( arrowColor, View, Proj, EyePt ) );
-        m_LightDir[i] = m_LightControl[i].GetLightDirection();
-        m_LightDiffuseColor[i] = LightScale * D3DXCOLOR(1,1,1,1);
-    }
+    int renderType = ChooseControls();
+    if(renderType == (int)FP_GUI_RENDERTYPE_MARCHING_CUBES)
+        // Render the light arrow so the user can visually see the light dir
+        for( int i=0; i<NumActiveLights; i++ ) {
+            D3DXCOLOR arrowColor = ( i == ActiveLight ) ? D3DXCOLOR(1,1,0,1) : D3DXCOLOR(1,1,1,1);
+            V( m_LightControl[i].OnRender9( arrowColor, View, Proj, EyePt ) );
+            m_LightDir[i] = m_LightControl[i].GetLightDirection();
+            m_LightDiffuseColor[i] = LightScale * D3DXCOLOR(1,1,1,1);
+        }
 
-    m_HUD.OnRender( ElapsedTime );
-    ChooseControls();
+    m_HUD.OnRender( ElapsedTime );    
     m_SampleUI.OnRender( ElapsedTime );
 
     RenderText();
@@ -556,7 +558,7 @@ typedef std::vector<CDXUTControl*>::iterator fp_GUIControlIterator;
 //--------------------------------------------------------------------------------------
 // Activate only the controls for the specified rendertype
 //--------------------------------------------------------------------------------------
-void fp_GUI::ChooseControls() {
+int fp_GUI::ChooseControls() {
     int renderType = 0;
     DXUTComboBoxItem *item = m_SampleUI.GetComboBox(IDC_SELECT_RENDER_TYPE)
             ->GetSelectedItem();    
@@ -600,4 +602,5 @@ void fp_GUI::ChooseControls() {
                 (*it)->SetVisible(true);
             break;
     }
+    return renderType;
 }
