@@ -131,6 +131,7 @@ void    CALLBACK FP_OnD3D10FrameRender(
 
 void    FP_InitApp();
 void    FP_FinishApp();
+D3DXVECTOR3 CalcRaycastVolumeStartPos(fp_Fluid* Fluid, fp_RenderRaycast* RenderRaycast);
 
 //--------------------------------------------------------------------------------------
 // Entry point to the program. Initializes everything and goes into a message processing 
@@ -197,6 +198,10 @@ void FP_InitApp() {
     g_RenderSprites = new fp_RenderSprites(FP_NUM_PARTICLES, g_Sim->m_Particles);
     g_CPUIsoVolume = new fp_CPUIsoVolume(g_Sim);
     g_RenderMarchingCubes = new fp_RenderMarchingCubes(g_CPUIsoVolume, 3);
+    g_RenderRaycast = new fp_RenderRaycast(g_Sim, 2 * FP_GLASS_RADIUS /
+            FP_RAYCAST_VOLUME_TEXTURE_WIDTH); 
+    D3DXVECTOR3 volumeStartPos = CalcRaycastVolumeStartPos(g_Sim, g_RenderRaycast);
+    g_RenderRaycast->SetVolumeStartPos(&volumeStartPos);
     g_RenderMarchingCubes->m_NumActiveLights = g_NumActiveLights;
     D3DCOLORVALUE diffuse  = { g_GUI.m_LightDiffuseColor->r,
             g_GUI.m_LightDiffuseColor->g, g_GUI.m_LightDiffuseColor->b, 1.0f };
@@ -295,18 +300,26 @@ void CALLBACK FP_OnFrameMoveInitial(
 
 void CALLBACK FP_OnFrameMove( double Time, float ElapsedTime, void* UserContext ) {
     // Update the camera's position based on user input 
-    g_Camera.FrameMove( ElapsedTime );
+    g_Camera.FrameMove( ElapsedTime );    
     float mouseDragX, mouseDragY;
     g_Camera.GetMouseDrag(mouseDragX, mouseDragY);
-    g_Sim->m_CurrentGlassPosition.x += 100.0f * mouseDragX;
-    if(g_MoveHorizontally)
-        g_Sim->m_CurrentGlassPosition.z -= 100.0f * mouseDragY;
-    else
-        g_Sim->m_CurrentGlassPosition.y -= 100.0f * mouseDragY;        
+    bool glassMoved = false;
+    if(mouseDragX != 0 || mouseDragY != 0)
+        glassMoved = true;
+    if(glassMoved) {
+        g_Sim->m_CurrentGlassPosition.x += 100.0f * mouseDragX;
+        if(g_MoveHorizontally)
+            g_Sim->m_CurrentGlassPosition.z -= 100.0f * mouseDragY;
+        else
+            g_Sim->m_CurrentGlassPosition.y -= 100.0f * mouseDragY;
+    }
     g_Sim->Update(ElapsedTime);
     if(g_RenderType == FP_GUI_RENDERTYPE_MARCHING_CUBES) {
         g_CPUIsoVolume->ConstructFromFluid();
         g_RenderMarchingCubes->ConstructMesh();
+    } else if (g_RenderType == FP_GUI_RENDERTYPE_RAYCAST && glassMoved) {
+        D3DXVECTOR3 volumeStartPos = CalcRaycastVolumeStartPos(g_Sim, g_RenderRaycast);
+        g_RenderRaycast->SetVolumeStartPos(&volumeStartPos);
     }
 }
 
@@ -376,6 +389,7 @@ void CALLBACK FP_OnGUIEvent(
         g_CPUIsoVolume = new fp_CPUIsoVolume(g_Sim, mcVoxelSize);
         g_RenderSprites->m_Particles = g_Sim->m_Particles;
         g_RenderMarchingCubes->m_IsoVolume = g_CPUIsoVolume;
+        g_RenderRaycast->SetFluid(g_Sim);
     }
 }
 
@@ -539,4 +553,15 @@ void CALLBACK FP_OnD3D10DestroyDevice( void* UserContext ) {
     if(g_RenderMarchingCubes) g_RenderMarchingCubes->OnD3D10DestroyDevice(UserContext);
     if(g_RenderRaycast) g_RenderRaycast->OnD3D10DestroyDevice(UserContext);
     DXUTGetGlobalResourceCache().OnDestroyDevice();
+}
+
+D3DXVECTOR3 CalcRaycastVolumeStartPos(
+        fp_Fluid* Fluid,
+        fp_RenderRaycast* RenderRaycast) {
+    D3DXVECTOR3 result = Fluid->m_CurrentGlassPosition;
+    result.y += Fluid->m_GlassFloor;
+    D3DXVECTOR3 volumeSize = RenderRaycast->GetVolumeSize();
+    result.x -= volumeSize.x / 2.0f;
+    result.z -= volumeSize.z / 2.0f;
+    return result;
 }

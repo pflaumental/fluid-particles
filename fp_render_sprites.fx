@@ -7,11 +7,11 @@
 //--------------------------------------------------------------------------------------
 
 struct RenderSpritesGSIn {
-    float3 PosWorldS       : POSITION;
+    float3 Pos            : POSITION;
 };
 
 struct RenderSpritesPSIn {
-    float4 PosClipS  	  : SV_POSITION;
+    float4 Pos  	      : SV_POSITION;
     float2 Tex			  : TEXCOORD0;
 };
 
@@ -103,8 +103,9 @@ DepthStencilState DisableDepthTest {
 };
 
 //--------------------------------------------------------------------------------------
-// Geometry shader for particles:
-// Outputs 2 triangles with texture coordinates for each particle
+// Geometry shader for particles
+// Input:  world space particle position
+// Output: 2 clip space triangles, texture coordinates
 //--------------------------------------------------------------------------------------
 [maxvertexcount(4)]
 void RenderSpritesGS(
@@ -112,8 +113,8 @@ void RenderSpritesGS(
 		inout TriangleStream<RenderSpritesPSIn> SpriteStream) {				
 	RenderSpritesPSIn output;
 	[unroll] for(int i=0; i<4; i++) {					
-		float3 spriteCornerWorldS = Input[0].PosWorldS + g_SpriteCornersWorldS[i];	
-		output.PosClipS = mul(float4(spriteCornerWorldS,1), g_ViewProj);		
+		float3 spriteCornerWorldS = Input[0].Pos + g_SpriteCornersWorldS[i];	
+		output.Pos = mul(float4(spriteCornerWorldS,1), g_ViewProj);		
 		output.Tex = g_SpriteTexCoords[i];
 		SpriteStream.Append(output);
 	}	
@@ -121,7 +122,9 @@ void RenderSpritesGS(
 }	
 
 //--------------------------------------------------------------------------------------
-// Pixel shader for particles:
+// Pixel shader for particles
+// Input:  screen space position (not used), texture coordinates (both p. c. interpolated)
+// Output: diffuse color
 // Lookups the diffuse color in particle texture
 //--------------------------------------------------------------------------------------
 RenderSpritesPSOut RenderSpritesPS(RenderSpritesPSIn Input)  { 

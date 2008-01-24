@@ -11,16 +11,6 @@ const D3D10_INPUT_ELEMENT_DESC fp_MCVertex::Layout[] = {
     { "NORMAL",    0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12,
             D3D10_INPUT_PER_VERTEX_DATA, 0 }, };
 
-fp_VolumeIndex operator+(
-        const fp_VolumeIndex& A,
-        const fp_VolumeIndex& B) {
-    fp_VolumeIndex result;
-    result.x = A.x + B.x;
-    result.y = A.y + B.y;
-    result.z = A.z + B.z;
-    return result;
-}
-
 fp_CPUIsoVolume::fp_CPUIsoVolume(fp_Fluid* Fluid, float VoxelSize, float IsoVolumeBorder) 
         :
         m_Fluid(Fluid),

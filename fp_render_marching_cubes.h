@@ -5,6 +5,7 @@
 #include "DXUT.h"
 
 #include "fp_global.h"
+#include "fp_util.h"
 #include "fp_cpu_sph.h"
 
 //--------------------------------------------------------------------------------------
@@ -28,18 +29,6 @@ struct fp_MCVertex
             m_Position(Position),
             m_Normal(Normal) {}
 };
-
-struct fp_VolumeIndex {
-    int x;
-    int y;
-    int z;
-
-    fp_VolumeIndex() : x(0), y(0), z(0) {}
-    fp_VolumeIndex(int X, int Y, int Z) : x(X), y(Y), z(Z) {}
-    fp_VolumeIndex(const fp_VolumeIndex& Other) : x(Other.x), y(Other.y), z(Other.z) {}
-};
-
-fp_VolumeIndex operator+(const fp_VolumeIndex& A, const fp_VolumeIndex& B);
 
 class fp_CPUIsoVolume {
 public:
