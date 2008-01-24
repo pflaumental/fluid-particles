@@ -7,12 +7,12 @@
 //--------------------------------------------------------------------------------------
 
 struct RenderIsoVolumeVSIn {
-    float3 PosWorldS  	  : POSITION;
-    float3 NormalWorldS   : NORMAL;    
+    float3 Pos  	      : POSITION;
+    float3 Normal         : NORMAL;    
 };
 
 struct RenderIsoVolumePSIn {
-    float4 PosClipS  	  : SV_POSITION;
+    float4 Pos  	      : SV_POSITION;
     float4 Diffuse        : COLOR0; // vertex diffuse color
 };
 
@@ -71,19 +71,22 @@ DepthStencilState EnableDepth {
 };
 
 //--------------------------------------------------------------------------------------
-// Vertex shader for marching cubes:
+// Vertex shader for marching cubes
+// Input:  worldspace position, normal
+// Output: clip space position, vertex color
+// Transforms to clipspace, calculates n dot l lighting
 //--------------------------------------------------------------------------------------
 RenderIsoVolumePSIn RenderIsoVolumeVS(
         in RenderIsoVolumeVSIn Input,
         uniform int NumLights) {
 	RenderIsoVolumePSIn output;
 	
-	output.PosClipS = mul(float4(Input.PosWorldS,1), g_WorldViewProjection);
+	output.Pos = mul(float4(Input.Pos,1), g_WorldViewProjection);
 	
 	// Compute simple directional lighting equation
 	float3 totalLightDiffuse = float3(0,0,0);
 	for(int i=0; i<NumLights; i++ )
-        totalLightDiffuse += g_LightDiffuse[i].rgb * max(0,dot(Input.NormalWorldS,
+        totalLightDiffuse += g_LightDiffuse[i].rgb * max(0,dot(Input.Normal,
                 g_LightDir[i].xyz));
                 
     output.Diffuse.rgb = g_MaterialDiffuseColor * totalLightDiffuse + 
@@ -94,7 +97,10 @@ RenderIsoVolumePSIn RenderIsoVolumeVS(
 }	
 
 //--------------------------------------------------------------------------------------
-// Pixel shader for marching cubes:
+// Pixel shader for marching cubes
+// Input:  screen space position (not used), pixel color (both p. c. interpolated)
+// Output: pixel color
+// Does nothing
 //--------------------------------------------------------------------------------------
 RenderIsoVolumePSOut RenderIsoVolumePS(RenderIsoVolumePSIn Input)  { 
     RenderIsoVolumePSOut output;
