@@ -36,8 +36,8 @@ fp_CPUIsoVolume::fp_CPUIsoVolume(fp_Fluid* Fluid, float VoxelSize, float IsoVolu
     m_VoxelSize = -1.0f; // Needed in SetSmoothingLength()
     UpdateSmoothingLength();
     SetVoxelSize(VoxelSize);
-    m_IsoValues.reserve(FP_INITIAL_ISOVOLUME_CAPACITY);
-    m_GradientIsoValues.reserve(FP_INITIAL_ISOVOLUME_CAPACITY);
+    m_IsoValues.reserve(FP_MC_INITIAL_ISOVOLUME_CAPACITY);
+    m_GradientIsoValues.reserve(FP_MC_INITIAL_ISOVOLUME_CAPACITY);
 }
 
 void fp_CPUIsoVolume::UpdateSmoothingLength() {
@@ -71,40 +71,40 @@ void fp_CPUIsoVolume::ConstructFromFluid() {
     partMaxZ += m_IsoVolumeBorder;    
     
     if(partMinX < m_LastMinX) // Grow?
-        minX = partMinX - (partMaxX - partMinX) * FP_ISO_VOLUME_GROW_FACTOR;
+        minX = partMinX - (partMaxX - partMinX) * FP_MC_ISO_VOLUME_GROW_FACTOR;
     else if (partMinX > m_LastMinX + 0.5 * (m_LastMaxX - m_LastMinX)
-            * FP_ISO_VOLUME_SHRINK_BORDER) // Shrink?
-        minX = partMinX - (partMaxX - partMinX) * FP_ISO_VOLUME_GROW_FACTOR;
+            * FP_MC_ISO_VOLUME_SHRINK_BORDER) // Shrink?
+        minX = partMinX - (partMaxX - partMinX) * FP_MC_ISO_VOLUME_GROW_FACTOR;
 
     if(partMinY < m_LastMinY) // Grow?
-        minY = partMinY - (partMaxY - partMinY) * FP_ISO_VOLUME_GROW_FACTOR;
+        minY = partMinY - (partMaxY - partMinY) * FP_MC_ISO_VOLUME_GROW_FACTOR;
     else if (partMinY > m_LastMinY + 0.5 * (m_LastMaxY - m_LastMinY)
-            * FP_ISO_VOLUME_SHRINK_BORDER) // Shrink?
-        minY = partMinY - (partMaxY - partMinY) * FP_ISO_VOLUME_GROW_FACTOR;
+            * FP_MC_ISO_VOLUME_SHRINK_BORDER) // Shrink?
+        minY = partMinY - (partMaxY - partMinY) * FP_MC_ISO_VOLUME_GROW_FACTOR;
 
     if(partMinZ < m_LastMinZ) // Grow?
-        minZ = partMinZ - (partMaxZ - partMinZ) * FP_ISO_VOLUME_GROW_FACTOR;
+        minZ = partMinZ - (partMaxZ - partMinZ) * FP_MC_ISO_VOLUME_GROW_FACTOR;
     else if (partMinZ > m_LastMinZ + 0.5 * (m_LastMaxZ - m_LastMinZ)
-            * FP_ISO_VOLUME_SHRINK_BORDER) // Shrink?
-        minZ = partMinZ - (partMaxZ - partMinZ) * FP_ISO_VOLUME_GROW_FACTOR;
+            * FP_MC_ISO_VOLUME_SHRINK_BORDER) // Shrink?
+        minZ = partMinZ - (partMaxZ - partMinZ) * FP_MC_ISO_VOLUME_GROW_FACTOR;
 
     if(partMaxX > m_LastMaxX) // Grow?
-        maxX = partMaxX + (partMaxX - partMinX) * FP_ISO_VOLUME_GROW_FACTOR;
+        maxX = partMaxX + (partMaxX - partMinX) * FP_MC_ISO_VOLUME_GROW_FACTOR;
     else if (partMaxX < m_LastMaxX - 0.5 * (m_LastMaxX - m_LastMinX)
-            * FP_ISO_VOLUME_SHRINK_BORDER) // Shrink?
-        maxX = partMaxX + (partMaxX - partMinX) * FP_ISO_VOLUME_GROW_FACTOR;
+            * FP_MC_ISO_VOLUME_SHRINK_BORDER) // Shrink?
+        maxX = partMaxX + (partMaxX - partMinX) * FP_MC_ISO_VOLUME_GROW_FACTOR;
 
     if(partMaxY > m_LastMaxY) // Grow?
-        maxY = partMaxY + (partMaxY - partMinY) * FP_ISO_VOLUME_GROW_FACTOR;
+        maxY = partMaxY + (partMaxY - partMinY) * FP_MC_ISO_VOLUME_GROW_FACTOR;
     else if (partMaxY < m_LastMaxY - 0.5 * (m_LastMaxY - m_LastMinY)
-            * FP_ISO_VOLUME_SHRINK_BORDER) // Shrink?
-        maxY = partMaxY + (partMaxY - partMinY) * FP_ISO_VOLUME_GROW_FACTOR;
+            * FP_MC_ISO_VOLUME_SHRINK_BORDER) // Shrink?
+        maxY = partMaxY + (partMaxY - partMinY) * FP_MC_ISO_VOLUME_GROW_FACTOR;
 
     if(partMaxZ > m_LastMaxZ) // Grow?
-        maxZ = partMaxZ + (partMaxZ - partMinZ) * FP_ISO_VOLUME_GROW_FACTOR;
+        maxZ = partMaxZ + (partMaxZ - partMinZ) * FP_MC_ISO_VOLUME_GROW_FACTOR;
     else if (partMaxZ < m_LastMaxZ - 0.5 * (m_LastMaxZ - m_LastMinZ)
-            * FP_ISO_VOLUME_SHRINK_BORDER) // Shrink?
-        maxZ = partMaxZ + (partMaxZ - partMinZ) * FP_ISO_VOLUME_GROW_FACTOR;
+            * FP_MC_ISO_VOLUME_SHRINK_BORDER) // Shrink?
+        maxZ = partMaxZ + (partMaxZ - partMinZ) * FP_MC_ISO_VOLUME_GROW_FACTOR;
 
     m_LastMinX = minX;
     m_LastMinY = minY;
