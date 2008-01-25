@@ -40,7 +40,7 @@ fp_Grid::fp_Grid(int InitialCapacity, float CellWidth)
         m_MaxX(FLT_MIN),
         m_MaxY(FLT_MIN),
         m_MaxZ(FLT_MIN) {
-    m_Cells.reserve(FP_INITIAL_GRID_CAPACITY);
+    m_Cells.reserve(FP_MC_INITIAL_GRID_CAPACITY);
 }
 
 fp_Grid::fp_Grid(const fp_Grid& Other)
@@ -107,7 +107,7 @@ void fp_Grid::FillAndPrepare(fp_FluidParticle *Particles, int NumParticles) {
         fp_GridCell* cell = m_Cells[cellIndex];
         if(cell == NULL) {
             m_Cells[cellIndex] = cell = new fp_GridCell();
-            cell->reserve(FP_DEFAULT_INITIAL_CELL_CAPACITY);
+            cell->reserve(FP_MC_DEFAULT_INITIAL_CELL_CAPACITY);
         }
         cell->push_back(Particles[i]);
     }
@@ -119,12 +119,12 @@ inline void fp_Grid::SetBounds(fp_FluidParticle *Particles, int NumParticles){
     for (int i = 0; i < NumParticles; i++)
     {
         D3DXVECTOR3 pos = Particles[i].m_Position;
-        if(pos.x < -FP_FLUID_MAX_POS) continue;
-        if(pos.x > FP_FLUID_MAX_POS) continue;
-        if(pos.y < -FP_FLUID_MAX_POS) continue;
-        if(pos.y > FP_FLUID_MAX_POS) continue;
-        if(pos.z < -FP_FLUID_MAX_POS) continue;
-        if(pos.z > FP_FLUID_MAX_POS) continue;
+        if(pos.x < -FP_MC_INITIAL_GRID_SIDELENGTHFLUID_MAX_POS) continue;
+        if(pos.x > FP_MC_INITIAL_GRID_SIDELENGTHFLUID_MAX_POS) continue;
+        if(pos.y < -FP_MC_INITIAL_GRID_SIDELENGTHFLUID_MAX_POS) continue;
+        if(pos.y > FP_MC_INITIAL_GRID_SIDELENGTHFLUID_MAX_POS) continue;
+        if(pos.z < -FP_MC_INITIAL_GRID_SIDELENGTHFLUID_MAX_POS) continue;
+        if(pos.z > FP_MC_INITIAL_GRID_SIDELENGTHFLUID_MAX_POS) continue;
         if(pos.x < m_MinX)
             m_MinX = pos.x;
         if(pos.y < m_MinY)
@@ -195,7 +195,7 @@ fp_Fluid::fp_Fluid(
     m_Grid = NULL;
     SetSmoothingLength(SmoothingLenght);
     SetParticleMass(ParticleMass);
-    m_Grid = new fp_Grid(FP_INITIAL_GRID_CAPACITY, SmoothingLenght);
+    m_Grid = new fp_Grid(FP_MC_INITIAL_GRID_CAPACITY, SmoothingLenght);
     m_PressureAndViscosityForces = new D3DXVECTOR3[m_NumParticles];
     m_GradientColorField = new D3DXVECTOR3[m_NumParticles];
     m_LaplacianColorField = new float[m_NumParticles];
@@ -420,8 +420,8 @@ void fp_Fluid::CalculateGlassFluidStateChangeMT(int ThreadIdx) {
 
         // Handle Collision with floor 
         float lenR = particlePosition.y - m_CurrentGlassFloorY;
-        if(lenR < FP_DEFAULT_FLUID_GLASS_PUSHBACK_DISTANCE)
-            lenR = FP_DEFAULT_FLUID_GLASS_PUSHBACK_DISTANCE;
+        if(lenR < FP_FLUID_DEFAULT_GLASS_PUSHBACK_DISTANCE)
+            lenR = FP_FLUID_DEFAULT_GLASS_PUSHBACK_DISTANCE;
         if(lenR < m_SmoothingLength) {
             float lenRSq = lenR * lenR;
             D3DXVECTOR3 r = D3DXVECTOR3(0.0f, lenR, 0.0f);
@@ -457,9 +457,9 @@ void fp_Fluid::CalculateGlassFluidStateChangeMT(int ThreadIdx) {
         float particleToCenterLen = D3DXVec3Length(&particleToCenter);
         float particleToCenterLenInv = 1.0f / particleToCenterLen;
         lenR = m_GlassRadius - particleToCenterLen;  
-        if(lenR < FP_DEFAULT_FLUID_GLASS_PUSHBACK_DISTANCE) {
-            lenR = FP_DEFAULT_FLUID_GLASS_PUSHBACK_DISTANCE;
-            particleToCenterLen = m_GlassRadius - FP_DEFAULT_FLUID_GLASS_PUSHBACK_DISTANCE;
+        if(lenR < FP_FLUID_DEFAULT_GLASS_PUSHBACK_DISTANCE) {
+            lenR = FP_FLUID_DEFAULT_GLASS_PUSHBACK_DISTANCE;
+            particleToCenterLen = m_GlassRadius - FP_FLUID_DEFAULT_GLASS_PUSHBACK_DISTANCE;
             particleToCenter *= particleToCenterLenInv * particleToCenterLen;
             particleToCenterLenInv = 1.0f / particleToCenterLen;
         }

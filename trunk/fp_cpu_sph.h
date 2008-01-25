@@ -114,18 +114,18 @@ public:
         D3DXVECTOR3 Center,
         float GlassRadius,
         float GlassFloor,
-        D3DXVECTOR3 Gravity = FP_DEFAULT_GRAVITY,
-        float SmoothingLenght = FP_DEFAULT_FLUID_SMOOTHING_LENGTH,
-        float GasConstantK = FP_DEFAULT_FLUID_GAS_CONSTANT_K,        
-        float Viscosity = FP_DEFAULT_FLUID_VISCOSITY,
-        float SurfaceTension = FP_DEFAULT_FLUID_SURFACE_TENSION,
-        float GradientColorFieldThreshold = FP_DEFAULT_FLUID_GRADIENT_COLORFIELD_THRESHOLD,
-        float ParticleMass = FP_DEFAULT_FLUID_PARTICLE_MASS,
-        float RestDensityCoefficient = FP_DEFAULT_FLUID_REST_DENSITY_COEFFICIENT, 
-        float DampingCoefficient = FP_DEFAULT_FLUID_DAMPING_COEFFICIENT,
-        float GlassDensity = FP_DEFAULT_FLUID_GLASS_DENSITY,
-        float GlassViscosity = FP_DEFAULT_FLUID_GLASS_VISCOSITY,
-        float GlassEnforceDistance = FP_DEFAULT_FLUID_GLASS_ENFORCE_DISTANCE);
+        D3DXVECTOR3 Gravity = FP_FLUID_DEFAULT_GRAVITY,
+        float SmoothingLenght = FP_FLUID_DEFAULT_SMOOTHING_LENGTH,
+        float GasConstantK = FP_FLUID_DEFAULT_GAS_CONSTANT_K,        
+        float Viscosity = FP_FLUID_DEFAULT_VISCOSITY,
+        float SurfaceTension = FP_FLUID_DEFAULT_SURFACE_TENSION,
+        float GradientColorFieldThreshold = FP_FLUID_DEFAULT_GRADIENT_COLORFIELD_THRESHOLD,
+        float ParticleMass = FP_FLUID_DEFAULT_PARTICLE_MASS,
+        float RestDensityCoefficient = FP_FLUID_DEFAULT_REST_DENSITY_COEFFICIENT, 
+        float DampingCoefficient = FP_FLUID_DEFAULT_DAMPING_COEFFICIENT,
+        float GlassDensity = FP_FLUID_DEFAULT_GLASS_DENSITY,
+        float GlassViscosity = FP_FLUID_DEFAULT_GLASS_VISCOSITY,
+        float GlassEnforceDistance = FP_FLUID_DEFAULT_GLASS_ENFORCE_DISTANCE);
     ~fp_Fluid();
     void Update(float ElapsedTime);
     void SetGlassEnforceDistance(float GlassEnforceDistance);

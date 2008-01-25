@@ -54,8 +54,8 @@ public:
     
     fp_CPUIsoVolume(
             fp_Fluid* Fluid, 
-            float VoxelSize = FP_DEFAULT_ISOVOLUME_VOXELSIZE, 
-            float IsoVolumeBorder = FP_DEFAULT_ISO_VOLUME_BORDER);
+            float VoxelSize = FP_MC_DEFAULT_ISOVOLUME_VOXELSIZE, 
+            float IsoVolumeBorder = FP_MC_DEFAULT_ISO_VOLUME_BORDER);
     void UpdateSmoothingLength();
     void SetVoxelSize(float VoxelSize);
     void ConstructFromFluid();
@@ -99,7 +99,7 @@ public:
     fp_RenderMarchingCubes(
             fp_CPUIsoVolume* IsoVolume,
             int NumLights,
-            float IsoLevel = FP_DEFAULT_MC_ISO_LEVEL);
+            float IsoLevel = FP_MC_DEFAULT_ISO_LEVEL);
     ~fp_RenderMarchingCubes();
 
     void ConstructMesh();

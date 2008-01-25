@@ -198,8 +198,7 @@ void FP_InitApp() {
     g_RenderSprites = new fp_RenderSprites(FP_NUM_PARTICLES, g_Sim->m_Particles);
     g_CPUIsoVolume = new fp_CPUIsoVolume(g_Sim);
     g_RenderMarchingCubes = new fp_RenderMarchingCubes(g_CPUIsoVolume, 3);
-    g_RenderRaycast = new fp_RenderRaycast(g_Sim, 2 * FP_GLASS_RADIUS /
-            FP_RAYCAST_VOLUME_TEXTURE_WIDTH); 
+    g_RenderRaycast = new fp_RenderRaycast(g_Sim, FP_RAYCAST_DEFAULT_VOXEL_SIZE); 
     D3DXVECTOR3 volumeStartPos = CalcRaycastVolumeStartPos(g_Sim, g_RenderRaycast);
     g_RenderRaycast->SetVolumeStartPos(&volumeStartPos);
     g_RenderMarchingCubes->m_NumActiveLights = g_NumActiveLights;
@@ -275,10 +274,10 @@ bool CALLBACK FP_ModifyDeviceSettings(
     static bool s_bFirstTime = true;
     if( s_bFirstTime ) {
         s_bFirstTime = false;
-        if( (DXUT_D3D9_DEVICE == DeviceSettings->ver && DeviceSettings->d3d9.DeviceType
+        if((DXUT_D3D9_DEVICE == DeviceSettings->ver && DeviceSettings->d3d9.DeviceType
                 == D3DDEVTYPE_REF) || (DXUT_D3D10_DEVICE == DeviceSettings->ver
-                && DeviceSettings->d3d10.DriverType == D3D10_DRIVER_TYPE_REFERENCE) )
-                DXUTDisplaySwitchingToREFWarning( DeviceSettings->ver );
+                && DeviceSettings->d3d10.DriverType == D3D10_DRIVER_TYPE_REFERENCE))
+            DXUTDisplaySwitchingToREFWarning( DeviceSettings->ver );
     }
 
     return true;
@@ -559,7 +558,7 @@ D3DXVECTOR3 CalcRaycastVolumeStartPos(
         fp_Fluid* Fluid,
         fp_RenderRaycast* RenderRaycast) {
     D3DXVECTOR3 result = Fluid->m_CurrentGlassPosition;
-    result.y += Fluid->m_GlassFloor;
+    result.y += Fluid->m_GlassFloor + FP_RAYCAST_GLASS_FLOOR_OFFSET;
     D3DXVECTOR3 volumeSize = RenderRaycast->GetVolumeSize();
     result.x -= volumeSize.x / 2.0f;
     result.z -= volumeSize.z / 2.0f;
