@@ -39,37 +39,34 @@ public:
     // Defines the lower, left, front corner of the volume
     void SetVolumeStartPos(D3DXVECTOR3* VolumeStartPos);
     
-    HRESULT CreateVolumeTexture(ID3D10Device* pd3dDevice);
-    void FillVolumeTexture(ID3D10Device* d3dDevice); 
-    void DestroyVolumeTexture();
-
     // D3D9 specific
     HRESULT OnD3D9CreateDevice(
-            IDirect3DDevice9* d3dDevice,
+            IDirect3DDevice9* D3DDevice,
             const D3DSURFACE_DESC* BackBufferSurfaceDesc,
             void* UserContext );
     HRESULT OnD3D9ResetDevice(
-            IDirect3DDevice9* d3dDevice,
+            IDirect3DDevice9* D3DDevice,
             const D3DSURFACE_DESC* BackBufferSurfaceDesc,
             void* UserContext );
-    void    OnD3D9FrameRender(IDirect3DDevice9* d3dDevice);
+    void    OnD3D9FrameRender(IDirect3DDevice9* D3DDevice);
     void    OnD3D9LostDevice( void* UserContext );
     void    OnD3D9DestroyDevice( void* UserContext );
 
     // D3D10 specific
     HRESULT OnD3D10CreateDevice(
-            ID3D10Device* d3dDevice,
+            ID3D10Device* D3DDevice,
             const DXGI_SURFACE_DESC* BackBufferSurfaceDesc,
             void* UserContext );
     HRESULT OnD3D10ResizedSwapChain(
-            ID3D10Device* d3dDevice,
+            ID3D10Device* D3DDevice,
             IDXGISwapChain *SwapChain,
             const DXGI_SURFACE_DESC* BackBufferSurfaceDesc,
             void* UserContext );
     void    OnD3D10ReleasingSwapChain( void* UserContext );
     void    OnD3D10DestroyDevice( void* UserContext );
     void    OnD3D10FrameRender(
-            ID3D10Device* d3dDevice); 
+            ID3D10Device* D3DDevice,
+            const D3DXMATRIX*  WorldViewProjection); 
 
 private:
     ID3D10Texture3D *m_VolumeTexture;
@@ -87,9 +84,12 @@ private:
     ID3D10EffectVectorVariable* m_EffectVarCornersPos;
     ID3D10EffectScalarVariable* m_EffectVarHalfParticleVoxelDiameter;
     ID3D10EffectScalarVariable* m_EffectVarParticleVoxelRadius;
-    ID3D10EffectVectorVariable* m_EffectVarVolumeDimensions;
-    ID3D10EffectMatrixVariable* m_EffectVarWorldToNDS;
+    ID3D10EffectVectorVariable* m_EffectVarVolumeDimensions;    
+    ID3D10EffectMatrixVariable* m_EffectVarWorldViewProjection;
     ID3D10EffectShaderResourceVariable* m_EffectVarWValsMulParticleMass;
+    ID3D10EffectVectorVariable* m_EffectVarBBoxStart;
+    ID3D10EffectVectorVariable* m_EffectVarBBoxSize;
+    ID3D10EffectMatrixVariable* m_EffectVarWorldToNDS;
 
     fp_VolumeIndex m_VolumeDimensions;
     
@@ -98,6 +98,12 @@ private:
     int m_ParticleVoxelDiameter;
     int m_ParticleVoxelRadius;
     D3DXVECTOR3 m_VolumeStartPos;
+
+    HRESULT CreateVolumeTexture(ID3D10Device* pd3dDevice);
+    void FillVolumeTexture(ID3D10Device* D3DDevice); 
+    void DestroyVolumeTexture();
+
+    void RenderVolume(ID3D10Device* D3DDevice, const D3DXMATRIX*  WorldViewProjection); 
 };
 
 #endif

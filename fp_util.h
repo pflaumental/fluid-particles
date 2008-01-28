@@ -25,6 +25,50 @@ template<class T> fp_Vec3<T> operator+(const fp_Vec3<T>& A, const fp_Vec3<T>& B)
 
 typedef fp_Vec3<int> fp_VolumeIndex;
 
+class fp_RenderTarget2D {
+public:
+	fp_RenderTarget2D(
+            ID3D10Device* D3DDevice, 
+            unsigned int Width, 
+            unsigned int Height, 
+            DXGI_FORMAT Format, 
+            unsigned int TargetCount=1, 
+            bool CreateDS=false, 
+            const D3D10_SUBRESOURCE_DATA *InitialData = NULL);
+	virtual ~fp_RenderTarget2D();
+
+	void Clear(float ClearColor[4]);
+	ID3D10DepthStencilView* Bind(
+            bool SaveRTs = false, 
+            bool KeepDS = false, 
+            ID3D10DepthStencilView* KnownDS = false);
+	void Unbind();
+	ID3D10ShaderResourceView* GetSRV(unsigned int i = 0) {
+            assert(i < m_TargetCount); return m_SRV[i]; }
+	ID3D10Texture2D* GetTex(unsigned int i = 0) {
+            assert(i < m_TargetCount); return m_Texture[i]; }
+
+protected:
+	unsigned int						m_TargetCount;
+	bool								m_TargetsSaved;
+
+	ID3D10Device						*m_Device;
+	ID3D10ShaderResourceView			*m_SRV[D3D10_SIMULTANEOUS_RENDER_TARGET_COUNT];
+	ID3D10RenderTargetView				*m_RTV[D3D10_SIMULTANEOUS_RENDER_TARGET_COUNT];
+	ID3D10Texture2D					    *m_Texture[D3D10_SIMULTANEOUS_RENDER_TARGET_COUNT];
+    
+	ID3D10Texture2D					    *m_DSTexture;
+	ID3D10DepthStencilView				*m_DSV;
+
+	ID3D10RenderTargetView				*m_OldRTVs[D3D10_SIMULTANEOUS_RENDER_TARGET_COUNT];
+	ID3D10DepthStencilView				*m_OldDS;
+    D3D10_VIEWPORT                      m_RTViewport;
+    D3D10_VIEWPORT                      m_OldViewport;
+
+	void SaveRT();
+	void RestoreRT();
+};	
+
 // Helper functions
 class fp_Util {
 public:
@@ -38,7 +82,7 @@ public:
     static D3DXVECTOR3 GetRandomVector();
 
 	static ID3D10Effect* LoadEffect(
-			ID3D10Device* d3dDevice, 
+			ID3D10Device* D3DDevice, 
 			const LPCWSTR Filename, 
 			const D3D10_SHADER_MACRO *ShaderMacros = NULL);
 };

@@ -285,21 +285,21 @@ void fp_GUI::OnGUIEvent(
 // Create any D3D10 GUI resources that aren't dependant on the back buffer
 //--------------------------------------------------------------------------------------
 HRESULT fp_GUI::OnD3D10CreateDevice(
-        ID3D10Device* d3dDevice,
+        ID3D10Device* D3DDevice,
         const DXGI_SURFACE_DESC *BackBufferSurfaceDesc,
         void* UserContext ) {
     HRESULT hr;
 
-    V_RETURN( m_DialogResourceManager.OnD3D10CreateDevice( d3dDevice ) );
-    V_RETURN( m_D3DSettingsDlg.OnD3D10CreateDevice( d3dDevice ) );
-    V_RETURN( D3DX10CreateFont( d3dDevice, 15, 0, FW_BOLD, 1, FALSE, DEFAULT_CHARSET, 
+    V_RETURN( m_DialogResourceManager.OnD3D10CreateDevice( D3DDevice ) );
+    V_RETURN( m_D3DSettingsDlg.OnD3D10CreateDevice( D3DDevice ) );
+    V_RETURN( D3DX10CreateFont( D3DDevice, 15, 0, FW_BOLD, 1, FALSE, DEFAULT_CHARSET, 
             OUT_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Arial",
             &m_Font10 ) );
-    V_RETURN( D3DX10CreateSprite( d3dDevice, 512, &m_Sprite10 ) );
+    V_RETURN( D3DX10CreateSprite( D3DDevice, 512, &m_Sprite10 ) );
     m_TxtHelper = new CDXUTTextHelper( m_Font9, m_Sprite9, m_Font10, m_Sprite10,
             15 );
     
-    V_RETURN( CDXUTDirectionWidget::StaticOnD3D10CreateDevice( d3dDevice ) );
+    V_RETURN( CDXUTDirectionWidget::StaticOnD3D10CreateDevice( D3DDevice ) );
     for( int i=0; i<FP_MAX_LIGHTS; i++ )
         m_LightControl[i].SetRadius( FP_OBJECT_RADIUS );
 
@@ -311,15 +311,15 @@ HRESULT fp_GUI::OnD3D10CreateDevice(
 // Create any D3D10 GUI resources that depend on the back buffer
 //--------------------------------------------------------------------------------------
 HRESULT fp_GUI::OnD3D10ResizedSwapChain(
-        ID3D10Device* d3dDevice,
+        ID3D10Device* D3DDevice,
         IDXGISwapChain *SwapChain,
         const DXGI_SURFACE_DESC* BackBufferSurfaceDesc,
         void* UserContext ) {
     HRESULT hr;
 
-    V_RETURN( m_DialogResourceManager.OnD3D10ResizedSwapChain( d3dDevice,
+    V_RETURN( m_DialogResourceManager.OnD3D10ResizedSwapChain( D3DDevice,
             BackBufferSurfaceDesc ) );
-    V_RETURN( m_D3DSettingsDlg.OnD3D10ResizedSwapChain( d3dDevice,
+    V_RETURN( m_D3DSettingsDlg.OnD3D10ResizedSwapChain( D3DDevice,
             BackBufferSurfaceDesc ) );
 
     m_HUD.SetLocation( BackBufferSurfaceDesc->Width-170, 0 );
@@ -335,7 +335,7 @@ HRESULT fp_GUI::OnD3D10ResizedSwapChain(
 // Render the GUI using the D3D10 device
 //--------------------------------------------------------------------------------------
 void fp_GUI::OnD3D10FrameRender(
-        ID3D10Device* d3dDevice,
+        ID3D10Device* D3DDevice,
         float ElapsedTime,
         const D3DXVECTOR3* EyePt,
         const D3DXMATRIX*  View,
@@ -398,16 +398,16 @@ void fp_GUI::OnD3D10DestroyDevice( void* UserContext )
 // and aren't tied to the back buffer size 
 //--------------------------------------------------------------------------------------
 HRESULT fp_GUI::OnD3D9CreateDevice(
-        IDirect3DDevice9* d3dDevice,
+        IDirect3DDevice9* D3DDevice,
         const D3DSURFACE_DESC* BackBufferSurfaceDesc,
         void* UserContext ) {
     HRESULT hr;
 
-    V_RETURN( m_DialogResourceManager.OnD3D9CreateDevice( d3dDevice ) );
-    V_RETURN( m_D3DSettingsDlg.OnD3D9CreateDevice( d3dDevice ) );
+    V_RETURN( m_DialogResourceManager.OnD3D9CreateDevice( D3DDevice ) );
+    V_RETURN( m_D3DSettingsDlg.OnD3D9CreateDevice( D3DDevice ) );
 
     // Initialize the font
-    V_RETURN( D3DXCreateFont( d3dDevice, 15, 0, FW_BOLD, 1, FALSE, DEFAULT_CHARSET, 
+    V_RETURN( D3DXCreateFont( D3DDevice, 15, 0, FW_BOLD, 1, FALSE, DEFAULT_CHARSET, 
             OUT_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE,
             L"Arial", &m_Font9 ) );
 
@@ -415,7 +415,7 @@ HRESULT fp_GUI::OnD3D9CreateDevice(
     m_SampleUI.GetSlider( IDC_NUM_LIGHTS )->SetVisible( true );
     m_SampleUI.GetButton( IDC_ACTIVE_LIGHT )->SetVisible( true );
 
-    V_RETURN( CDXUTDirectionWidget::StaticOnD3D9CreateDevice( d3dDevice ) );
+    V_RETURN( CDXUTDirectionWidget::StaticOnD3D9CreateDevice( D3DDevice ) );
     for( int i=0; i<FP_MAX_LIGHTS; i++ )
         m_LightControl[i].SetRadius( FP_OBJECT_RADIUS );
 
@@ -428,7 +428,7 @@ HRESULT fp_GUI::OnD3D9CreateDevice(
 // (D3DPOOL_DEFAULT) or that are tied to the back buffer size 
 //--------------------------------------------------------------------------------------
 HRESULT fp_GUI::OnD3D9ResetDevice(
-        IDirect3DDevice9* d3dDevice, 
+        IDirect3DDevice9* D3DDevice, 
         const D3DSURFACE_DESC* BackBufferSurfaceDesc,
         void* UserContext ) {
     HRESULT hr;
@@ -439,7 +439,7 @@ HRESULT fp_GUI::OnD3D9ResetDevice(
     if( m_Font9 ) V_RETURN( m_Font9->OnResetDevice() );
 
     // Create a sprite to help batch calls when drawing many lines of text
-    V_RETURN( D3DXCreateSprite( d3dDevice, &m_Sprite9 ) );
+    V_RETURN( D3DXCreateSprite( D3DDevice, &m_Sprite9 ) );
     m_TxtHelper = new CDXUTTextHelper( m_Font9, m_Sprite9, NULL, NULL, 15 );
 
     for( int i=0; i<FP_MAX_LIGHTS; i++ )
@@ -459,7 +459,7 @@ HRESULT fp_GUI::OnD3D9ResetDevice(
 // Render the GUI using the D3D9 device
 //--------------------------------------------------------------------------------------
 void fp_GUI::OnD3D9FrameRender(
-        IDirect3DDevice9* d3dDevice,
+        IDirect3DDevice9* D3DDevice,
         float ElapsedTime,
         const D3DXVECTOR3* EyePt,
         const D3DXMATRIX*  View,

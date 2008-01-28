@@ -559,7 +559,7 @@ void fp_RenderMarchingCubes::ConstructMesh() {
 
 
 HRESULT fp_RenderMarchingCubes::OnD3D9CreateDevice(
-        IDirect3DDevice9* d3dDevice,
+        IDirect3DDevice9* D3DDevice,
         const D3DSURFACE_DESC* BackBufferSurfaceDesc,
         void* UserContext ) {
     //HRESULT hr;
@@ -568,35 +568,35 @@ HRESULT fp_RenderMarchingCubes::OnD3D9CreateDevice(
 }
 
 HRESULT fp_RenderMarchingCubes::OnD3D9ResetDevice(
-        IDirect3DDevice9* d3dDevice,
+        IDirect3DDevice9* D3DDevice,
         const D3DSURFACE_DESC* BackBufferSurfaceDesc,
         void* UserContext ) {
-    d3dDevice->CreateVertexBuffer( FP_MC_MAX_VETICES * sizeof(fp_MCVertex), 
+    D3DDevice->CreateVertexBuffer( FP_MC_MAX_VETICES * sizeof(fp_MCVertex), 
             D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY, 
             fp_MCVertex::FVF_Flags, D3DPOOL_DEFAULT, &m_VertexBuffer9, NULL );
-    d3dDevice->CreateIndexBuffer(FP_MC_MAX_TRIANGLES * 3 * sizeof(int),
+    D3DDevice->CreateIndexBuffer(FP_MC_MAX_TRIANGLES * 3 * sizeof(int),
             D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY,
             D3DFMT_INDEX32, D3DPOOL_DEFAULT, &m_IndexBuffer9, NULL );
     return S_OK;
 }
 
-void fp_RenderMarchingCubes::OnD3D9FrameRender(IDirect3DDevice9* d3dDevice) {  
-    d3dDevice->SetStreamSource(0, m_VertexBuffer9, 0, sizeof(fp_MCVertex));
-    d3dDevice->SetIndices(m_IndexBuffer9);
-	d3dDevice->SetFVF(fp_MCVertex::FVF_Flags);
-    d3dDevice->SetMaterial(&m_Material9);
+void fp_RenderMarchingCubes::OnD3D9FrameRender(IDirect3DDevice9* D3DDevice) {  
+    D3DDevice->SetStreamSource(0, m_VertexBuffer9, 0, sizeof(fp_MCVertex));
+    D3DDevice->SetIndices(m_IndexBuffer9);
+	D3DDevice->SetFVF(fp_MCVertex::FVF_Flags);
+    D3DDevice->SetMaterial(&m_Material9);
     int i;
     for (i=0; i < m_NumActiveLights; i++) {        
-        d3dDevice->SetLight(i, &m_Lights9[i]);
-        d3dDevice->LightEnable(i, TRUE);
+        D3DDevice->SetLight(i, &m_Lights9[i]);
+        D3DDevice->LightEnable(i, TRUE);
     }
-    d3dDevice->LightEnable(i, FALSE);
-    d3dDevice->SetRenderState(D3DRS_LIGHTING, TRUE);
+    D3DDevice->LightEnable(i, FALSE);
+    D3DDevice->SetRenderState(D3DRS_LIGHTING, TRUE);
 
-    d3dDevice->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, m_NumVertices, 0, m_NumTriangles);
+    D3DDevice->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, m_NumVertices, 0, m_NumTriangles);
 
-    d3dDevice->SetRenderState(D3DRS_LIGHTING, FALSE);
-    d3dDevice->LightEnable(0, FALSE);
+    D3DDevice->SetRenderState(D3DRS_LIGHTING, FALSE);
+    D3DDevice->LightEnable(0, FALSE);
 }
 
 void fp_RenderMarchingCubes::OnD3D9DestroyDevice(void* UserContext) {
@@ -612,13 +612,13 @@ void fp_RenderMarchingCubes::OnD3D9LostDevice(void* UserContext) {
 
 
 HRESULT fp_RenderMarchingCubes::OnD3D10CreateDevice(
-        ID3D10Device* d3dDevice,
+        ID3D10Device* D3DDevice,
         const DXGI_SURFACE_DESC* BackBufferSurfaceDesc,
         void* UserContext ) {
     HRESULT hr;
 
     // Read the D3DX effect file
-    m_Effect10 = fp_Util::LoadEffect(d3dDevice, FP_RENDER_ISO_VOLUME_EFFECT_FILE);
+    m_Effect10 = fp_Util::LoadEffect(D3DDevice, FP_RENDER_ISO_VOLUME_EFFECT_FILE);
 
     // Obtain technique objects
     m_TechRenderIsoVolume1Light = m_Effect10->GetTechniqueByName(
@@ -654,24 +654,24 @@ HRESULT fp_RenderMarchingCubes::OnD3D10CreateDevice(
     bufferDesc.BindFlags = D3D10_BIND_VERTEX_BUFFER;
     bufferDesc.CPUAccessFlags = D3D10_CPU_ACCESS_WRITE;
     bufferDesc.MiscFlags = 0;
-    V_RETURN(d3dDevice->CreateBuffer(&bufferDesc, NULL, &m_VertexBuffer10));
+    V_RETURN(D3DDevice->CreateBuffer(&bufferDesc, NULL, &m_VertexBuffer10));
 
     D3D10_PASS_DESC passDesc;
     V_RETURN( m_TechRenderIsoVolume1Light->GetPassByIndex(0)->GetDesc(&passDesc));
-    V_RETURN( d3dDevice->CreateInputLayout(fp_MCVertex::Layout, 2,
+    V_RETURN( D3DDevice->CreateInputLayout(fp_MCVertex::Layout, 2,
             passDesc.pIAInputSignature, passDesc.IAInputSignatureSize,
             &m_VertexLayout ) );
 
     // Create index buffer
     bufferDesc.ByteWidth = FP_MC_MAX_TRIANGLES * 3 * sizeof(int);
     bufferDesc.BindFlags = D3D10_BIND_INDEX_BUFFER;
-    V_RETURN(d3dDevice->CreateBuffer(&bufferDesc, NULL, &m_IndexBuffer10));
+    V_RETURN(D3DDevice->CreateBuffer(&bufferDesc, NULL, &m_IndexBuffer10));
 
     return S_OK;
 }
 
 HRESULT fp_RenderMarchingCubes::OnD3D10ResizedSwapChain(
-        ID3D10Device* d3dDevice,
+        ID3D10Device* D3DDevice,
         IDXGISwapChain *SwapChain,
         const DXGI_SURFACE_DESC* BackBufferSurfaceDesc,
         void* UserContext ) {
@@ -679,7 +679,7 @@ HRESULT fp_RenderMarchingCubes::OnD3D10ResizedSwapChain(
 }
 
 void fp_RenderMarchingCubes::OnD3D10FrameRender(
-        ID3D10Device* d3dDevice,
+        ID3D10Device* D3DDevice,
         const D3DXMATRIX*  WorldViewProjection) {  
     HRESULT hr;
 
@@ -714,20 +714,20 @@ void fp_RenderMarchingCubes::OnD3D10FrameRender(
     }
 
     //IA setup
-    d3dDevice->IASetInputLayout(m_VertexLayout);
+    D3DDevice->IASetInputLayout(m_VertexLayout);
     UINT stride = sizeof(fp_MCVertex);
     UINT offset = 0;
-    d3dDevice->IASetVertexBuffers(0, 1, &m_VertexBuffer10, &stride, &offset);
-    d3dDevice->IASetIndexBuffer(m_IndexBuffer10, DXGI_FORMAT_R32_UINT, 0);
+    D3DDevice->IASetVertexBuffers(0, 1, &m_VertexBuffer10, &stride, &offset);
+    D3DDevice->IASetIndexBuffer(m_IndexBuffer10, DXGI_FORMAT_R32_UINT, 0);
 
     //Render
-    d3dDevice->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    D3DDevice->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
     D3D10_TECHNIQUE_DESC techDesc;
     renderTechnique->GetDesc( &techDesc );
     for( UINT iPass = 0; iPass < techDesc.Passes; ++iPass ) {
         renderTechnique->GetPassByIndex( iPass )->Apply(0);
-        d3dDevice->DrawIndexed(m_NumTriangles * 3, 0, 0);
+        D3DDevice->DrawIndexed(m_NumTriangles * 3, 0, 0);
     }
 }
 
