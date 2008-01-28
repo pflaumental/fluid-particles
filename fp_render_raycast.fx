@@ -322,7 +322,7 @@ RaycastTransformVSOut RaycastTransformVS(in float3 Position : POSITION) {
 //--------------------------------------------------------------------------------------
 float4 RaycastNullVS(in float3 Position : POSITION) : SV_POSITION {
     //*Position *= g_vAspect;
-    return mul(float4(Position, 1), g_mWorldViewProjection);    
+    return mul(float4(Position, 1), g_WorldViewProjection);    
 }
 
 //--------------------------------------------------------------------------------------
@@ -343,7 +343,7 @@ float4 RaycastExitPS(RaycastTransformVSOut Input) : SV_Target {
 //--------------------------------------------------------------------------------------
 RaycastTraceIsoPSOut RaycastTraceIsoPS(RaycastTransformVSOut Input) {
     RaycastTraceIsoPSOut result;
-    float4 ExitAndDepth = g_ExitPoint.Load(int3(pos.xy,0));
+    float4 ExitAndDepth = g_ExitPoint.Load(int3(Input.Pos.xy,0));
 
     //*// ray entry, exit and direction
     //*float3 volumePos      = volumePosAndDepth.xyz;
@@ -577,7 +577,7 @@ technique10 RenderRaycast {
         SetPixelShader(CompileShader(ps_4_0, CopyRT1PS()));
                
         SetBlendState(NoBlending, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-        SetDepthStencilState(DepthDisable, 0);
+        SetDepthStencilState(DisableDepth, 0);
         SetRasterizerState(CullBack);
     }    
 }
