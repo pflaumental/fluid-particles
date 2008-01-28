@@ -6,9 +6,7 @@
 #pragma warning(default:4995)
 #pragma warning(default:4530)
 #include "fp_util.h"
-
-
-    
+  
 fp_RenderTarget2D::fp_RenderTarget2D(
         ID3D10Device* D3DDevice,
         unsigned int Width,
@@ -71,7 +69,6 @@ fp_RenderTarget2D::fp_RenderTarget2D(
 
 		V(m_Device->CreateTexture2D(&RTDesc, init,  &m_Texture[i]));
 		V(m_Device->CreateRenderTargetView(m_Texture[i], &RTVDesc, &m_RTV[i]));
-
 		V(m_Device->CreateShaderResourceView(m_Texture[i], &SRVDesc, &m_SRV[i]));
 	}
 
@@ -134,7 +131,6 @@ ID3D10DepthStencilView* fp_RenderTarget2D::Bind(
 void fp_RenderTarget2D::Unbind() {
 	RestoreRT();
 }
-
 	
 fp_RenderTarget2D::~fp_RenderTarget2D() {
 	for(unsigned int i=0; i<D3D10_SIMULTANEOUS_RENDER_TARGET_COUNT; i++)
@@ -159,7 +155,6 @@ void fp_RenderTarget2D::SaveRT() {
     UINT cVPs = 1;
     m_Device->RSGetViewports(&cVPs,&m_OldViewport);
 }
-
 
 void fp_RenderTarget2D::RestoreRT() {
 	if (!m_TargetsSaved) return;
