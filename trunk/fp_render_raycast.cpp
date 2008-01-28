@@ -39,7 +39,7 @@ fp_RenderRaycast::~fp_RenderRaycast() {
 }
 
 HRESULT fp_RenderRaycast::OnD3D9CreateDevice(
-        IDirect3DDevice9* d3dDevice,
+        IDirect3DDevice9* D3DDevice,
         const D3DSURFACE_DESC* BackBufferSurfaceDesc,
         void* UserContext ) {
     //HRESULT hr;
@@ -47,13 +47,13 @@ HRESULT fp_RenderRaycast::OnD3D9CreateDevice(
 }
 
 HRESULT fp_RenderRaycast::OnD3D9ResetDevice(
-        IDirect3DDevice9* d3dDevice,
+        IDirect3DDevice9* D3DDevice,
         const D3DSURFACE_DESC* BackBufferSurfaceDesc,
         void* UserContext ) {
     return S_OK;
 }
 
-void fp_RenderRaycast::OnD3D9FrameRender(IDirect3DDevice9* d3dDevice) {  
+void fp_RenderRaycast::OnD3D9FrameRender(IDirect3DDevice9* D3DDevice) {  
 }
 
 void fp_RenderRaycast::OnD3D9DestroyDevice(void* UserContext) {
@@ -65,11 +65,11 @@ void fp_RenderRaycast::OnD3D9LostDevice(void* UserContext) {
 
 
 HRESULT fp_RenderRaycast::OnD3D10CreateDevice(
-        ID3D10Device* d3dDevice,
+        ID3D10Device* D3DDevice,
         const DXGI_SURFACE_DESC* BackBufferSurfaceDesc,
         void* UserContext ) {
     HRESULT hr;
-    V_RETURN(CreateVolumeTexture(d3dDevice));
+    V_RETURN(CreateVolumeTexture(D3DDevice));
 
     // CreateW ValsMulParticleMass texture
     D3D10_TEXTURE1D_DESC texDesc;
@@ -81,7 +81,7 @@ HRESULT fp_RenderRaycast::OnD3D10CreateDevice(
     texDesc.MiscFlags = 0;
     texDesc.Usage = D3D10_USAGE_DYNAMIC;
     texDesc.Width = m_WValsMulParticleMassLength = 32;
-    V_RETURN(d3dDevice->CreateTexture1D(&texDesc, NULL, &m_WValsMulParticleMassTexture));
+    V_RETURN(D3DDevice->CreateTexture1D(&texDesc, NULL, &m_WValsMulParticleMassTexture));
 
     // Create Shader Resource View
     D3D10_SHADER_RESOURCE_VIEW_DESC srvDesc;
@@ -89,11 +89,11 @@ HRESULT fp_RenderRaycast::OnD3D10CreateDevice(
     srvDesc.ViewDimension = D3D10_SRV_DIMENSION_TEXTURE1D;
     srvDesc.Texture3D.MipLevels = 1;
     srvDesc.Texture3D.MostDetailedMip = 0;
-    V_RETURN(d3dDevice->CreateShaderResourceView(m_WValsMulParticleMassTexture,
+    V_RETURN(D3DDevice->CreateShaderResourceView(m_WValsMulParticleMassTexture,
             &srvDesc, &m_WValsMulParticleMassSRV));
 
     // Read the D3DX effect file
-    m_Effect = fp_Util::LoadEffect(d3dDevice, FP_RENDER_RAYCAST_EFFECT_FILE);
+    m_Effect = fp_Util::LoadEffect(D3DDevice, FP_RENDER_RAYCAST_EFFECT_FILE);
 
     // Obtain technique objects
     m_TechRenderRaycast = m_Effect->GetTechniqueByName("RenderRaycast");
@@ -107,15 +107,24 @@ HRESULT fp_RenderRaycast::OnD3D10CreateDevice(
             "g_ParticleVoxelRadius")->AsScalar();
     m_EffectVarVolumeDimensions = m_Effect->GetVariableByName("g_VolumeDimensions")
             ->AsVector();
-    m_EffectVarWorldToNDS = m_Effect->GetVariableByName("g_WorldToNDS")->AsMatrix();
+    m_EffectVarWorldToNDS = m_Effect->GetVariableByName("g_WorldToNDS")->AsMatrix();    
     m_EffectVarWValsMulParticleMass = m_Effect->GetVariableByName(
             "g_WValsMulParticleMass")->AsShaderResource();
+    m_EffectVarBBoxStart = m_Effect->GetConstantBufferByName(
+            "g_BBoxStart")->AsVector();
+    m_EffectVarBBoxSize = m_Effect->GetConstantBufferByName(
+            "g_BBoxSize")->AsVector();
+    m_EffectVarWorldViewProjection = m_Effect->GetVariableByName(
+            "g_WorldViewProjection")->AsMatrix();
     bool allValid = m_EffectVarCornersPos->IsValid();
     allValid = allValid || m_EffectVarHalfParticleVoxelDiameter->IsValid();
     allValid = allValid || m_EffectVarParticleVoxelRadius->IsValid();
     allValid = allValid || m_EffectVarVolumeDimensions->IsValid();
-    allValid = allValid || m_EffectVarWorldToNDS->IsValid();
+    allValid = allValid || m_EffectVarWorldToNDS->IsValid();    
     allValid = allValid || m_EffectVarWValsMulParticleMass->IsValid();
+    allValid = allValid || m_EffectVarBBoxStart->IsValid();
+    allValid = allValid || m_EffectVarBBoxSize->IsValid();
+    allValid = allValid || m_EffectVarWorldViewProjection->IsValid();
     if(!allValid) return E_FAIL;
 
     // Set effect variables as needed
@@ -128,7 +137,7 @@ HRESULT fp_RenderRaycast::OnD3D10CreateDevice(
     V_RETURN( m_TechRenderRaycast->GetPassByIndex(0)->GetDesc(&passDesc));
     int numElements = sizeof(fp_SplatParticleVertex::Layout)
             / sizeof(fp_SplatParticleVertex::Layout[0]);
-    V_RETURN( d3dDevice->CreateInputLayout(fp_SplatParticleVertex::Layout, numElements,
+    V_RETURN( D3DDevice->CreateInputLayout(fp_SplatParticleVertex::Layout, numElements,
             passDesc.pIAInputSignature, passDesc.IAInputSignatureSize, &m_VertexLayout));
 
     D3D10_BUFFER_DESC bufferDesc;
@@ -137,13 +146,13 @@ HRESULT fp_RenderRaycast::OnD3D10CreateDevice(
     bufferDesc.BindFlags = D3D10_BIND_VERTEX_BUFFER;
     bufferDesc.CPUAccessFlags = D3D10_CPU_ACCESS_WRITE;
     bufferDesc.MiscFlags = 0;
-    V_RETURN(d3dDevice->CreateBuffer(&bufferDesc, NULL, &m_VertexBuffer));
+    V_RETURN(D3DDevice->CreateBuffer(&bufferDesc, NULL, &m_VertexBuffer));
 
     return S_OK;
 }
 
 HRESULT fp_RenderRaycast::OnD3D10ResizedSwapChain(
-        ID3D10Device* d3dDevice,
+        ID3D10Device* D3DDevice,
         IDXGISwapChain *SwapChain,
         const DXGI_SURFACE_DESC* BackBufferSurfaceDesc,
         void* UserContext ) {
@@ -151,9 +160,11 @@ HRESULT fp_RenderRaycast::OnD3D10ResizedSwapChain(
 }
 
 void fp_RenderRaycast::OnD3D10FrameRender(
-        ID3D10Device* d3dDevice) {  
+        ID3D10Device* D3DDevice,
+        const D3DXMATRIX*  WorldViewProjection) {  
     //HRESULT hr;
-    FillVolumeTexture(d3dDevice);
+    FillVolumeTexture(D3DDevice);
+    RenderVolume(D3DDevice, WorldViewProjection);
 }
 
 void fp_RenderRaycast::OnD3D10DestroyDevice( void* UserContext ) {
@@ -204,6 +215,10 @@ void fp_RenderRaycast::SetVoxelSize(float VoxelSize) {
             mappedTexture[i] = m_Fluid->WPoly6(hSq_LenRSq) * m_Fluid->m_ParticleMass;
         }
         m_WValsMulParticleMassTexture->Unmap(0);
+
+        // Set bounding box size
+        D3DXVECTOR3 bBoxSize = GetVolumeSize();
+        V(m_EffectVarBBoxSize->SetFloatVector((float*)&bBoxSize));
     }
 }
 
@@ -225,6 +240,9 @@ void fp_RenderRaycast::SetVolumeStartPos(D3DXVECTOR3* VolumeStartPos) {
     m_VolumeStartPos = *VolumeStartPos;
 
     if(m_Effect != NULL) {
+        // Set bounding box start pos
+        V(m_EffectVarBBoxStart->SetFloatVector((float*)m_VolumeStartPos));
+
         // Set WorldToNDS matrix
 
         D3DXMATRIX worldToNDS, tmpMatrix;    
@@ -241,7 +259,7 @@ void fp_RenderRaycast::SetVolumeStartPos(D3DXVECTOR3* VolumeStartPos) {
     }
 }
 
-HRESULT fp_RenderRaycast::CreateVolumeTexture(ID3D10Device* d3dDevice) {
+HRESULT fp_RenderRaycast::CreateVolumeTexture(ID3D10Device* D3DDevice) {
     HRESULT hr;
 
     // Create the texture
@@ -255,7 +273,7 @@ HRESULT fp_RenderRaycast::CreateVolumeTexture(ID3D10Device* d3dDevice) {
     texDesc.Width =  m_VolumeDimensions.x;
     texDesc.Height = m_VolumeDimensions.y;
     texDesc.Depth =  m_VolumeDimensions.z;
-    V_RETURN(d3dDevice->CreateTexture3D(&texDesc,NULL,&m_VolumeTexture));
+    V_RETURN(D3DDevice->CreateTexture3D(&texDesc,NULL,&m_VolumeTexture));
 
     // Create the render target view
     D3D10_RENDER_TARGET_VIEW_DESC rtvDesc;
@@ -264,7 +282,7 @@ HRESULT fp_RenderRaycast::CreateVolumeTexture(ID3D10Device* d3dDevice) {
     rtvDesc.Texture3D.FirstWSlice = 0;
     rtvDesc.Texture3D.MipSlice = 0;
     rtvDesc.Texture3D.WSize = texDesc.Depth;
-    V_RETURN(d3dDevice->CreateRenderTargetView(m_VolumeTexture, &rtvDesc,
+    V_RETURN(D3DDevice->CreateRenderTargetView(m_VolumeTexture, &rtvDesc,
             &m_VolumeRTV));
 
     // Create Shader Resource View
@@ -273,13 +291,13 @@ HRESULT fp_RenderRaycast::CreateVolumeTexture(ID3D10Device* d3dDevice) {
     srvDesc.ViewDimension = D3D10_SRV_DIMENSION_TEXTURE3D;
     srvDesc.Texture3D.MipLevels = 1;
     srvDesc.Texture3D.MostDetailedMip = 0;
-    V_RETURN(d3dDevice->CreateShaderResourceView(m_VolumeTexture, &srvDesc,
+    V_RETURN(D3DDevice->CreateShaderResourceView(m_VolumeTexture, &srvDesc,
             &m_VolumeSRV));
 
     return S_OK;
 }
 
-void fp_RenderRaycast::FillVolumeTexture(ID3D10Device* d3dDevice) {    
+void fp_RenderRaycast::FillVolumeTexture(ID3D10Device* D3DDevice) {    
     fp_SplatParticleVertex *splatVertices;
     float* densities = m_Fluid->GetDensities();
     m_VertexBuffer->Map(D3D10_MAP_WRITE_DISCARD, 0, (void**)&splatVertices);
@@ -293,7 +311,7 @@ void fp_RenderRaycast::FillVolumeTexture(ID3D10Device* d3dDevice) {
 
     ID3D10RenderTargetView *oldRTV;
     ID3D10DepthStencilView *oldDSV;
-    d3dDevice->OMGetRenderTargets(1, &oldRTV, &oldDSV);
+    D3DDevice->OMGetRenderTargets(1, &oldRTV, &oldDSV);
     
     D3D10_VIEWPORT rtViewport, oldViewport;
     rtViewport.TopLeftX = 0;
@@ -304,32 +322,32 @@ void fp_RenderRaycast::FillVolumeTexture(ID3D10Device* d3dDevice) {
     rtViewport.Height = m_VolumeDimensions.y;
 
     UINT numViewports = 1;
-    d3dDevice->RSGetViewports(&numViewports, &oldViewport);
-    d3dDevice->RSSetViewports(1, &rtViewport);
+    D3DDevice->RSGetViewports(&numViewports, &oldViewport);
+    D3DDevice->RSSetViewports(1, &rtViewport);
 
     // Set vertex Layout
-    d3dDevice->IASetInputLayout(m_VertexLayout);
+    D3DDevice->IASetInputLayout(m_VertexLayout);
 
     // Set IA parameters
     UINT strides[1] = {sizeof(fp_SplatParticleVertex)};
     UINT offsets[1] = {0};
-    d3dDevice->IASetVertexBuffers(0, 1, &m_VertexBuffer, strides, offsets);
-    d3dDevice->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_POINTLIST);
+    D3DDevice->IASetVertexBuffers(0, 1, &m_VertexBuffer, strides, offsets);
+    D3DDevice->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_POINTLIST);
 
     m_EffectVarWValsMulParticleMass->SetResource(m_WValsMulParticleMassSRV);
 
-    d3dDevice->OMSetRenderTargets(1, &m_VolumeRTV , NULL); 
+    D3DDevice->OMSetRenderTargets(1, &m_VolumeRTV , NULL); 
 
     float clearColor[4] = {0.0f, 0.0f, 0.0f, 0.0f};
-    d3dDevice->ClearRenderTargetView(m_VolumeRTV, clearColor);
+    D3DDevice->ClearRenderTargetView(m_VolumeRTV, clearColor);
 
     m_TechRenderRaycast->GetPassByIndex(0)->Apply(0);
     
-    d3dDevice->DrawInstanced(m_NumParticles, m_ParticleVoxelDiameter, 0, 0);
+    D3DDevice->DrawInstanced(m_NumParticles, m_ParticleVoxelDiameter, 0, 0);
 
-    d3dDevice->RSSetViewports(1, &oldViewport);
+    D3DDevice->RSSetViewports(1, &oldViewport);
 
-    d3dDevice->OMSetRenderTargets(1, &oldRTV, oldDSV);
+    D3DDevice->OMSetRenderTargets(1, &oldRTV, oldDSV);
     SAFE_RELEASE(oldDSV);
     SAFE_RELEASE(oldRTV);
 }
@@ -338,4 +356,9 @@ void fp_RenderRaycast::DestroyVolumeTexture() {
     SAFE_RELEASE(m_VolumeTexture);
     SAFE_RELEASE(m_VolumeRTV);
     SAFE_RELEASE(m_VolumeSRV);
+}
+
+void fp_RenderRaycast::RenderVolume(
+        ID3D10Device* D3DDevice,
+        const D3DXMATRIX*  WorldViewProjection) {
 }

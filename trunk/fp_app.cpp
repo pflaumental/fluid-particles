@@ -90,15 +90,15 @@ extern bool    CALLBACK FP_IsD3D9DeviceAcceptable(
         bool Windowed, 
         void* UserContext );
 extern HRESULT CALLBACK FP_OnD3D9CreateDevice( 
-        IDirect3DDevice9* d3dDevice, 
+        IDirect3DDevice9* D3DDevice, 
         const D3DSURFACE_DESC* BackBufferSurfaceDesc, 
         void* UserContext );
 extern HRESULT CALLBACK FP_OnD3D9ResetDevice( 
-        IDirect3DDevice9* d3dDevice, 
+        IDirect3DDevice9* D3DDevice, 
         const D3DSURFACE_DESC* BackBufferSurfaceDesc, 
         void* UserContext );
 extern void    CALLBACK FP_OnD3D9FrameRender( 
-        IDirect3DDevice9* d3dDevice, 
+        IDirect3DDevice9* D3DDevice, 
         double Time, 
         float ElapsedTime, 
         void* UserContext );
@@ -113,18 +113,18 @@ bool    CALLBACK FP_IsD3D10DeviceAcceptable(
         bool Windowed, 
         void* UserContext );
 HRESULT CALLBACK FP_OnD3D10CreateDevice( 
-        ID3D10Device* d3dDevice, 
+        ID3D10Device* D3DDevice, 
         const DXGI_SURFACE_DESC* BackBufferSurfaceDesc, 
         void* UserContext );
 HRESULT CALLBACK FP_OnD3D10ResizedSwapChain( 
-        ID3D10Device* d3dDevice, 
+        ID3D10Device* D3DDevice, 
         IDXGISwapChain *SwapChain, 
         const DXGI_SURFACE_DESC* BackBufferSurfaceDesc, 
         void* UserContext );
 void    CALLBACK FP_OnD3D10ReleasingSwapChain( void* UserContext );
 void    CALLBACK FP_OnD3D10DestroyDevice( void* UserContext );
 void    CALLBACK FP_OnD3D10FrameRender( 
-        ID3D10Device* d3dDevice, 
+        ID3D10Device* D3DDevice, 
         double Time, 
         float ElapsedTime, 
         void* UserContext );
@@ -411,12 +411,12 @@ bool CALLBACK FP_IsD3D10DeviceAcceptable(
 // Create any D3D10 resources that aren't dependent on the back buffer
 //--------------------------------------------------------------------------------------
 HRESULT CALLBACK FP_OnD3D10CreateDevice(
-        ID3D10Device* d3dDevice, 
+        ID3D10Device* D3DDevice, 
         const DXGI_SURFACE_DESC *BackBufferSurfaceDesc, 
         void* UserContext ) {
     //HRESULT hr;
 
-    g_GUI.OnD3D10CreateDevice(d3dDevice, BackBufferSurfaceDesc, UserContext);
+    g_GUI.OnD3D10CreateDevice(D3DDevice, BackBufferSurfaceDesc, UserContext);
 
     DWORD dwShaderFlags = D3D10_SHADER_ENABLE_STRICTNESS;
     #if defined( DEBUG ) || defined( _DEBUG )
@@ -428,11 +428,11 @@ HRESULT CALLBACK FP_OnD3D10CreateDevice(
     #endif
 
 
-    g_RenderSprites->OnD3D10CreateDevice(d3dDevice, BackBufferSurfaceDesc,
+    g_RenderSprites->OnD3D10CreateDevice(D3DDevice, BackBufferSurfaceDesc,
             UserContext);
-    g_RenderMarchingCubes->OnD3D10CreateDevice(d3dDevice, BackBufferSurfaceDesc,
+    g_RenderMarchingCubes->OnD3D10CreateDevice(D3DDevice, BackBufferSurfaceDesc,
             UserContext);
-    g_RenderRaycast->OnD3D10CreateDevice(d3dDevice, BackBufferSurfaceDesc,
+    g_RenderRaycast->OnD3D10CreateDevice(D3DDevice, BackBufferSurfaceDesc,
         UserContext);
 
     // Setup the camera's view parameters
@@ -449,17 +449,17 @@ HRESULT CALLBACK FP_OnD3D10CreateDevice(
 // Create any D3D10 resources that depend on the back buffer
 //--------------------------------------------------------------------------------------
 HRESULT CALLBACK FP_OnD3D10ResizedSwapChain( 
-        ID3D10Device* d3dDevice, 
+        ID3D10Device* D3DDevice, 
         IDXGISwapChain *SwapChain, 
         const DXGI_SURFACE_DESC* BackBufferSurfaceDesc, 
         void* UserContext ) {
-    g_GUI.OnD3D10ResizedSwapChain(d3dDevice, SwapChain, BackBufferSurfaceDesc,
+    g_GUI.OnD3D10ResizedSwapChain(D3DDevice, SwapChain, BackBufferSurfaceDesc,
             UserContext);
-    g_RenderSprites->OnD3D10ResizedSwapChain(d3dDevice, SwapChain, BackBufferSurfaceDesc,
+    g_RenderSprites->OnD3D10ResizedSwapChain(D3DDevice, SwapChain, BackBufferSurfaceDesc,
             UserContext);
-    g_RenderMarchingCubes->OnD3D10ResizedSwapChain(d3dDevice, SwapChain, BackBufferSurfaceDesc,
+    g_RenderMarchingCubes->OnD3D10ResizedSwapChain(D3DDevice, SwapChain, BackBufferSurfaceDesc,
             UserContext);
-    g_RenderRaycast->OnD3D10ResizedSwapChain(d3dDevice, SwapChain, BackBufferSurfaceDesc,
+    g_RenderRaycast->OnD3D10ResizedSwapChain(D3DDevice, SwapChain, BackBufferSurfaceDesc,
         UserContext);
 
     // Setup the camera's projection parameters
@@ -477,7 +477,7 @@ HRESULT CALLBACK FP_OnD3D10ResizedSwapChain(
 // Render the scene using the D3D10 device
 //--------------------------------------------------------------------------------------
 void CALLBACK FP_OnD3D10FrameRender( 
-        ID3D10Device* d3dDevice, 
+        ID3D10Device* D3DDevice, 
         double Time, 
         float ElapsedTime, 
         void* UserContext ) {
@@ -491,9 +491,9 @@ void CALLBACK FP_OnD3D10FrameRender(
     // Clear the render target and depth stencil
     float ClearColor[4] = { FP_CLEAR_COLOR };
     ID3D10RenderTargetView* pRTV = DXUTGetD3D10RenderTargetView();
-    d3dDevice->ClearRenderTargetView( pRTV, ClearColor );
+    D3DDevice->ClearRenderTargetView( pRTV, ClearColor );
     ID3D10DepthStencilView* pDSV = DXUTGetD3D10DepthStencilView();
-    d3dDevice->ClearDepthStencilView( pDSV, D3D10_CLEAR_DEPTH, 1.0, 0 );
+    D3DDevice->ClearDepthStencilView( pDSV, D3D10_CLEAR_DEPTH, 1.0, 0 );
     
     D3DXMATRIX  world;
     D3DXMATRIX  view;
@@ -518,14 +518,14 @@ void CALLBACK FP_OnD3D10FrameRender(
     }
 
     if(g_RenderType == FP_GUI_RENDERTYPE_SPRITE)
-        g_RenderSprites->OnD3D10FrameRender(d3dDevice, &viewProjection, &invView);
+        g_RenderSprites->OnD3D10FrameRender(D3DDevice, &viewProjection, &invView);
     else if(g_RenderType == FP_GUI_RENDERTYPE_MARCHING_CUBES)
-        g_RenderMarchingCubes->OnD3D10FrameRender(d3dDevice, &worldViewProjection);
+        g_RenderMarchingCubes->OnD3D10FrameRender(D3DDevice, &worldViewProjection);
     else if(g_RenderType == FP_GUI_RENDERTYPE_RAYCAST)
-        g_RenderRaycast->OnD3D10FrameRender(d3dDevice);
+        g_RenderRaycast->OnD3D10FrameRender(D3DDevice, &worldViewProjection);
 
     // Render GUI
-    g_GUI.OnD3D10FrameRender(d3dDevice, ElapsedTime, g_Camera.GetEyePt(),
+    g_GUI.OnD3D10FrameRender(D3DDevice, ElapsedTime, g_Camera.GetEyePt(),
             &view, &projection, g_NumActiveLights,
             g_ActiveLight, g_LightScale);
 }

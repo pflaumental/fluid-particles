@@ -32,31 +32,31 @@ public:
 
     // DX9 specific
     HRESULT OnD3D9CreateDevice(
-            IDirect3DDevice9* d3dDevice,
+            IDirect3DDevice9* D3DDevice,
             const D3DSURFACE_DESC* BackBufferSurfaceDesc,
             void* UserContext );
     HRESULT OnD3D9ResetDevice(
-            IDirect3DDevice9* d3dDevice,
+            IDirect3DDevice9* D3DDevice,
             const D3DSURFACE_DESC* BackBufferSurfaceDesc,
             void* UserContext );
-    void    OnD3D9FrameRender(IDirect3DDevice9* d3dDevice);
+    void    OnD3D9FrameRender(IDirect3DDevice9* D3DDevice);
     void    OnD3D9LostDevice( void* UserContext );
     void    OnD3D9DestroyDevice( void* UserContext );
 
     // DX10 specific
     HRESULT OnD3D10CreateDevice(
-            ID3D10Device* d3dDevice,
+            ID3D10Device* D3DDevice,
             const DXGI_SURFACE_DESC* BackBufferSurfaceDesc,
             void* UserContext );
     HRESULT OnD3D10ResizedSwapChain(
-            ID3D10Device* d3dDevice,
+            ID3D10Device* D3DDevice,
             IDXGISwapChain *SwapChain,
             const DXGI_SURFACE_DESC* BackBufferSurfaceDesc,
             void* UserContext );
     void    OnD3D10ReleasingSwapChain( void* UserContext );
     void    OnD3D10DestroyDevice( void* UserContext );
     void    OnD3D10FrameRender(
-            ID3D10Device* d3dDevice,
+            ID3D10Device* D3DDevice,
             const D3DXMATRIX*  ViewProjection,
 			const D3DXMATRIX*  InvView); 
 

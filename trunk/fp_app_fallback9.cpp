@@ -63,21 +63,21 @@ bool    CALLBACK FP_IsD3D9DeviceAcceptable(
         bool Windowed, 
         void* UserContext);
 HRESULT CALLBACK FP_OnD3D9CreateDevice( 
-        IDirect3DDevice9* d3dDevice, 
+        IDirect3DDevice9* D3DDevice, 
         const D3DSURFACE_DESC* BackBufferSurfaceDesc, 
         void* UserContext);
 HRESULT CALLBACK FP_OnD3D9ResetDevice(
-        IDirect3DDevice9* d3dDevice, 
+        IDirect3DDevice9* D3DDevice, 
         const D3DSURFACE_DESC* BackBufferSurfaceDesc, 
         void* UserContext);
 void    CALLBACK FP_OnD3D9FrameRender(
-        IDirect3DDevice9* d3dDevice,
+        IDirect3DDevice9* D3DDevice,
         double Time,
         float ElapsedTime,
         void* UserContext );
 void    CALLBACK FP_OnD3D9LostDevice( void* UserContext );
 void    CALLBACK FP_OnD3D9DestroyDevice( void* UserContext );
-HRESULT FP_LoadMesh( IDirect3DDevice9* d3dDevice, WCHAR* FileName, ID3DXMesh** Mesh );
+HRESULT FP_LoadMesh( IDirect3DDevice9* D3DDevice, WCHAR* FileName, ID3DXMesh** Mesh );
 
 
 //--------------------------------------------------------------------------------------
@@ -110,15 +110,15 @@ bool CALLBACK FP_IsD3D9DeviceAcceptable(
 // and aren't tied to the back buffer size 
 //--------------------------------------------------------------------------------------
 HRESULT CALLBACK FP_OnD3D9CreateDevice(
-        IDirect3DDevice9* d3dDevice,
+        IDirect3DDevice9* D3DDevice,
         const D3DSURFACE_DESC* BackBufferSurfaceDesc,
         void* UserContext) {    
     //HRESULT hr;
 
-    g_GUI.OnD3D9CreateDevice(d3dDevice, BackBufferSurfaceDesc, UserContext);
-    g_RenderSprites->OnD3D9CreateDevice(d3dDevice, BackBufferSurfaceDesc, UserContext);
-    g_RenderMarchingCubes->OnD3D9CreateDevice(d3dDevice, BackBufferSurfaceDesc, UserContext);
-    g_RenderRaycast->OnD3D9CreateDevice(d3dDevice, BackBufferSurfaceDesc, UserContext);
+    g_GUI.OnD3D9CreateDevice(D3DDevice, BackBufferSurfaceDesc, UserContext);
+    g_RenderSprites->OnD3D9CreateDevice(D3DDevice, BackBufferSurfaceDesc, UserContext);
+    g_RenderMarchingCubes->OnD3D9CreateDevice(D3DDevice, BackBufferSurfaceDesc, UserContext);
+    g_RenderRaycast->OnD3D9CreateDevice(D3DDevice, BackBufferSurfaceDesc, UserContext);
 
     // Setup the camera's view parameters
     D3DXVECTOR3 vecEye(0.0f, 0.0f, -15.0f);
@@ -135,7 +135,7 @@ HRESULT CALLBACK FP_OnD3D9CreateDevice(
 // mesh for the graphics card's vertex cache, which improves performance by organizing 
 // the internal triangle list for less cache misses.
 //--------------------------------------------------------------------------------------
-HRESULT FP_LoadMesh( IDirect3DDevice9* d3dDevice, WCHAR* FileName, ID3DXMesh** Mesh ) {
+HRESULT FP_LoadMesh( IDirect3DDevice9* D3DDevice, WCHAR* FileName, ID3DXMesh** Mesh ) {
     ID3DXMesh* pMesh = NULL;
     WCHAR str[MAX_PATH];
     HRESULT hr;
@@ -145,7 +145,7 @@ HRESULT FP_LoadMesh( IDirect3DDevice9* d3dDevice, WCHAR* FileName, ID3DXMesh** M
     // exactly the model we're loading.  See the mesh samples such as
     // "OptimizedMesh" for a more generic mesh loading example.
     V_RETURN( DXUTFindDXSDKMediaFileCch( str, MAX_PATH, FileName ) );
-    V_RETURN( D3DXLoadMeshFromX(str, D3DXMESH_MANAGED, d3dDevice, NULL, NULL, NULL,
+    V_RETURN( D3DXLoadMeshFromX(str, D3DXMESH_MANAGED, D3DDevice, NULL, NULL, NULL,
             NULL, &pMesh) );
 
     DWORD *rgdwAdjacency = NULL;
@@ -155,7 +155,7 @@ HRESULT FP_LoadMesh( IDirect3DDevice9* d3dDevice, WCHAR* FileName, ID3DXMesh** M
     {
         ID3DXMesh* pTempMesh;
         V( pMesh->CloneMeshFVF( pMesh->GetOptions(), pMesh->GetFVF()
-                | D3DFVF_NORMAL, d3dDevice, &pTempMesh ) );
+                | D3DFVF_NORMAL, D3DDevice, &pTempMesh ) );
         V( D3DXComputeNormals( pTempMesh, NULL ) );
 
         SAFE_RELEASE( pMesh );
@@ -185,15 +185,15 @@ HRESULT FP_LoadMesh( IDirect3DDevice9* d3dDevice, WCHAR* FileName, ID3DXMesh** M
 // or that are tied to the back buffer size 
 //--------------------------------------------------------------------------------------
 HRESULT CALLBACK FP_OnD3D9ResetDevice(
-        IDirect3DDevice9* d3dDevice, 
+        IDirect3DDevice9* D3DDevice, 
         const D3DSURFACE_DESC* BackBufferSurfaceDesc,
         void* UserContext ) {
     HRESULT hr;
-    //initPointSprites(d3dDevice);
-    g_GUI.OnD3D9ResetDevice(d3dDevice, BackBufferSurfaceDesc, UserContext);
-    g_RenderSprites->OnD3D9ResetDevice(d3dDevice, BackBufferSurfaceDesc, UserContext);
-    g_RenderMarchingCubes->OnD3D9ResetDevice(d3dDevice, BackBufferSurfaceDesc, UserContext);
-    g_RenderRaycast->OnD3D9ResetDevice(d3dDevice, BackBufferSurfaceDesc, UserContext);
+    //initPointSprites(D3DDevice);
+    g_GUI.OnD3D9ResetDevice(D3DDevice, BackBufferSurfaceDesc, UserContext);
+    g_RenderSprites->OnD3D9ResetDevice(D3DDevice, BackBufferSurfaceDesc, UserContext);
+    g_RenderMarchingCubes->OnD3D9ResetDevice(D3DDevice, BackBufferSurfaceDesc, UserContext);
+    g_RenderRaycast->OnD3D9ResetDevice(D3DDevice, BackBufferSurfaceDesc, UserContext);
 
     if( g_Effect9 ) V_RETURN( g_Effect9->OnResetDevice() );
     // Setup the camera's projection parameters
@@ -210,7 +210,7 @@ HRESULT CALLBACK FP_OnD3D9ResetDevice(
 // Render the scene using the D3D9 device
 //--------------------------------------------------------------------------------------
 void CALLBACK FP_OnD3D9FrameRender(
-        IDirect3DDevice9* d3dDevice, 
+        IDirect3DDevice9* D3DDevice, 
         double Time, 
         float ElapsedTime, 
         void* UserContext) {
@@ -226,11 +226,11 @@ void CALLBACK FP_OnD3D9FrameRender(
     D3DXMATRIXA16 Proj;
    
     // Clear the render target and the zbuffer 
-    V( d3dDevice->Clear(0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, D3DXCOLOR(
+    V( D3DDevice->Clear(0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, D3DXCOLOR(
 			FP_CLEAR_COLOR), 1.0f, 0) );
 
     // Render the scene
-    if( SUCCEEDED( d3dDevice->BeginScene() ) )
+    if( SUCCEEDED( D3DDevice->BeginScene() ) )
     {
         // Get the projection & view matrix from the camera class
         World = *g_Camera.GetWorldMatrix();
@@ -246,21 +246,21 @@ void CALLBACK FP_OnD3D9FrameRender(
             g_RenderMarchingCubes->m_Lights9[i].Diffuse = diffuse;
         }
 
-		d3dDevice->SetTransform( D3DTS_WORLD, &World );
-        d3dDevice->SetTransform( D3DTS_PROJECTION, &Proj );
-        d3dDevice->SetTransform( D3DTS_VIEW, &View );        
+		D3DDevice->SetTransform( D3DTS_WORLD, &World );
+        D3DDevice->SetTransform( D3DTS_PROJECTION, &Proj );
+        D3DDevice->SetTransform( D3DTS_VIEW, &View );        
        
         if(g_RenderType == FP_GUI_RENDERTYPE_SPRITE)
-            g_RenderSprites->OnD3D9FrameRender(d3dDevice);
+            g_RenderSprites->OnD3D9FrameRender(D3DDevice);
         else if(g_RenderType == FP_GUI_RENDERTYPE_MARCHING_CUBES)
-            g_RenderMarchingCubes->OnD3D9FrameRender(d3dDevice);
+            g_RenderMarchingCubes->OnD3D9FrameRender(D3DDevice);
         else if(g_RenderType == FP_GUI_RENDERTYPE_RAYCAST)
-            g_RenderRaycast->OnD3D9FrameRender(d3dDevice);
-        g_GUI.OnD3D9FrameRender(d3dDevice, ElapsedTime, g_Camera.GetEyePt(),
+            g_RenderRaycast->OnD3D9FrameRender(D3DDevice);
+        g_GUI.OnD3D9FrameRender(D3DDevice, ElapsedTime, g_Camera.GetEyePt(),
                 &View, &Proj, g_NumActiveLights,
                 g_ActiveLight, g_LightScale);
 
-        V( d3dDevice->EndScene() );
+        V( D3DDevice->EndScene() );
     }
 }
 
