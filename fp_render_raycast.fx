@@ -2,6 +2,62 @@
 // File: fp_render_raycast.fx
 //--------------------------------------------------------------------------------------
 
+
+
+
+
+//--------------------------------------------------------------------------------------
+// Global variables
+//--------------------------------------------------------------------------------------
+
+cbuffer cbImmutable {
+    float2 g_CornersTex[4] = { 
+        float2(-1, 1), 
+        float2( 1, 1),
+        float2(-1,-1),
+        float2( 1,-1),
+    };
+};
+
+cbuffer cbOnce {
+    int3 g_VolumeDimensions; // volume dimension in number of voxels
+};
+
+cbuffer cbSometimes {
+    int g_ParticleVoxelRadius;
+    float g_HalfParticleVoxelDiameter;
+    float4 g_CornersPos[4]; // normalized device space corner offsets
+    float3 g_BBoxSize;
+};
+
+cbuffer cbOften {
+    float4x4 g_WorldToNDS;
+    float4x4 g_WorldViewProjection;
+    float3 g_BBoxStart;    
+};
+
+//*cbuffer cbEveryFrame {
+//*};
+
+
+
+
+
+//--------------------------------------------------------------------------------------
+// Textures
+//--------------------------------------------------------------------------------------
+
+Texture1D g_WValsMulParticleMass;
+Texture2D g_ExitPoint;
+Texture2D g_IntersectionPosition0;
+Texture2D g_IntersectionPosition1;
+Texture2D g_IntersectionNormal0;
+Texture2D g_IntersectionNormal1;
+
+
+
+
+
 //--------------------------------------------------------------------------------------
 // Structs
 //--------------------------------------------------------------------------------------
@@ -42,38 +98,9 @@ struct RaycastComposePSOut {
     float Depth                     : SV_Depth;
 };
 
-//--------------------------------------------------------------------------------------
-// Global variables
-//--------------------------------------------------------------------------------------
 
-cbuffer cbImmutable {
-    float2 g_CornersTex[4] = { 
-        float2(-1, 1), 
-        float2( 1, 1),
-        float2(-1,-1),
-        float2( 1,-1),
-    };
-};
 
-cbuffer cbOnce {
-    int3 g_VolumeDimensions; // volume dimension in number of voxels
-};
 
-cbuffer cbSometimes {
-    int g_ParticleVoxelRadius;
-    float g_HalfParticleVoxelDiameter;
-    float4 g_CornersPos[4]; // normalized device space corner offsets
-    float3 g_BBoxSize;
-};
-
-cbuffer cbOften {
-    float4x4 g_WorldToNDS;
-    float4x4 g_WorldViewProjection;
-    float3 g_BBoxStart;    
-};
-
-//*cbuffer cbEveryFrame {
-//*};
 
 //--------------------------------------------------------------------------------------
 // Texture samplers
@@ -85,154 +112,13 @@ SamplerState LinearBorder {
     BorderColor = float4(0, 0, 0, 0);
 };
 
-//--------------------------------------------------------------------------------------
-// Textures
-//--------------------------------------------------------------------------------------
 
-Texture1D g_WValsMulParticleMass;
-Texture2D g_ExitPoint;
-Texture2D g_IntersectionPosition0;
-Texture2D g_IntersectionPosition1;
-Texture2D g_IntersectionNormal0;
-Texture2D g_IntersectionNormal1;
+
+
 
 //--------------------------------------------------------------------------------------
-// RasterizerStates
+// Shaders
 //--------------------------------------------------------------------------------------
-
-RasterizerState CullFront {
-    CullMode = Front;
-};
-
-RasterizerState CullBack {
-    CullMode = Back;
-};
-
-RasterizerState CullNone {
-    CullMode = None;
-};
-
-//--------------------------------------------------------------------------------------
-// BlendStates
-//--------------------------------------------------------------------------------------
-
-BlendState AlphaBlending {
-    AlphaToCoverageEnable = FALSE;
-    SrcBlend = SRC_ALPHA;
-    DestBlend = INV_SRC_ALPHA;
-    BlendOp = ADD;
-    SrcBlendAlpha = ZERO;
-    DestBlendAlpha = ZERO;
-    BlendOpAlpha = ADD;
-    
-    BlendEnable[0] = TRUE;
-    BlendEnable[1] = TRUE;
-    BlendEnable[2] = TRUE;
-    BlendEnable[3] = TRUE;
-    BlendEnable[4] = TRUE;
-    BlendEnable[5] = TRUE;
-    BlendEnable[6] = TRUE;
-    BlendEnable[7] = TRUE;
-    
-    RenderTargetWriteMask[0] = 0x0F;
-    RenderTargetWriteMask[1] = 0x0F;
-    RenderTargetWriteMask[2] = 0x0F;
-    RenderTargetWriteMask[3] = 0x0F;
-    RenderTargetWriteMask[4] = 0x0F;
-    RenderTargetWriteMask[5] = 0x0F;
-    RenderTargetWriteMask[6] = 0x0F;
-    RenderTargetWriteMask[7] = 0x0F;   
-};
-
-BlendState AdditiveBlending
-{
-    AlphaToCoverageEnable = FALSE;    
-    SrcBlend = ONE;
-    DestBlend = ONE;
-    BlendOp = ADD;
-    SrcBlendAlpha = ONE;
-    DestBlendAlpha = ONE;
-    BlendOpAlpha = ADD;
-    
-    BlendEnable[0] = TRUE;
-    BlendEnable[1] = TRUE;
-    BlendEnable[2] = TRUE;
-    BlendEnable[3] = TRUE;
-    BlendEnable[4] = TRUE;
-    BlendEnable[5] = TRUE;
-    BlendEnable[6] = TRUE;
-    BlendEnable[7] = TRUE;
-    
-    RenderTargetWriteMask[0] = 0x0F;
-    RenderTargetWriteMask[1] = 0x0F;
-    RenderTargetWriteMask[2] = 0x0F;
-    RenderTargetWriteMask[3] = 0x0F;
-    RenderTargetWriteMask[4] = 0x0F;
-    RenderTargetWriteMask[5] = 0x0F;
-    RenderTargetWriteMask[6] = 0x0F;
-    RenderTargetWriteMask[7] = 0x0F;    
-}; 
-
-BlendState BlendOver {
-    AlphaToCoverageEnable = FALSE;
-    SrcBlend = SRC_ALPHA;
-    DestBlend = INV_SRC_ALPHA;
-    BlendOp = ADD;
-    SrcBlendAlpha = ONE;
-    DestBlendAlpha = ONE;
-    BlendOpAlpha = ADD;
-
-    BlendEnable[0]			 = TRUE;
-    BlendEnable[1]			 = TRUE;
-    BlendEnable[2]			 = TRUE;
-    BlendEnable[3]			 = TRUE;
-    BlendEnable[4]			 = TRUE;
-    BlendEnable[5]			 = TRUE;
-    BlendEnable[6]			 = TRUE;
-    BlendEnable[7]			 = TRUE;
-
-    RenderTargetWriteMask[0] = 0x0F;
-	RenderTargetWriteMask[1] = 0x0F;
-    RenderTargetWriteMask[2] = 0x0F;
-    RenderTargetWriteMask[3] = 0x0F;
-    RenderTargetWriteMask[4] = 0x0F;
-    RenderTargetWriteMask[5] = 0x0F;
-    RenderTargetWriteMask[6] = 0x0F;
-    RenderTargetWriteMask[7] = 0x0F;
-};
-
-BlendState NoBlending {
-    AlphaToCoverageEnable = FALSE;
-    BlendEnable[0] = FALSE;
-    BlendEnable[1] = FALSE;
-    BlendEnable[2] = FALSE;
-    BlendEnable[3] = FALSE;
-    BlendEnable[4] = FALSE;
-    BlendEnable[5] = FALSE;
-    BlendEnable[6] = FALSE;
-    BlendEnable[7] = FALSE;
-};
-
-//--------------------------------------------------------------------------------------
-// DepthStencilStates
-//--------------------------------------------------------------------------------------
-
-DepthStencilState EnableDepth {
-    DepthEnable = TRUE;
-    DepthWriteMask = ALL;
-    DepthFunc = LESS_EQUAL;
-};
-
-DepthStencilState DisableDepth {
-    DepthEnable = false;
-    DepthWriteMask = ZERO;
-    DepthFunc = Less;
-
-    //Stencil
-    StencilEnable = false;
-    StencilReadMask = 0xFF;
-    StencilWriteMask = 0x00;
-};
 
 //--------------------------------------------------------------------------------------
 // Vertex shader for particle splatting
@@ -506,8 +392,157 @@ void CopyRT1PS(
 }
 
 
+
+
+
 //--------------------------------------------------------------------------------------
-// D3D10 Techniques
+// States
+//--------------------------------------------------------------------------------------
+
+//--------------------------------------------------------------------------------------
+// Rasterizer states
+//--------------------------------------------------------------------------------------
+
+RasterizerState CullFront {
+    CullMode = Front;
+};
+
+RasterizerState CullBack {
+    CullMode = Back;
+};
+
+RasterizerState CullNone {
+    CullMode = None;
+};
+
+//--------------------------------------------------------------------------------------
+// Blend states
+//--------------------------------------------------------------------------------------
+
+BlendState AlphaBlending {
+    AlphaToCoverageEnable = FALSE;
+    SrcBlend = SRC_ALPHA;
+    DestBlend = INV_SRC_ALPHA;
+    BlendOp = ADD;
+    SrcBlendAlpha = ZERO;
+    DestBlendAlpha = ZERO;
+    BlendOpAlpha = ADD;
+    
+    BlendEnable[0] = TRUE;
+    BlendEnable[1] = TRUE;
+    BlendEnable[2] = TRUE;
+    BlendEnable[3] = TRUE;
+    BlendEnable[4] = TRUE;
+    BlendEnable[5] = TRUE;
+    BlendEnable[6] = TRUE;
+    BlendEnable[7] = TRUE;
+    
+    RenderTargetWriteMask[0] = 0x0F;
+    RenderTargetWriteMask[1] = 0x0F;
+    RenderTargetWriteMask[2] = 0x0F;
+    RenderTargetWriteMask[3] = 0x0F;
+    RenderTargetWriteMask[4] = 0x0F;
+    RenderTargetWriteMask[5] = 0x0F;
+    RenderTargetWriteMask[6] = 0x0F;
+    RenderTargetWriteMask[7] = 0x0F;   
+};
+
+BlendState AdditiveBlending
+{
+    AlphaToCoverageEnable = FALSE;    
+    SrcBlend = ONE;
+    DestBlend = ONE;
+    BlendOp = ADD;
+    SrcBlendAlpha = ONE;
+    DestBlendAlpha = ONE;
+    BlendOpAlpha = ADD;
+    
+    BlendEnable[0] = TRUE;
+    BlendEnable[1] = TRUE;
+    BlendEnable[2] = TRUE;
+    BlendEnable[3] = TRUE;
+    BlendEnable[4] = TRUE;
+    BlendEnable[5] = TRUE;
+    BlendEnable[6] = TRUE;
+    BlendEnable[7] = TRUE;
+    
+    RenderTargetWriteMask[0] = 0x0F;
+    RenderTargetWriteMask[1] = 0x0F;
+    RenderTargetWriteMask[2] = 0x0F;
+    RenderTargetWriteMask[3] = 0x0F;
+    RenderTargetWriteMask[4] = 0x0F;
+    RenderTargetWriteMask[5] = 0x0F;
+    RenderTargetWriteMask[6] = 0x0F;
+    RenderTargetWriteMask[7] = 0x0F;    
+}; 
+
+BlendState BlendOver {
+    AlphaToCoverageEnable = FALSE;
+    SrcBlend = SRC_ALPHA;
+    DestBlend = INV_SRC_ALPHA;
+    BlendOp = ADD;
+    SrcBlendAlpha = ONE;
+    DestBlendAlpha = ONE;
+    BlendOpAlpha = ADD;
+
+    BlendEnable[0]			 = TRUE;
+    BlendEnable[1]			 = TRUE;
+    BlendEnable[2]			 = TRUE;
+    BlendEnable[3]			 = TRUE;
+    BlendEnable[4]			 = TRUE;
+    BlendEnable[5]			 = TRUE;
+    BlendEnable[6]			 = TRUE;
+    BlendEnable[7]			 = TRUE;
+
+    RenderTargetWriteMask[0] = 0x0F;
+	RenderTargetWriteMask[1] = 0x0F;
+    RenderTargetWriteMask[2] = 0x0F;
+    RenderTargetWriteMask[3] = 0x0F;
+    RenderTargetWriteMask[4] = 0x0F;
+    RenderTargetWriteMask[5] = 0x0F;
+    RenderTargetWriteMask[6] = 0x0F;
+    RenderTargetWriteMask[7] = 0x0F;
+};
+
+BlendState NoBlending {
+    AlphaToCoverageEnable = FALSE;
+    BlendEnable[0] = FALSE;
+    BlendEnable[1] = FALSE;
+    BlendEnable[2] = FALSE;
+    BlendEnable[3] = FALSE;
+    BlendEnable[4] = FALSE;
+    BlendEnable[5] = FALSE;
+    BlendEnable[6] = FALSE;
+    BlendEnable[7] = FALSE;
+};
+
+//--------------------------------------------------------------------------------------
+// DepthStencil states
+//--------------------------------------------------------------------------------------
+
+DepthStencilState EnableDepth {
+    DepthEnable = TRUE;
+    DepthWriteMask = ALL;
+    DepthFunc = LESS_EQUAL;
+};
+
+DepthStencilState DisableDepth {
+    DepthEnable = false;
+    DepthWriteMask = ZERO;
+    DepthFunc = Less;
+
+    //Stencil
+    StencilEnable = false;
+    StencilReadMask = 0xFF;
+    StencilWriteMask = 0x00;
+};
+
+
+
+
+
+//--------------------------------------------------------------------------------------
+// Techniques
 //--------------------------------------------------------------------------------------
 
 technique10 RenderRaycast {
