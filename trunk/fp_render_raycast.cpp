@@ -20,10 +20,11 @@ fp_RenderRaycast::fp_RenderRaycast(
     m_VolumeTexture(NULL),
     m_VolumeRTV(NULL),
     m_VolumeSRV(NULL),
+    m_ExitPoint(NULL),
     m_WValsMulParticleMassTexture(NULL),
     m_WValsMulParticleMassSRV(NULL),
-    m_VertexLayout(NULL),
-    m_VertexBuffer(NULL), 
+    m_SplatParticleVertexLayout(NULL),
+    m_SplatParticleVertexBuffer(NULL), 
     m_Effect(NULL),
     m_TechRenderRaycast(NULL),
     m_EffectVarCornersPos(NULL),
@@ -71,7 +72,7 @@ HRESULT fp_RenderRaycast::OnD3D10CreateDevice(
     HRESULT hr;
     V_RETURN(CreateVolumeTexture(D3DDevice));
 
-    // CreateW ValsMulParticleMass texture
+    // CreateWValsMulParticleMass texture
     D3D10_TEXTURE1D_DESC texDesc;
     texDesc.BindFlags = D3D10_BIND_SHADER_RESOURCE;
     texDesc.CPUAccessFlags = D3D10_CPU_ACCESS_WRITE; 
@@ -83,7 +84,7 @@ HRESULT fp_RenderRaycast::OnD3D10CreateDevice(
     texDesc.Width = m_WValsMulParticleMassLength = 32;
     V_RETURN(D3DDevice->CreateTexture1D(&texDesc, NULL, &m_WValsMulParticleMassTexture));
 
-    // Create Shader Resource View
+    // Create CreateWValsMulParticleMass shader sesource view
     D3D10_SHADER_RESOURCE_VIEW_DESC srvDesc;
     ZeroMemory( &srvDesc, sizeof(srvDesc) );
     srvDesc.ViewDimension = D3D10_SRV_DIMENSION_TEXTURE1D;
@@ -137,8 +138,8 @@ HRESULT fp_RenderRaycast::OnD3D10CreateDevice(
     V_RETURN( m_TechRenderRaycast->GetPassByIndex(0)->GetDesc(&passDesc));
     int numElements = sizeof(fp_SplatParticleVertex::Layout)
             / sizeof(fp_SplatParticleVertex::Layout[0]);
-    V_RETURN( D3DDevice->CreateInputLayout(fp_SplatParticleVertex::Layout, numElements,
-            passDesc.pIAInputSignature, passDesc.IAInputSignatureSize, &m_VertexLayout));
+    V_RETURN(D3DDevice->CreateInputLayout(fp_SplatParticleVertex::Layout, numElements,
+            passDesc.pIAInputSignature, passDesc.IAInputSignatureSize, &m_SplatParticleVertexLayout));
 
     D3D10_BUFFER_DESC bufferDesc;
     bufferDesc.Usage = D3D10_USAGE_DYNAMIC;
@@ -146,7 +147,7 @@ HRESULT fp_RenderRaycast::OnD3D10CreateDevice(
     bufferDesc.BindFlags = D3D10_BIND_VERTEX_BUFFER;
     bufferDesc.CPUAccessFlags = D3D10_CPU_ACCESS_WRITE;
     bufferDesc.MiscFlags = 0;
-    V_RETURN(D3DDevice->CreateBuffer(&bufferDesc, NULL, &m_VertexBuffer));
+    V_RETURN(D3DDevice->CreateBuffer(&bufferDesc, NULL, &m_SplatParticleVertexBuffer));
 
     return S_OK;
 }
@@ -156,6 +157,9 @@ HRESULT fp_RenderRaycast::OnD3D10ResizedSwapChain(
         IDXGISwapChain *SwapChain,
         const DXGI_SURFACE_DESC* BackBufferSurfaceDesc,
         void* UserContext ) {
+    // Create exit point render target
+    m_ExitPoint = new fp_RenderTarget2D(D3DDevice, BackBufferSurfaceDesc->Width,
+            BackBufferSurfaceDesc->Height, DXGI_FORMAT_R16G16B16A16_FLOAT);
     return S_OK;
 }
 
@@ -171,12 +175,13 @@ void fp_RenderRaycast::OnD3D10DestroyDevice( void* UserContext ) {
     DestroyVolumeTexture();   
     SAFE_RELEASE(m_WValsMulParticleMassTexture);
     SAFE_RELEASE(m_WValsMulParticleMassSRV);
-    SAFE_RELEASE(m_VertexLayout);
-    SAFE_RELEASE(m_VertexBuffer);
+    SAFE_RELEASE(m_SplatParticleVertexLayout);
+    SAFE_RELEASE(m_SplatParticleVertexBuffer);
     SAFE_RELEASE(m_Effect);
 }
 
 void fp_RenderRaycast::OnD3D10ReleasingSwapChain( void* UserContext ) {
+    SAFE_DELETE(m_ExitPoint);
 }
 
 void fp_RenderRaycast::SetFluid(fp_Fluid* Fluid) {
@@ -300,14 +305,14 @@ HRESULT fp_RenderRaycast::CreateVolumeTexture(ID3D10Device* D3DDevice) {
 void fp_RenderRaycast::FillVolumeTexture(ID3D10Device* D3DDevice) {    
     fp_SplatParticleVertex *splatVertices;
     float* densities = m_Fluid->GetDensities();
-    m_VertexBuffer->Map(D3D10_MAP_WRITE_DISCARD, 0, (void**)&splatVertices);
+    m_SplatParticleVertexBuffer->Map(D3D10_MAP_WRITE_DISCARD, 0, (void**)&splatVertices);
     for( int i = 0; i < m_NumParticles; i++ ) {
         D3DXVECTOR3 pos = m_Particles[i].m_Position;
         splatVertices->m_PositionAndDensity = D3DXVECTOR4(pos.x, pos.y, pos.z,
                 densities[i]);
         splatVertices++;
     }
-    m_VertexBuffer->Unmap();  
+    m_SplatParticleVertexBuffer->Unmap();  
 
     ID3D10RenderTargetView *oldRTV;
     ID3D10DepthStencilView *oldDSV;
@@ -326,12 +331,12 @@ void fp_RenderRaycast::FillVolumeTexture(ID3D10Device* D3DDevice) {
     D3DDevice->RSSetViewports(1, &rtViewport);
 
     // Set vertex Layout
-    D3DDevice->IASetInputLayout(m_VertexLayout);
+    D3DDevice->IASetInputLayout(m_SplatParticleVertexLayout);
 
     // Set IA parameters
     UINT strides[1] = {sizeof(fp_SplatParticleVertex)};
     UINT offsets[1] = {0};
-    D3DDevice->IASetVertexBuffers(0, 1, &m_VertexBuffer, strides, offsets);
+    D3DDevice->IASetVertexBuffers(0, 1, &m_SplatParticleVertexBuffer, strides, offsets);
     D3DDevice->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_POINTLIST);
 
     m_EffectVarWValsMulParticleMass->SetResource(m_WValsMulParticleMassSRV);
@@ -361,4 +366,8 @@ void fp_RenderRaycast::DestroyVolumeTexture() {
 void fp_RenderRaycast::RenderVolume(
         ID3D10Device* D3DDevice,
         const D3DXMATRIX*  WorldViewProjection) {
+    m_EffectVarWorldViewProjection->SetMatrix((float*)WorldViewProjection);
+    m_ExitPoint->Bind(true, false);
+    m_ExitPoint->Unbind();
+
 }

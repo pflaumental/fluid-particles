@@ -71,13 +71,16 @@ public:
 private:
     ID3D10Texture3D *m_VolumeTexture;
     ID3D10RenderTargetView *m_VolumeRTV;
-    ID3D10ShaderResourceView *m_VolumeSRV;
+    ID3D10ShaderResourceView *m_VolumeSRV;    
+
     ID3D10Texture1D *m_WValsMulParticleMassTexture;
     ID3D10ShaderResourceView *m_WValsMulParticleMassSRV;
     int m_WValsMulParticleMassLength;
 
-    ID3D10InputLayout* m_VertexLayout;
-    ID3D10Buffer* m_VertexBuffer;    
+    fp_RenderTarget2D* m_ExitPoint;
+
+    ID3D10InputLayout* m_SplatParticleVertexLayout;
+    ID3D10Buffer* m_SplatParticleVertexBuffer;    
 
     ID3D10Effect* m_Effect;
     ID3D10EffectTechnique* m_TechRenderRaycast;
@@ -89,7 +92,7 @@ private:
     ID3D10EffectShaderResourceVariable* m_EffectVarWValsMulParticleMass;
     ID3D10EffectVectorVariable* m_EffectVarBBoxStart;
     ID3D10EffectVectorVariable* m_EffectVarBBoxSize;
-    ID3D10EffectMatrixVariable* m_EffectVarWorldToNDS;
+    ID3D10EffectMatrixVariable* m_EffectVarWorldToNDS;     
 
     fp_VolumeIndex m_VolumeDimensions;
     
