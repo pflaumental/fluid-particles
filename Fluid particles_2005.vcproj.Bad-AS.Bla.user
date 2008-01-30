@@ -11,7 +11,7 @@
 			<DebugSettings
 				Command="$(TargetPath)"
 				WorkingDirectory=""
-				CommandArguments="-forceapi:10 -width:1024 -height:768"
+				CommandArguments="-width:1024 -height:768 -forcevsync:0 -startx:0, -starty:0, "
 				Attach="false"
 				DebuggerType="3"
 				Remote="1"
@@ -67,7 +67,7 @@
 			<DebugSettings
 				Command="$(TargetPath)"
 				WorkingDirectory=""
-				CommandArguments="-forceapi:10 -width:1024 -height:768"
+				CommandArguments="-width:1024 -height:768 -forcevsync:0 -startx:0, -starty:0, "
 				Attach="false"
 				DebuggerType="3"
 				Remote="1"
@@ -123,7 +123,7 @@
 			<DebugSettings
 				Command="$(TargetPath)"
 				WorkingDirectory=""
-				CommandArguments="-forceapi:10 -width:1024 -height:768"
+				CommandArguments="-width:1024 -height:768 -forcevsync:0 -startx:0, -starty:0, "
 				Attach="false"
 				DebuggerType="3"
 				Remote="1"

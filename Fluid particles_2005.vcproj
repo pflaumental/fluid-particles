@@ -800,6 +800,14 @@
 			>
 		</File>
 		<File
+			RelativePath=".\fp_bounding_box.cpp"
+			>
+		</File>
+		<File
+			RelativePath=".\fp_bounding_box.h"
+			>
+		</File>
+		<File
 			RelativePath=".\fp_cpu_sph.cpp"
 			>
 		</File>

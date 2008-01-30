@@ -10,7 +10,7 @@
 // Global variables
 //--------------------------------------------------------------------------------------
 
-cbuffer cbImmutable {
+cbuffer Immutable {
     float2 g_CornersTex[4] = { 
         float2(-1, 1), 
         float2( 1, 1),
@@ -19,19 +19,25 @@ cbuffer cbImmutable {
     };
 };
 
-cbuffer cbOnce {
+cbuffer Once {
     int3 g_VolumeDimensions; // volume dimension in number of voxels
+    float3 g_VolumeSizeRatio; // contains ratio "size / sizeMax" for each dimension
+    float3 g_TexDelta;
+    float g_Stepsize;
+    int g_NumRefineSteps = 5;
 };
 
-cbuffer cbSometimes {
+cbuffer Sometimes {
     int g_ParticleVoxelRadius;
     float g_HalfParticleVoxelDiameter;
     float4 g_CornersPos[4]; // normalized device space corner offsets
     float3 g_BBoxSize;
+    float g_IsoLevel;
 };
 
-cbuffer cbOften {
+cbuffer Often {
     float4x4 g_WorldToNDS;
+    float4x4 g_WorldView;
     float4x4 g_WorldViewProjection;
     float3 g_BBoxStart;    
 };
@@ -53,6 +59,7 @@ Texture2D g_IntersectionPosition0;
 Texture2D g_IntersectionPosition1;
 Texture2D g_IntersectionNormal0;
 Texture2D g_IntersectionNormal1;
+Texture3D g_IsoVolume;
 
 
 
@@ -84,16 +91,11 @@ struct SplatParticlePSOut {
 };
 
 struct RaycastTransformVSOut {
-    float4 VolumePosDepth           : VOLUMEPOS_DEPTH;
+    float4 VolumePosClipDepth       : VOLUMEPOS_CLIPDEPTH;
     float4 Pos                      : SV_POSITION;
 };
 
-struct RaycastTraceIsoPSOut {
-    float4 Position                 : SV_Target0;
-    float4 Normal                   : SV_Target1;
-};
-
-struct RaycastComposePSOut {
+struct RaycastTraceIsoAndShadePSOut {
     float4 Color                    : SV_Target0;
     float Depth                     : SV_Depth;
 };
@@ -110,6 +112,14 @@ SamplerState LinearBorder {
     Filter = MIN_MAG_MIP_LINEAR;
     AddressU = Border;
     BorderColor = float4(0, 0, 0, 0);
+};
+
+SamplerState LinearPointClamp
+{
+    Filter      = MIN_MAG_LINEAR_MIP_POINT;
+    AddressU    = Clamp;
+    AddressV    = Clamp;
+    AddressW    = Clamp;
 };
 
 
@@ -193,10 +203,10 @@ SplatParticlePSOut SplatParticlePS(SplatParticlePSIn Input) {
 RaycastTransformVSOut RaycastTransformVS(in float3 Position : POSITION) {
     RaycastTransformVSOut result;
 	// scale to [0,1]
-    result.VolumePosDepth.xyz = (Position - g_BBoxStart) / g_BBoxSize;    
+    result.VolumePosClipDepth.xyz = (Position - g_BBoxStart) / g_BBoxSize;    
     //*Position *= g_Aspect;
     result.Pos = mul(float4(Position, 1), g_WorldViewProjection);
-    result.VolumePosDepth.w = result.Pos.z;    
+    result.VolumePosClipDepth.w = result.Pos.z;    
     return result;
 }
 
@@ -218,177 +228,131 @@ float4 RaycastNullVS(in float3 Position : POSITION) : SV_POSITION {
 // -
 //--------------------------------------------------------------------------------------
 float4 RaycastExitPS(RaycastTransformVSOut Input) : SV_Target {
-    return Input.VolumePosDepth;
+    return Input.VolumePosClipDepth;
+}
+
+// Helper Function for calculating the local stepsize
+float CalcLocalStepsize(float3 RayDir, float RayDirLen) {
+	float3 scaledRayDir = RayDir * g_VolumeSizeRatio;
+	return g_Stepsize * RayDirLen / length(scaledRayDir);
+}
+
+// Function for refining the iso trace
+float3 RefineIsosurface(float3 VolumeOffset, float3 SampleVolumePos) {
+	VolumeOffset /= 2;
+	SampleVolumePos -= VolumeOffset;
+	for (int i = 0; i < g_NumRefineSteps; i++) {
+		VolumeOffset /= 2;
+		float isoVal = g_IsoVolume.SampleLevel(LinearPointClamp, SampleVolumePos, 0).r;
+		if (isoVal >= g_IsoLevel)
+			SampleVolumePos -= VolumeOffset;
+		else
+			SampleVolumePos += VolumeOffset;
+	}	
+	return float3(SampleVolumePos);
 }
 
 //--------------------------------------------------------------------------------------
-// Pixel shader for tracing the iso volume
+// Function for tracing iso surface
 // Input:  volume space position, clip space depth, screen space position
-// Output: wordspace position and normal of the first intersection
+// Output: worldspace position and normal of the first intersection
+// Traces the iso volume along the view ray to find the first intersection.
+// If Intersection is found it get's refined.
+//--------------------------------------------------------------------------------------
+void RaycastTraceIso(
+        in RaycastTransformVSOut Input, 
+        out float4 IntersectionPosDepth,
+        out float3 IntersectionNormal,
+        bool PerPixelStepsize) {
+    IntersectionPosDepth = 0;
+    IntersectionNormal = 0;    
+
+    float4 entryVolumePosClipDepth = Input.VolumePosClipDepth;
+    float4 exitVolumePosClipDepth = g_ExitPoint.Load(
+            int3(entryVolumePosClipDepth.xy, 0));
+
+    // ray entry, exit and direction    
+    float3 sampleVolumePos = entryVolumePosClipDepth.xyz;
+    float3 exitVolumePos = exitVolumePosClipDepth.xyz;
+    float3 volumeOffset = exitVolumePos - entryVolumePosClipDepth.xyz;
+    float  volumeRayLen = length(volumeOffset);
+    float  localStepsize = PerPixelStepsize
+            ? CalcLocalStepsize(volumeOffset, volumeRayLen)
+            : g_Stepsize;
+    volumeOffset /= (volumeRayLen * localStepsize);
+    int numSteps = ceil(volumeRayLen / localStepsize);
+    float isoVal;
+    while(numSteps-- > 0) {
+        float isoVal = g_IsoVolume.SampleLevel(LinearPointClamp, sampleVolumePos, 0).r;
+        if (isoVal >= g_IsoLevel)
+			break;
+        sampleVolumePos += volumeOffset;
+    }
+    if(numSteps <= 0) {
+        isoVal = g_IsoVolume.SampleLevel(LinearPointClamp, exitVolumePos, 0).r;
+        if (isoVal >= g_IsoLevel) {
+			sampleVolumePos = exitVolumePos;
+			numSteps = 1;
+		}
+    }    
+	// refine isosurface
+	if(numSteps > 0) {
+		IntersectionPosDepth = float4(RefineIsosurface(volumeOffset, sampleVolumePos), 0);
+		// compute depth 		
+		IntersectionPosDepth.w = entryVolumePosClipDepth.w
+		        + length(entryVolumePosClipDepth.xyz - IntersectionPosDepth.xyz)
+		        / volumeRayLen * (exitVolumePosClipDepth.w - Input.VolumePosClipDepth.w);
+		// generate normal
+		float3 grad;
+		grad.x = g_IsoVolume.SampleLevel(LinearPointClamp,
+		        IntersectionPosDepth.xyz + float3(g_TexDelta.x, 0, 0), 0)
+		        -
+                g_IsoVolume.SampleLevel(LinearPointClamp,
+                IntersectionPosDepth.xyz - float3(g_TexDelta.x, 0, 0), 0);
+		grad.y = g_IsoVolume.SampleLevel(LinearPointClamp,
+		        IntersectionPosDepth.xyz + float3(0, g_TexDelta.y, 0), 0)
+		        -
+                g_IsoVolume.SampleLevel(LinearPointClamp,
+                IntersectionPosDepth.xyz - float3(0, g_TexDelta.y, 0), 0);
+		grad.z = g_IsoVolume.SampleLevel(LinearPointClamp,
+		        IntersectionPosDepth.xyz + float3(0, 0, g_TexDelta.z), 0)
+		        -
+                g_IsoVolume.SampleLevel(LinearPointClamp,
+                IntersectionPosDepth.xyz - float3(0, 0 ,g_TexDelta.z), 0);
+		IntersectionNormal = normalize(mul(normalize(grad), (float3x3)g_WorldView));
+		// transform intersection position from volume to world space
+		IntersectionPosDepth.xyz = (IntersectionPosDepth.xyz * g_BBoxSize) + g_BBoxStart;
+	}    
+}
+
+void ShadeIso(
+        in float4 PositionDepth,
+        in float3 Normal,
+        out float4 Color,
+        out float Depth) {
+    Color = float4(0,0,0,0);
+    Depth = 0;
+}
+
+//--------------------------------------------------------------------------------------
+// Pixel shader for tracing and shading the iso surface
+// Input:  volume space position, clip space depth, screen space position
+// Output: worldspace position and normal of the first intersection
 // comment TODO
 //--------------------------------------------------------------------------------------
-RaycastTraceIsoPSOut RaycastTraceIsoPS(RaycastTransformVSOut Input) {
-    RaycastTraceIsoPSOut result;
-    float4 ExitAndDepth = g_ExitPoint.Load(int3(Input.Pos.xy,0));
+RaycastTraceIsoAndShadePSOut RaycastTraceIsoAndShadePS(
+        RaycastTransformVSOut Input,
+        uniform bool PerPixelStepSize) {
+    RaycastTraceIsoAndShadePSOut result;   
+    float4 intersectionWorldPosClipDepth;
+    float3 intersectionNormal;
+    
+    RaycastTraceIso(Input, intersectionWorldPosClipDepth, intersectionNormal,
+            PerPixelStepSize);
+    ShadeIso(intersectionWorldPosClipDepth, intersectionNormal, result.Color,
+            result.Depth);
 
-    //*// ray entry, exit and direction
-    //*float3 volumePos      = volumePosAndDepth.xyz;
-    //*float3 vExit          = vExitAndDepth.xyz;
-    //*float3 vDir           = vExit - volumePos;
-    //*float  fDirLen        = length(vDir);
-    //*float  fLocalStepsize = bPerPixelStepsize ? GetLocalStepsize(vDir, fDirLen) : g_fStepsize;
-    //*vDir                  = vDir / fDirLen * fLocalStepsize;
-	//*
-    //*position0 = 0;
-    //*normal0 = 0;
-    //*
-    //*int numSteps = ceil(fDirLen / fLocalStepsize);
-    //*while(--numSteps >= 0) {
-        //*float voxel = GetScalar(volumePos, g_txVolume);
-        //*
-        //*if (voxel >= g_fIsoVal)
-			//*break;
-		//*
-        //*volumePos += vDir;
-    //*}
-    //*if(numSteps < 0) {
-        //*float voxel = GetScalar(vExit, g_txVolume);
-        //*
-        //*if (voxel >= g_fIsoVal) {
-			//*volumePos = vExit;
-			//*numSteps = 0;
-		//*}
-    //*}
-    //*
-	//*// refine isosurface
-	//*if(numSteps >= 0) {
-		//*position0 = RefineIsosurface(vDir, volumePos, g_txVolume, g_fIsoVal);
-		//*
-		//*// compute depth 		
-		//*position0.a = volumePosAndDepth.a + length(volumePosAndDepth.xyz - position0.xyz)/fDirLen * (vExitAndDepth.a - volumePosAndDepth.a);
-		//*
-		//*// generate normal
-		//*float3 grad;
-		//*float3 vTexDeltaGlobal = g_vTexDelta * (g_vBBoxSize/(1-3*g_vTexDelta)) * g_vAspect;
-		//*grad.x = (GetScalar(position0.xyz+float3(g_vTexDelta.x,0,0),g_txVolume)-
-				  //*GetScalar(position0.xyz-float3(g_vTexDelta.x,0,0),g_txVolume))/(2*vTexDeltaGlobal.x);
-		//*grad.y = (GetScalar(position0.xyz+float3(0,g_vTexDelta.y,0),g_txVolume)-
-				  //*GetScalar(position0.xyz-float3(0,g_vTexDelta.y,0),g_txVolume))/(2*vTexDeltaGlobal.y);
-		//*grad.z = (GetScalar(position0.xyz+float3(0,0,g_vTexDelta.z),g_txVolume)-
-				  //*GetScalar(position0.xyz-float3(0,0,g_vTexDelta.z),g_txVolume))/(2*vTexDeltaGlobal.z);
-		//*
-		//*float3 normal = normalize(mul(normalize(grad), (float3x3)g_mWorldView));	
-		//*normal0 = float4(normal, position0.a);
-		//*
-		//*// rescale position to global box dimensions
-		//*position0.xyz -= 1.5 * g_vTexDelta;
-		//*position0.xyz /= 1.0 - 3.0 * g_vTexDelta;
-		//*position0.xyz = (position0.xyz * g_vBBoxSize) + g_vBBoxMin;
-	//*}
-    result.Position = float4(0, 0, 0, 0);
-    result.Normal = float4(0, 0, 0, 0);
     return result;	
-}
-
-//--------------------------------------------------------------------------------------
-// Pixel shader for illumination
-// Input:  -
-// Output: -
-// -
-//--------------------------------------------------------------------------------------
-float4 RaycastIlluminatePS(float4 Position : SV_POSITION) : SV_Target0 {
-    float4 color = float4(0, 0, 0, 0);
-    //*float4 normal = g_txNormal0.Load(int3(pos.xy,0));
-    //*
-    //*if (normal.a == 0) discard;
-    //*
-	//*color0 = float4(saturate(dot(g_vLightDir,normal.xyz)),0,0,normal.a);
-//*
-	//*if (g_fEdges > 0) {
-		//*float curv = length(
-					   //*abs(g_txNormal0.Load(int3(pos.x+1,pos.y,0))-normal.xyz) +
-					   //*abs(g_txNormal0.Load(int3(pos.x-1,pos.y,0))-normal.xyz) +
-					   //*abs(g_txNormal0.Load(int3(pos.x,pos.y+1,0))-normal.xyz) +
-					   //*abs(g_txNormal0.Load(int3(pos.x,pos.y-1,0))-normal.xyz)
-					 //*);
-					 //*
-		//*color.x -= g_fEdges*curv;
-	//*}
-//*
-//*
-	//*// TODO disable if no stippling
-	//*// encode stipple or not in y
-	//*float4 VolumePos = g_txVolPos0.Load(int3(pos.xy,0));
-	//*float random = g_txStipple.Sample(smPointWrap, VolumePos*g_vStippleScale).x;
-	//*color.y =  ( color0.x > random ) ? 1 : 0;
-	return color;
-}
-
-//--------------------------------------------------------------------------------------
-// Pixel shader for composition
-// Input:  -
-// Output: -
-// -
-//--------------------------------------------------------------------------------------
-RaycastComposePSOut RaycastComposePS(float4 Position : SV_POSITION) {
-    RaycastComposePSOut result;
-    //*float4 last = g_txColor0.Load(int3(pos.xy,0));
-    //*
-    //*if (last.a == 0) discard;
-	//*
-	//*if (bStipple) {
-		//*color0 = float4(last.yyy,1);
-				//*
-		//*if (last.y == 1) {
-			//*float nCount = g_txColor0.Load(int3(pos.x+1,pos.y,0)).y +
-						   //*g_txColor0.Load(int3(pos.x-1,pos.y,0)).y +
-						   //*g_txColor0.Load(int3(pos.x,pos.y+1,0)).y +
-						   //*g_txColor0.Load(int3(pos.x,pos.y-1,0)).y;
-			//*
-			//*if (nCount < 4) color0 = float4(( 1-(4-nCount)*0.1).xxx,1);
-		//*}
-		//*
-		//*
-	//*} else color0 = float4(g_vColor0 * last.x, 1);
-    //*
-	//*depth = (-g_vDepthParam.z/last.a + g_vDepthParam.y)/g_vDepthParam.w;
-	result.Color = float4(0, 0, 0, 0);
-	result.Depth = 0;
-	return result;
-}
-
-//--------------------------------------------------------------------------------------
-// Pixel shader for rendertarget 0 copy
-// Input:  volume space position, clip space depth, screen space position
-// Output: content of g_IntersectionPosition0
-// Reads position and normal from g_IntersectionPosition0, discards pixel if alpha == 0
-//--------------------------------------------------------------------------------------
-void CopyRT0PS(
-        float4 Position : SV_POSITION,
-        out float4 Position0 : SV_Target0,
-        out float4 Normal0 : SV_Target1) {
-	float4 pos0b = g_IntersectionPosition0.Load(int3(Position.xy, 0));
-	if(pos0b.a == 0)
-		discard;	
-	Position0 = pos0b;
-	Normal0 = g_IntersectionNormal0.Load(int3(Position.xy, 0));
-}
-
-//--------------------------------------------------------------------------------------
-// Pixel shader for rendertarget 1 copy
-// Input:  volume space position, clip space depth, screen space position
-// Output: content of g_IntersectionPosition1
-// Reads position and normal from g_IntersectionPosition1, discards pixel if alpha == 0
-//--------------------------------------------------------------------------------------
-void CopyRT1PS(
-        float4 Position : SV_POSITION,
-        out float4 Position1 : SV_Target2,
-        out float4 Normal1 : SV_Target3) {
-	float4 pos1b = g_IntersectionPosition1.Load(int3(Position.xy, 0));
-	if(pos1b.a == 0)
-		discard;	
-	Position1 = pos1b;
-	Normal1 = g_IntersectionNormal1.Load(int3(Position.xy, 0));
 }
 
 
@@ -565,54 +529,24 @@ technique10 RenderRaycast {
         SetDepthStencilState(DisableDepth, 0);
         SetRasterizerState(CullFront);
     }
-    
-    pass P2_IsoSurface {
+
+    pass P2_TraceIsoSurfaceAndShade {
         SetVertexShader(CompileShader( vs_4_0, RaycastTransformVS()));
         SetGeometryShader(NULL);
-        SetPixelShader(CompileShader(ps_4_0, RaycastTraceIsoPS()));
+        SetPixelShader(CompileShader(ps_4_0, RaycastTraceIsoAndShadePS(false)));
         
         SetBlendState(NoBlending, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
         SetDepthStencilState(DisableDepth, 0);
         SetRasterizerState(CullBack);        
     }
     
-    pass P3_Illuminate {
-        SetVertexShader(CompileShader(vs_4_0, RaycastNullVS()));
+    pass P3_TraceIsoSurfaceAndShadeWidthPerPixelStepsize {
+        SetVertexShader(CompileShader( vs_4_0, RaycastTransformVS()));
         SetGeometryShader(NULL);
-        SetPixelShader(CompileShader(ps_4_0, RaycastIlluminatePS()));
+        SetPixelShader(CompileShader(ps_4_0, RaycastTraceIsoAndShadePS(true)));
         
         SetBlendState(NoBlending, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
         SetDepthStencilState(DisableDepth, 0);
         SetRasterizerState(CullBack);        
     }
-    
-    pass P4_Compose {
-        SetVertexShader(CompileShader(vs_4_0, RaycastNullVS()));
-        SetGeometryShader(NULL);
-        SetPixelShader(CompileShader(ps_4_0, RaycastComposePS()));
-        
-        SetBlendState(BlendOver, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-        SetDepthStencilState(DisableDepth, 0);
-        SetRasterizerState(CullBack);
-    }
-    
-    pass P5_CopyRT0 {
-        SetVertexShader(CompileShader(vs_4_0, RaycastNullVS()));
-        SetGeometryShader(NULL);
-        SetPixelShader(CompileShader(ps_4_0, CopyRT0PS()));
-                
-        SetBlendState(NoBlending, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-        SetDepthStencilState(DisableDepth, 0);
-        SetRasterizerState(CullBack);
-    }
-    
-    pass P6_CopyRT1 {
-        SetVertexShader(CompileShader(vs_4_0, RaycastNullVS()));
-        SetGeometryShader(NULL);
-        SetPixelShader(CompileShader(ps_4_0, CopyRT1PS()));
-               
-        SetBlendState(NoBlending, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-        SetDepthStencilState(DisableDepth, 0);
-        SetRasterizerState(CullBack);
-    }    
 }
