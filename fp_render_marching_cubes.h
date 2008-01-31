@@ -131,7 +131,7 @@ public:
     void    OnD3D10DestroyDevice( void* UserContext );
     void    OnD3D10FrameRender(
             ID3D10Device* D3DDevice,
-            const D3DXMATRIX*  WorldViewProjection); 
+            const D3DXMATRIX*  ViewProjection); 
 
 private:
     // D3D9 resources
@@ -150,7 +150,7 @@ private:
     ID3D10EffectVectorVariable* m_EffectVarLightDir;
     ID3D10EffectVectorVariable* m_EffectVarLightDiffuse;
     ID3D10EffectVectorVariable* m_EffectVarLightAmbient;
-    ID3D10EffectMatrixVariable* m_EffectVarWorldViewProjection;
+    ID3D10EffectMatrixVariable* m_EffectVarViewProjection;
     ID3D10EffectVectorVariable* m_EffectVarMaterialDiffuseColor;
     ID3D10EffectVectorVariable* m_EffectVarMaterialAmbientColor;
     ID3D10InputLayout* m_VertexLayout;

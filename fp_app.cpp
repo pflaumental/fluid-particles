@@ -42,8 +42,6 @@ bool                    g_MoveHorizontally;
 // Direct3D10 resources
 ID3D10EffectVectorVariable* g_LightDir = NULL;
 ID3D10EffectVectorVariable* g_LightDiffuse = NULL;
-ID3D10EffectMatrixVariable* g_WorldViewProjection = NULL;
-ID3D10EffectMatrixVariable* g_World = NULL;
 ID3D10EffectScalarVariable* g_Time = NULL;
 ID3D10EffectVectorVariable* g_MaterialDiffuseColor = NULL;
 ID3D10EffectVectorVariable* g_MaterialAmbientColor = NULL;
@@ -494,20 +492,18 @@ void CALLBACK FP_OnD3D10FrameRender(
     D3DDevice->ClearRenderTargetView( pRTV, ClearColor );
     ID3D10DepthStencilView* pDSV = DXUTGetD3D10DepthStencilView();
     D3DDevice->ClearDepthStencilView( pDSV, D3D10_CLEAR_DEPTH, 1.0, 0 );
-    
-    D3DXMATRIX  world;
+        
     D3DXMATRIX  view;
-    D3DXMATRIX  projection;
-	D3DXMATRIX  worldViewProjection;
-	D3DXMATRIX  viewProjection;
+    D3DXMATRIX  projection;	
+    D3DXMATRIX  worldView;
+	D3DXMATRIX  viewProjection;    
+    D3DXMATRIX  worldViewProjection;
 	D3DXMATRIX  invView;
 
     // Get the projection & view matrix from the camera class
-    world = *g_Camera.GetWorldMatrix();
     view = *g_Camera.GetViewMatrix();
     projection = *g_Camera.GetProjMatrix();
     viewProjection = view * projection;
-	worldViewProjection = world * viewProjection;
 	D3DXMatrixInverse(&invView, NULL, &view);
 
     for (int i=0; i < FP_MAX_LIGHTS; i++) {
@@ -520,9 +516,9 @@ void CALLBACK FP_OnD3D10FrameRender(
     if(g_RenderType == FP_GUI_RENDERTYPE_SPRITE)
         g_RenderSprites->OnD3D10FrameRender(D3DDevice, &viewProjection, &invView);
     else if(g_RenderType == FP_GUI_RENDERTYPE_MARCHING_CUBES)
-        g_RenderMarchingCubes->OnD3D10FrameRender(D3DDevice, &worldViewProjection);
+        g_RenderMarchingCubes->OnD3D10FrameRender(D3DDevice, &viewProjection);
     else if(g_RenderType == FP_GUI_RENDERTYPE_RAYCAST)
-        g_RenderRaycast->OnD3D10FrameRender(D3DDevice, &worldViewProjection);
+        g_RenderRaycast->OnD3D10FrameRender(D3DDevice, &view, &viewProjection);
 
     // Render GUI
     g_GUI.OnD3D10FrameRender(D3DDevice, ElapsedTime, g_Camera.GetEyePt(),

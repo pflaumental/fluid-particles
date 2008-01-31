@@ -4,33 +4,42 @@
 
 #include "DXUT.h"
 
-
 class fp_BoundingBox {
-public:
-	fp_BoundingBox(D3DXVECTOR2 vDimX = D3DXVECTOR2(-1,1),  D3DXVECTOR2 vDimY = D3DXVECTOR2(-1,1),  D3DXVECTOR2 dimZ = D3DXVECTOR2(-1,1));
+public:    
+	fp_BoundingBox(
+            D3DXVECTOR3* Start = NULL,
+            D3DXVECTOR3* Size = NULL);
 	virtual ~fp_BoundingBox();
 
-	HRESULT CreateDevice( ID3D10Device* pd3dDevice, ID3D10EffectTechnique* pTechniqueRender);
-	void	FrameRender( ID3D10Device* pd3dDevice, bool bDoSetup=true);
-	void	FrameRenderSolid( ID3D10Device* pd3dDevice, bool bDoSetup=true);
-	void    DestroyDevice();
+	HRESULT OnD3D10CreateDevice(
+            ID3D10Device* D3DDevice, 
+            ID3D10EffectTechnique* RenderTechnique);
+	void OnD3D10FrameRenderWireframe(ID3D10Device* D3DDevice, bool DoSetup = true);
+	void OnD3D10FrameRenderSolid(ID3D10Device* D3DDevice, bool DoSetup = true);
+	void OnD3D10DestroyDevice();	
+    
+    D3DXVECTOR3 GetStart();
+    D3DXVECTOR3 GetEnd();
+	D3DXVECTOR3 GetSize();
+	D3DXVECTOR3 GetCenter();
+    D3DXMATRIX GetWorld();
+    void SetStart(D3DXVECTOR3* Start);
+    void SetSize(D3DXVECTOR3* Size);
 
-	void SetLayout(ID3D10Device* pd3dDevice, ID3D10Buffer* pVB);
-
-	D3DXVECTOR3 PosMin();
-	D3DXVECTOR3 PosMax();
-	D3DXVECTOR3 Size();
-	D3DXVECTOR3 Center();
-
-	D3DXVECTOR2 m_vDimX;
-	D3DXVECTOR2 m_vDimY;
-	D3DXVECTOR2 m_vDimZ;
 
 protected:
-	ID3D10Buffer*				m_pVBBoundingBox;
-	ID3D10Buffer*				m_pVBBoundingBoxInd;
-	ID3D10Buffer*				m_pVBBoundingBoxSolidInd;
-	ID3D10InputLayout*			m_pVertexLayout;
+    D3DXVECTOR3 m_Start;
+	D3DXVECTOR3 m_Size;
+    bool m_SizeChangedSinceLastRender;
+    D3DXMATRIX m_World;
+
+	ID3D10Buffer* m_VertexBuffer;
+	ID3D10Buffer* m_WireframeIndexBuffer;
+	ID3D10Buffer* m_SolidIndexBuffer;
+	ID3D10InputLayout* m_VertexLayout;
+
+    void FillVertexBuffer(ID3D10Device* D3DDevice);
+    void SetLayoutAndVertexBuffer(ID3D10Device* D3DDevice);    
 };
 
 #endif

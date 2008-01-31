@@ -354,7 +354,7 @@ fp_RenderMarchingCubes::fp_RenderMarchingCubes(
         m_TechRenderIsoVolume3Lights(NULL),
         m_EffectVarLightDir(NULL),
         m_EffectVarLightDiffuse(NULL),
-        m_EffectVarWorldViewProjection(NULL),
+        m_EffectVarViewProjection(NULL),
         m_EffectVarMaterialDiffuseColor(NULL),
         m_EffectVarMaterialAmbientColor(NULL),
         m_VertexLayout(NULL) {    
@@ -634,8 +634,8 @@ HRESULT fp_RenderMarchingCubes::OnD3D10CreateDevice(
         ->AsVector();
     m_EffectVarLightAmbient = m_Effect10->GetVariableByName(
         "g_LightAmbient" )->AsVector();
-    m_EffectVarWorldViewProjection = m_Effect10->GetVariableByName(
-        "g_WorldViewProjection" )->AsMatrix();
+    m_EffectVarViewProjection = m_Effect10->GetVariableByName(
+        "g_ViewProjection" )->AsMatrix();
     m_EffectVarMaterialAmbientColor = m_Effect10->GetVariableByName(
         "g_MaterialAmbientColor")->AsVector();
     m_EffectVarMaterialDiffuseColor = m_Effect10->GetVariableByName(
@@ -680,7 +680,7 @@ HRESULT fp_RenderMarchingCubes::OnD3D10ResizedSwapChain(
 
 void fp_RenderMarchingCubes::OnD3D10FrameRender(
         ID3D10Device* D3DDevice,
-        const D3DXMATRIX*  WorldViewProjection) {  
+        const D3DXMATRIX*  ViewProjection) {  
     HRESULT hr;
 
     D3DXVECTOR4* lightsDir = new D3DXVECTOR4[m_NumLights];
@@ -696,7 +696,7 @@ void fp_RenderMarchingCubes::OnD3D10FrameRender(
     V( m_EffectVarLightDiffuse->SetFloatVectorArray((float*)lightsDiffuse, 0, 
             m_NumLights));
     V( m_EffectVarLightAmbient->SetFloatVector((float*)&lightsAmbient));
-    V( m_EffectVarWorldViewProjection->SetMatrix((float*)WorldViewProjection ));
+    V( m_EffectVarViewProjection->SetMatrix((float*)ViewProjection ));
     delete[] lightsDir;
     delete[] lightsDiffuse;
 
