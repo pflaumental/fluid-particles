@@ -44,8 +44,6 @@ IDirect3DTexture9*      g_MeshTexture9 = NULL;  // Mesh texture
 
 D3DXHANDLE g_LightDir;
 D3DXHANDLE g_LightDiffuse;
-D3DXHANDLE g_WorldViewProjection;
-D3DXHANDLE g_World;
 D3DXHANDLE g_MaterialDiffuseColor;
 D3DXHANDLE g_Time;
 D3DXHANDLE g_NumLights;

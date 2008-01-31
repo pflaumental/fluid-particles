@@ -7,6 +7,7 @@
 #include "fp_global.h"
 #include "fp_util.h"
 #include "fp_cpu_sph.h"
+#include "fp_bounding_box.h"
 
 //--------------------------------------------------------------------------------------
 // Fluid particles render technique: Iso volume via GPU raycast
@@ -66,7 +67,8 @@ public:
     void    OnD3D10DestroyDevice( void* UserContext );
     void    OnD3D10FrameRender(
             ID3D10Device* D3DDevice,
-            const D3DXMATRIX*  WorldViewProjection); 
+            const D3DXMATRIX*  View,
+            const D3DXMATRIX*  ViewProjection);
 
 private:
     ID3D10Texture3D *m_VolumeTexture;
@@ -87,7 +89,8 @@ private:
     ID3D10EffectVectorVariable* m_EffectVarCornersPos;
     ID3D10EffectScalarVariable* m_EffectVarHalfParticleVoxelDiameter;
     ID3D10EffectScalarVariable* m_EffectVarParticleVoxelRadius;
-    ID3D10EffectVectorVariable* m_EffectVarVolumeDimensions;    
+    ID3D10EffectVectorVariable* m_EffectVarVolumeDimensions;
+    ID3D10EffectMatrixVariable* m_EffectVarWorldView;
     ID3D10EffectMatrixVariable* m_EffectVarWorldViewProjection;
     ID3D10EffectShaderResourceVariable* m_EffectVarWValsMulParticleMass;
     ID3D10EffectVectorVariable* m_EffectVarBBoxStart;
@@ -100,13 +103,17 @@ private:
     float m_VoxelSize;
     int m_ParticleVoxelDiameter;
     int m_ParticleVoxelRadius;
-    D3DXVECTOR3 m_VolumeStartPos;
+
+    fp_BoundingBox m_BBox;    
 
     HRESULT CreateVolumeTexture(ID3D10Device* pd3dDevice);
     void FillVolumeTexture(ID3D10Device* D3DDevice); 
     void DestroyVolumeTexture();
 
-    void RenderVolume(ID3D10Device* D3DDevice, const D3DXMATRIX*  WorldViewProjection); 
+    void RenderVolume(
+            ID3D10Device* D3DDevice,
+            const D3DXMATRIX* View,
+            const D3DXMATRIX* ViewProjection); 
 };
 
 #endif

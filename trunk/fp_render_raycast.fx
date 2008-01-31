@@ -39,7 +39,9 @@ cbuffer Often {
     float4x4 g_WorldToNDS;
     float4x4 g_WorldView;
     float4x4 g_WorldViewProjection;
-    float3 g_BBoxStart;    
+    float3 g_BBoxStart;
+    float3 g_LightDir;
+    float3 g_MaterialColor;
 };
 
 //*cbuffer cbEveryFrame {
@@ -203,7 +205,7 @@ SplatParticlePSOut SplatParticlePS(SplatParticlePSIn Input) {
 RaycastTransformVSOut RaycastTransformVS(in float3 Position : POSITION) {
     RaycastTransformVSOut result;
 	// scale to [0,1]
-    result.VolumePosClipDepth.xyz = (Position - g_BBoxStart) / g_BBoxSize;    
+    result.VolumePosClipDepth.xyz = Position / g_BBoxSize;    
     //*Position *= g_Aspect;
     result.Pos = mul(float4(Position, 1), g_WorldViewProjection);
     result.VolumePosClipDepth.w = result.Pos.z;    
@@ -330,8 +332,9 @@ void ShadeIso(
         in float3 Normal,
         out float4 Color,
         out float Depth) {
-    Color = float4(0,0,0,0);
-    Depth = 0;
+    float brightness = saturate(dot(g_LightDir,Normal.xyz));
+    Color = float4(g_MaterialColor * brightness, 1);
+    Depth = PositionDepth.w;
 }
 
 //--------------------------------------------------------------------------------------
@@ -344,11 +347,15 @@ RaycastTraceIsoAndShadePSOut RaycastTraceIsoAndShadePS(
         RaycastTransformVSOut Input,
         uniform bool PerPixelStepSize) {
     RaycastTraceIsoAndShadePSOut result;   
-    float4 intersectionWorldPosClipDepth;
-    float3 intersectionNormal;
     
+    float4 intersectionWorldPosClipDepth;
+    float3 intersectionNormal;    
     RaycastTraceIso(Input, intersectionWorldPosClipDepth, intersectionNormal,
             PerPixelStepSize);
+            
+    if(intersectionWorldPosClipDepth.w == 0)
+        discard;
+                        
     ShadeIso(intersectionWorldPosClipDepth, intersectionNormal, result.Color,
             result.Depth);
 

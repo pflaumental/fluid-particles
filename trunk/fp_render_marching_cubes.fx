@@ -36,7 +36,7 @@ cbuffer cbSometimes {
 };
 
 cbuffer cbEveryFrame {
-    float4x4 g_WorldViewProjection;    // World * View * Projection matrix
+    float4x4 g_ViewProjection;    // View * Projection matrix
 };
 
 //--------------------------------------------------------------------------------------
@@ -81,7 +81,7 @@ RenderIsoVolumePSIn RenderIsoVolumeVS(
         uniform int NumLights) {
 	RenderIsoVolumePSIn output;
 	
-	output.Pos = mul(float4(Input.Pos,1), g_WorldViewProjection);
+	output.Pos = mul(float4(Input.Pos,1), g_ViewProjection);
 	
 	// Compute simple directional lighting equation
 	float3 totalLightDiffuse = float3(0,0,0);
