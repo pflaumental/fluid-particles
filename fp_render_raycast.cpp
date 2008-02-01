@@ -3,7 +3,8 @@
 #include "fp_render_raycast.h"
 #include "fp_util.h"
 
-#define FP_RENDER_RAYCAST_EFFECT_FILE L"fp_render_raycast.fx" 
+#define FP_RENDER_RAYCAST_EFFECT_FILE L"fp_render_raycast.fx"
+#define FP_RENDER_RAYCAST_STEPSIZE_SCALE 0.8f
 
 const D3D10_INPUT_ELEMENT_DESC fp_SplatParticleVertex::Layout[] = {
         {"POSITION_DENSITY",  0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0,
@@ -32,7 +33,17 @@ fp_RenderRaycast::fp_RenderRaycast(
     m_EffectVarParticleVoxelRadius(NULL),
     m_EffectVarVolumeDimensions(NULL),
     m_EffectVarWorldToNDS(NULL),
-    m_EffectVarWValsMulParticleMass(NULL) {
+    m_EffectVarWValsMulParticleMass(NULL),
+    m_EffectVarExitPoint(NULL),
+    m_EffectVarStepSize(NULL),
+    m_EffectVarVolumeSizeRatio(NULL),
+    m_EffectVarWorldView(NULL),
+    m_EffectVarWorldViewProjection(NULL),
+    m_EffectVarIsoVolume(NULL),
+    m_EffectVarBBoxStart(NULL),
+    m_EffectVarBBoxSize(NULL),
+    m_EffectVarIsoLevel(NULL),
+    m_EffectVarTexDelta(NULL) {
     SetFluid(Fluid);
     D3DXVECTOR3 volumeSize = GetVolumeSize();
     m_BBox.SetSize(&volumeSize);
@@ -121,6 +132,18 @@ HRESULT fp_RenderRaycast::OnD3D10CreateDevice(
             "g_WorldView")->AsMatrix();
     m_EffectVarWorldViewProjection = m_Effect->GetVariableByName(
             "g_WorldViewProjection")->AsMatrix();
+    m_EffectVarExitPoint = m_Effect->GetVariableByName(
+            "g_ExitPoint")->AsShaderResource();
+    m_EffectVarStepSize = m_Effect->GetVariableByName(
+            "g_StepSize")->AsScalar();
+    m_EffectVarVolumeSizeRatio = m_Effect->GetVariableByName(
+            "g_VolumeSizeRatio")->AsVector();
+    m_EffectVarIsoVolume = m_Effect->GetVariableByName(
+            "g_IsoVolume")->AsShaderResource();
+    m_EffectVarIsoLevel = m_Effect->GetVariableByName(
+            "g_IsoLevel")->AsScalar();
+    m_EffectVarTexDelta = m_Effect->GetVariableByName(
+            "g_TexDelta")->AsVector();
     BOOL allValid = m_EffectVarCornersPos->IsValid();
     allValid |= m_EffectVarHalfParticleVoxelDiameter->IsValid();
     allValid |= m_EffectVarParticleVoxelRadius->IsValid();
@@ -131,13 +154,32 @@ HRESULT fp_RenderRaycast::OnD3D10CreateDevice(
     allValid |= m_EffectVarBBoxSize->IsValid();
     allValid |= m_EffectVarWorldViewProjection->IsValid();
     allValid |= m_EffectVarWorldView->IsValid();
+    allValid |= m_EffectVarExitPoint->IsValid();
+    allValid |= m_EffectVarStepSize->IsValid();
+    allValid |= m_EffectVarVolumeSizeRatio->IsValid();
+    allValid |= m_EffectVarIsoVolume->IsValid();
+    allValid |= m_EffectVarIsoLevel->IsValid();
+    allValid |= m_EffectVarTexDelta->IsValid();
     if(!allValid) return E_FAIL;
 
     // Set effect variables as needed
     V_RETURN(m_EffectVarVolumeDimensions->SetIntVector((int*)&m_VolumeDimensions));
+    m_NeedPerPixelStepSize = m_VolumeDimensions.x != m_VolumeDimensions.y
+            || m_VolumeDimensions.x != m_VolumeDimensions.z;
     SetVoxelSize(m_VoxelSize);
     D3DXVECTOR3 start = m_BBox.GetStart();
     SetVolumeStartPos(&start);
+    float maxDim = (float)m_VolumeDimensions.Max();
+    V_RETURN(m_EffectVarStepSize->SetFloat(FP_RENDER_RAYCAST_STEPSIZE_SCALE / maxDim));
+    D3DXVECTOR3 volumeSizeRatio = D3DXVECTOR3(m_VolumeDimensions.x / maxDim,
+            m_VolumeDimensions.y / maxDim, m_VolumeDimensions.y / maxDim);
+    V_RETURN(m_EffectVarVolumeSizeRatio->SetFloatVector((float*)&volumeSizeRatio));
+    V_RETURN(m_EffectVarIsoLevel->SetFloat(m_IsoLevel));
+    D3DXVECTOR3 texDelta;
+    texDelta.x = 1.0f / m_VolumeDimensions.x;
+    texDelta.y = 1.0f / m_VolumeDimensions.y;
+    texDelta.z = 1.0f / m_VolumeDimensions.z;
+    V_RETURN(m_EffectVarTexDelta->SetFloatVector((float*)&texDelta));
 
     // Create vertex buffer
     D3D10_PASS_DESC passDesc;
@@ -179,7 +221,7 @@ void fp_RenderRaycast::OnD3D10FrameRender(
     FillVolumeTexture(D3DDevice);
     RenderVolume(D3DDevice, View, ViewProjection);
 
-    // TODO: find out why things get messed up when pass does not get resetted
+    // TODO: find out why things get messed up when pass does not get reseted
     m_TechRenderRaycast->GetPassByIndex(0)->Apply(0);
 }
 
@@ -204,6 +246,13 @@ void fp_RenderRaycast::SetFluid(fp_Fluid* Fluid) {
     SetVoxelSize(m_VoxelSize);
 }
 
+void fp_RenderRaycast::SetIsoLevel(float IsoLevel) {
+    HRESULT hr;
+    m_IsoLevel = IsoLevel;
+    if(m_Effect != NULL)
+        V(m_EffectVarIsoLevel->SetFloat(IsoLevel));
+}
+
 void fp_RenderRaycast::SetVoxelSize(float VoxelSize) {
     HRESULT hr;
     m_VoxelSize = VoxelSize;
@@ -222,8 +271,8 @@ void fp_RenderRaycast::SetVoxelSize(float VoxelSize) {
         V(m_EffectVarHalfParticleVoxelDiameter->SetFloat(0.5f
                 * m_ParticleVoxelDiameter));
         V(m_EffectVarBBoxSize->SetFloatVector((float*)&volumeSize));
-        float offsetX = (float)m_ParticleVoxelRadius / (float)m_VolumeDimensions.x;
-        float offsetY = (float)m_ParticleVoxelRadius / (float)m_VolumeDimensions.y;
+        float offsetX = 2.0f *(float)m_ParticleVoxelRadius / (float)m_VolumeDimensions.x;
+        float offsetY = 2.0f *(float)m_ParticleVoxelRadius / (float)m_VolumeDimensions.y;
         D3DXVECTOR4 cornersPos[4] = {
                 D3DXVECTOR4(-offsetX, offsetY, 0, 0),
                 D3DXVECTOR4(offsetX, offsetY, 0, 0),
@@ -316,7 +365,8 @@ HRESULT fp_RenderRaycast::CreateVolumeTexture(ID3D10Device* D3DDevice) {
     return S_OK;
 }
 
-void fp_RenderRaycast::FillVolumeTexture(ID3D10Device* D3DDevice) {    
+void fp_RenderRaycast::FillVolumeTexture(ID3D10Device* D3DDevice) {
+    HRESULT hr;
     fp_SplatParticleVertex *splatVertices;
     float* densities = m_Fluid->GetDensities();
     m_SplatParticleVertexBuffer->Map(D3D10_MAP_WRITE_DISCARD, 0, (void**)&splatVertices);
@@ -353,7 +403,7 @@ void fp_RenderRaycast::FillVolumeTexture(ID3D10Device* D3DDevice) {
     D3DDevice->IASetVertexBuffers(0, 1, &m_SplatParticleVertexBuffer, strides, offsets);
     D3DDevice->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_POINTLIST);
 
-    m_EffectVarWValsMulParticleMass->SetResource(m_WValsMulParticleMassSRV);
+    V(m_EffectVarWValsMulParticleMass->SetResource(m_WValsMulParticleMassSRV));
 
     D3DDevice->OMSetRenderTargets(1, &m_VolumeRTV , NULL); 
 
@@ -381,15 +431,23 @@ void fp_RenderRaycast::RenderVolume(
         ID3D10Device* D3DDevice,
         const D3DXMATRIX*  View,
         const D3DXMATRIX*  ViewProjection) {
+    HRESULT hr;
     // Set matrizes
     D3DXMATRIX world = m_BBox.GetWorld();
     D3DXMATRIX worldView = world * *View;
     D3DXMATRIX worldViewProjection = world * *ViewProjection;
-    m_EffectVarWorldView->SetMatrix((float*)&worldView);
-    m_EffectVarWorldViewProjection->SetMatrix((float*)&worldViewProjection);
+    V(m_EffectVarWorldView->SetMatrix((float*)&worldView));
+    V(m_EffectVarWorldViewProjection->SetMatrix((float*)&worldViewProjection));
     
+    // Find the ray exit
     m_ExitPoint->Bind(true, false);
     m_TechRenderRaycast->GetPassByIndex(1)->Apply(0);
     m_BBox.OnD3D10FrameRenderSolid(D3DDevice, true);
-    m_ExitPoint->Unbind();    
+    m_ExitPoint->Unbind();
+    
+    // Trace the iso volume and shade intersections
+    V(m_EffectVarExitPoint->SetResource(m_ExitPoint->GetSRV()));
+    V(m_EffectVarIsoVolume->SetResource(m_VolumeSRV));
+    m_TechRenderRaycast->GetPassByIndex(m_NeedPerPixelStepSize ? 3 : 2)->Apply(0);
+    m_BBox.OnD3D10FrameRenderSolid(D3DDevice, false);
 }

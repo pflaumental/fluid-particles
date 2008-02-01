@@ -19,8 +19,7 @@ struct fp_SplatParticleVertex {
 };
 
 class fp_RenderRaycast {
-public:  
-    float m_IsoLevel;
+public:      
     fp_Fluid* m_Fluid;
     fp_FluidParticle* m_Particles;
 
@@ -33,6 +32,7 @@ public:
     ~fp_RenderRaycast();
 
     void SetFluid(fp_Fluid* Fluid);
+    void SetIsoLevel(float IsoLevel);
     void SetVoxelSize(float VoxelSize);
     D3DXVECTOR3 GetVolumeSize();
     fp_VolumeIndex GetVolumeTextureSize();
@@ -85,17 +85,26 @@ private:
     ID3D10Buffer* m_SplatParticleVertexBuffer;    
 
     ID3D10Effect* m_Effect;
+
     ID3D10EffectTechnique* m_TechRenderRaycast;
+
+    ID3D10EffectMatrixVariable* m_EffectVarWorldToNDS;
     ID3D10EffectVectorVariable* m_EffectVarCornersPos;
     ID3D10EffectScalarVariable* m_EffectVarHalfParticleVoxelDiameter;
     ID3D10EffectScalarVariable* m_EffectVarParticleVoxelRadius;
     ID3D10EffectVectorVariable* m_EffectVarVolumeDimensions;
-    ID3D10EffectMatrixVariable* m_EffectVarWorldView;
-    ID3D10EffectMatrixVariable* m_EffectVarWorldViewProjection;
     ID3D10EffectShaderResourceVariable* m_EffectVarWValsMulParticleMass;
+
+    ID3D10EffectScalarVariable* m_EffectVarIsoLevel;
+    ID3D10EffectShaderResourceVariable* m_EffectVarIsoVolume;
+    ID3D10EffectVectorVariable* m_EffectVarTexDelta;
+    ID3D10EffectMatrixVariable* m_EffectVarWorldView;
+    ID3D10EffectMatrixVariable* m_EffectVarWorldViewProjection;    
+    ID3D10EffectShaderResourceVariable* m_EffectVarExitPoint;
     ID3D10EffectVectorVariable* m_EffectVarBBoxStart;
     ID3D10EffectVectorVariable* m_EffectVarBBoxSize;
-    ID3D10EffectMatrixVariable* m_EffectVarWorldToNDS;     
+    ID3D10EffectScalarVariable* m_EffectVarStepSize;
+    ID3D10EffectVectorVariable* m_EffectVarVolumeSizeRatio;
 
     fp_VolumeIndex m_VolumeDimensions;
     
@@ -103,6 +112,8 @@ private:
     float m_VoxelSize;
     int m_ParticleVoxelDiameter;
     int m_ParticleVoxelRadius;
+    bool m_NeedPerPixelStepSize;
+    float m_IsoLevel;
 
     fp_BoundingBox m_BBox;    
 
