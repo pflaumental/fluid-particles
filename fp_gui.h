@@ -17,25 +17,27 @@
 // UI control IDs
 //--------------------------------------------------------------------------------------
 
-#define IDC_TOGGLEFULLSCREEN             1
-#define IDC_TOGGLEREF                    3
-#define IDC_CHANGEDEVICE                 4
-#define IDC_NUM_LIGHTS                   6
-#define IDC_NUM_LIGHTS_STATIC            7
-#define IDC_ACTIVE_LIGHT                 8
-#define IDC_LIGHT_SCALE                  9
-#define IDC_LIGHT_SCALE_STATIC          10
-#define IDC_PARTICLE_SCALE              11
-#define IDC_PARTICLE_SCALE_STATIC       12
-#define IDC_RESET_SIM                   13
-#define IDC_SELECT_RENDER_TYPE          14
-#define IDC_MC_ISO_LEVEL                15
-#define IDC_MC_ISO_LEVEL_STATIC         16
-#define IDC_MC_VOXEL_SIZE               17
-#define IDC_MC_VOXEL_SIZE_STATIC        18
-#define IDC_MOVE_HORIZONTALLY           19
-#define IDC_RAYCAST_ISO_LEVEL           20
-#define IDC_RAYCAST_ISO_LEVEL_STATIC    21
+#define IDC_TOGGLEFULLSCREEN                    1
+#define IDC_TOGGLEREF                           3
+#define IDC_CHANGEDEVICE                        4
+#define IDC_NUM_LIGHTS                          6
+#define IDC_NUM_LIGHTS_STATIC                   7
+#define IDC_ACTIVE_LIGHT                        8
+#define IDC_LIGHT_SCALE                         9
+#define IDC_LIGHT_SCALE_STATIC                 10
+#define IDC_SPRITE_PARTICLE_SCALE              11
+#define IDC_SPRITE_PARTICLE_SCALE_STATIC       12
+#define IDC_RESET_SIM                          13
+#define IDC_SELECT_RENDER_TYPE                 14
+#define IDC_MC_ISO_LEVEL                       15
+#define IDC_MC_ISO_LEVEL_STATIC                16
+#define IDC_MC_VOXEL_SIZE                      17
+#define IDC_MC_VOXEL_SIZE_STATIC               18
+#define IDC_MOVE_HORIZONTALLY                  19
+#define IDC_RAYCAST_ISO_LEVEL                  20
+#define IDC_RAYCAST_ISO_LEVEL_STATIC           21
+#define IDC_RAYCAST_STEP_SCALE                 22
+#define IDC_RAYCAST_STEP_SCALE_STATIC          23
 
 #define FP_GUI_HEIGHT              550
 
@@ -74,6 +76,7 @@ public:
             int& ActiveLight,
             int& NumActiveLights,
             float& RaycastIsoLevel,
+            float& RaycastStepScale,
             float& MCVoxelSize,
             float& MCIsoLevel,
             float& LightScale,

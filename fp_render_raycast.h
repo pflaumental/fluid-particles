@@ -27,12 +27,14 @@ public:
             fp_Fluid* Fluid,
             float VoxelSize,
             float IsoLevel = FP_RAYCAST_DEFAULT_ISO_LEVEL,
+            float StepScale = FP_RAYCAST_DEFAULT_STEP_SCALE,
             const fp_VolumeIndex& VolumeDimensions
                     = FP_RAYCAST_VOLUME_TEXTURE_DIMENSIONS);
     ~fp_RenderRaycast();
 
     void SetFluid(fp_Fluid* Fluid);
     void SetIsoLevel(float IsoLevel);
+    void SetStepScale(float StepScale);
     void SetVoxelSize(float VoxelSize);
     D3DXVECTOR3 GetVolumeSize();
     fp_VolumeIndex GetVolumeTextureSize();
@@ -114,6 +116,7 @@ private:
     int m_ParticleVoxelRadius;
     bool m_NeedPerPixelStepSize;
     float m_IsoLevel;
+    float m_StepScale;
 
     fp_BoundingBox m_BBox;    
 

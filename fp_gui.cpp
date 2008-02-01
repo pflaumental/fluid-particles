@@ -72,6 +72,16 @@ fp_GUI::fp_GUI()
             (int) (FP_RAYCAST_DEFAULT_ISO_LEVEL * 500.0f), false, (CDXUTSlider**)
             &m_RaycastSpecificControls.back() );
 
+    iYRaycast += 24;
+    StringCchPrintf( sz, 100, L"Step scale: %0.1f", FP_RAYCAST_DEFAULT_STEP_SCALE ); 
+    m_RaycastSpecificControls.push_back(NULL);
+    m_SampleUI.AddStatic( IDC_RAYCAST_STEP_SCALE_STATIC, sz, 35, iYRaycast += 24, 125, 22,
+            false, (CDXUTStatic**)&m_RaycastSpecificControls.back());
+    m_RaycastSpecificControls.push_back(NULL);
+    m_SampleUI.AddSlider( IDC_RAYCAST_STEP_SCALE, 50, iYRaycast += 24, 100, 22, 8, 100,
+            (int) (FP_RAYCAST_DEFAULT_STEP_SCALE * 10.0f), false, (CDXUTSlider**)
+            &m_RaycastSpecificControls.back() );
+
     // Marching cubes controls
 
     iYMC += 24;    
@@ -123,10 +133,10 @@ fp_GUI::fp_GUI()
     iYSprite += 24;
     StringCchPrintf( sz, 100, L"Sprite size: %0.2f", FP_RENDER_DEFAULT_SPRITE_SIZE );
     m_SpriteSpecificControls.push_back(NULL);
-    m_SampleUI.AddStatic( IDC_PARTICLE_SCALE_STATIC, sz, 35, iYSprite += 24, 125, 22,
+    m_SampleUI.AddStatic( IDC_SPRITE_PARTICLE_SCALE_STATIC, sz, 35, iYSprite += 24, 125, 22,
             false, (CDXUTStatic**)&m_SpriteSpecificControls.back());
     m_SpriteSpecificControls.push_back(NULL);
-    m_SampleUI.AddSlider( IDC_PARTICLE_SCALE, 50, iYSprite += 24, 100, 22, 1, 100,
+    m_SampleUI.AddSlider( IDC_SPRITE_PARTICLE_SCALE, 50, iYSprite += 24, 100, 22, 1, 100,
             (int) (FP_RENDER_DEFAULT_SPRITE_SIZE * 50.0f), false, (CDXUTSlider**)
             &m_SpriteSpecificControls.back() );
 }
@@ -196,6 +206,7 @@ void fp_GUI::OnGUIEvent(
         int& ActiveLight,
         int& NumActiveLights,
         float& RaycastIsoLevel,
+        float& RaycastStepScale,
         float& MCVoxelSize,
         float& MCIsoLevel,
         float& LightScale,        
@@ -236,6 +247,14 @@ void fp_GUI::OnGUIEvent(
             m_SampleUI.GetStatic( IDC_RAYCAST_ISO_LEVEL_STATIC )->SetText( sz );
             break;
 
+        case IDC_RAYCAST_STEP_SCALE: 
+            RaycastStepScale = (float) (m_SampleUI.GetSlider(
+                IDC_RAYCAST_STEP_SCALE)->GetValue() * 0.1f);
+
+            StringCchPrintf( sz, 100, L"Step scale: %0.1f", RaycastStepScale); 
+            m_SampleUI.GetStatic( IDC_RAYCAST_STEP_SCALE_STATIC )->SetText( sz );
+            break;
+
         case IDC_MC_VOXEL_SIZE: 
             MCVoxelSize = (float) (m_SampleUI.GetSlider(
                 IDC_MC_VOXEL_SIZE )->GetValue() * 0.1f);
@@ -252,12 +271,12 @@ void fp_GUI::OnGUIEvent(
             m_SampleUI.GetStatic( IDC_MC_ISO_LEVEL_STATIC )->SetText( sz );
             break;
 
-        case IDC_PARTICLE_SCALE: 
+        case IDC_SPRITE_PARTICLE_SCALE: 
             ParticleScale = (float) (m_SampleUI.GetSlider(
-                    IDC_PARTICLE_SCALE )->GetValue() * 0.02f);
+                    IDC_SPRITE_PARTICLE_SCALE )->GetValue() * 0.02f);
 
             StringCchPrintf( sz, 100, L"Sprite size: %0.2f", ParticleScale ); 
-            m_SampleUI.GetStatic( IDC_PARTICLE_SCALE_STATIC )->SetText( sz );
+            m_SampleUI.GetStatic( IDC_SPRITE_PARTICLE_SCALE_STATIC )->SetText( sz );
             break;
 
         case IDC_ACTIVE_LIGHT:

@@ -4,7 +4,6 @@
 #include "fp_util.h"
 
 #define FP_RENDER_RAYCAST_EFFECT_FILE L"fp_render_raycast.fx"
-#define FP_RENDER_RAYCAST_STEPSIZE_SCALE 0.8f
 
 const D3D10_INPUT_ELEMENT_DESC fp_SplatParticleVertex::Layout[] = {
         {"POSITION_DENSITY",  0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0,
@@ -14,10 +13,12 @@ fp_RenderRaycast::fp_RenderRaycast(
         fp_Fluid* Fluid,
         float VoxelSize,
         float IsoLevel,
+        float StepScale,
         const fp_VolumeIndex& VolumeDimensions) :
     m_VoxelSize(VoxelSize),
     m_IsoLevel(IsoLevel),
     m_VolumeDimensions(VolumeDimensions),
+    m_StepScale(StepScale),
     m_VolumeTexture(NULL),
     m_VolumeRTV(NULL),
     m_VolumeSRV(NULL),
@@ -169,8 +170,8 @@ HRESULT fp_RenderRaycast::OnD3D10CreateDevice(
     SetVoxelSize(m_VoxelSize);
     D3DXVECTOR3 start = m_BBox.GetStart();
     SetVolumeStartPos(&start);
-    float maxDim = (float)m_VolumeDimensions.Max();
-    V_RETURN(m_EffectVarStepSize->SetFloat(FP_RENDER_RAYCAST_STEPSIZE_SCALE / maxDim));
+    SetStepScale(m_StepScale);
+    float maxDim = m_VolumeDimensions.Max();
     D3DXVECTOR3 volumeSizeRatio = D3DXVECTOR3(m_VolumeDimensions.x / maxDim,
             m_VolumeDimensions.y / maxDim, m_VolumeDimensions.y / maxDim);
     V_RETURN(m_EffectVarVolumeSizeRatio->SetFloatVector((float*)&volumeSizeRatio));
@@ -251,6 +252,14 @@ void fp_RenderRaycast::SetIsoLevel(float IsoLevel) {
     m_IsoLevel = IsoLevel;
     if(m_Effect != NULL)
         V(m_EffectVarIsoLevel->SetFloat(IsoLevel));
+}
+
+void fp_RenderRaycast::SetStepScale(float StepScale) {
+    HRESULT hr;
+    m_StepScale = StepScale;
+    float maxDim = (float)m_VolumeDimensions.Max();
+    if(m_Effect != NULL)
+        V(m_EffectVarStepSize->SetFloat(m_StepScale / maxDim));
 }
 
 void fp_RenderRaycast::SetVoxelSize(float VoxelSize) {
