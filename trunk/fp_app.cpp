@@ -362,16 +362,19 @@ void CALLBACK FP_OnGUIEvent(
         CDXUTControl* Control, 
         void* UserContext ) {   
     bool resetSim;
-    float mcVoxelSize = -1.0f, mcIsoLevel = -1.0f, raycastIsoLevel = -1.0f;
+    float mcVoxelSize = -1.0f, mcIsoLevel = -1.0f, raycastIsoLevel = -1.0f, 
+            raycastStepScale = -1.0f;
     float oldSpriteSize = g_RenderSprites->GetSpriteSize();
     float newSpriteSize = oldSpriteSize;
     g_GUI.OnGUIEvent(Event, ControlID, Control, g_ActiveLight, g_NumActiveLights,
-            raycastIsoLevel, mcVoxelSize, mcIsoLevel, g_LightScale, newSpriteSize,
-            resetSim, g_MoveHorizontally, g_RenderType);
+            raycastIsoLevel, raycastStepScale, mcVoxelSize, mcIsoLevel, g_LightScale,
+            newSpriteSize, resetSim, g_MoveHorizontally, g_RenderType);
     if(oldSpriteSize != newSpriteSize)
         g_RenderSprites->SetSpriteSize(newSpriteSize);
     if(raycastIsoLevel > 0.0f)
         g_RenderRaycast->SetIsoLevel(raycastIsoLevel);
+    if(raycastStepScale > 0.0f)
+        g_RenderRaycast->SetStepScale(raycastStepScale);
     if(mcIsoLevel > 0.0f)
         g_RenderMarchingCubes->m_IsoLevel = mcIsoLevel;
     if(mcVoxelSize > 0.0f && mcVoxelSize != g_CPUIsoVolume->m_VoxelSize)
