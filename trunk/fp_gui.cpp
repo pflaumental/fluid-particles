@@ -62,7 +62,15 @@ fp_GUI::fp_GUI()
 
     // Raycast controls
 
-
+    iYRaycast += 24;
+    StringCchPrintf( sz, 100, L"Iso level: %0.3f", FP_RAYCAST_DEFAULT_ISO_LEVEL ); 
+    m_RaycastSpecificControls.push_back(NULL);
+    m_SampleUI.AddStatic( IDC_RAYCAST_ISO_LEVEL_STATIC, sz, 35, iYRaycast += 24, 125, 22,
+            false, (CDXUTStatic**)&m_RaycastSpecificControls.back());
+    m_RaycastSpecificControls.push_back(NULL);
+    m_SampleUI.AddSlider( IDC_RAYCAST_ISO_LEVEL, 50, iYRaycast += 24, 100, 22, 1, 100,
+            (int) (FP_RAYCAST_DEFAULT_ISO_LEVEL * 500.0f), false, (CDXUTSlider**)
+            &m_RaycastSpecificControls.back() );
 
     // Marching cubes controls
 
@@ -187,6 +195,7 @@ void fp_GUI::OnGUIEvent(
         CDXUTControl* Control,
         int& ActiveLight,
         int& NumActiveLights,
+        float& RaycastIsoLevel,
         float& MCVoxelSize,
         float& MCIsoLevel,
         float& LightScale,        
@@ -219,11 +228,19 @@ void fp_GUI::OnGUIEvent(
             MoveHorizontally = m_SampleUI.GetCheckBox(IDC_MOVE_HORIZONTALLY)->GetChecked();
             break;       
 
+        case IDC_RAYCAST_ISO_LEVEL: 
+            RaycastIsoLevel = (float) (m_SampleUI.GetSlider(
+                IDC_RAYCAST_ISO_LEVEL )->GetValue() * 0.002f);
+
+            StringCchPrintf( sz, 100, L"Iso level: %0.3f", RaycastIsoLevel ); 
+            m_SampleUI.GetStatic( IDC_RAYCAST_ISO_LEVEL_STATIC )->SetText( sz );
+            break;
+
         case IDC_MC_VOXEL_SIZE: 
             MCVoxelSize = (float) (m_SampleUI.GetSlider(
                 IDC_MC_VOXEL_SIZE )->GetValue() * 0.1f);
 
-            StringCchPrintf( sz, 100, L"MC voxel size: %0.1f", MCVoxelSize ); 
+            StringCchPrintf( sz, 100, L"Voxel size: %0.1f", MCVoxelSize ); 
             m_SampleUI.GetStatic( IDC_MC_VOXEL_SIZE_STATIC )->SetText( sz );
             break;
 
@@ -231,7 +248,7 @@ void fp_GUI::OnGUIEvent(
             MCIsoLevel = (float) (m_SampleUI.GetSlider(
                 IDC_MC_ISO_LEVEL )->GetValue() * 0.002f);
 
-            StringCchPrintf( sz, 100, L"MC iso level: %0.3f", MCIsoLevel ); 
+            StringCchPrintf( sz, 100, L"Iso level: %0.3f", MCIsoLevel ); 
             m_SampleUI.GetStatic( IDC_MC_ISO_LEVEL_STATIC )->SetText( sz );
             break;
 

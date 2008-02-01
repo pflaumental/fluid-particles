@@ -23,8 +23,9 @@ cbuffer Once {
     int3 g_VolumeDimensions; // volume dimension in number of voxels
     float3 g_VolumeSizeRatio; // contains ratio "size / sizeMax" for each dimension
     float3 g_TexDelta;
-    float g_Stepsize;
+    float g_StepSize;
     int g_NumRefineSteps = 5;
+    float3 g_MaterialColor = float3(0.75, 0.75, 1.0); // TODO remove color hack
 };
 
 cbuffer Sometimes {
@@ -40,8 +41,7 @@ cbuffer Often {
     float4x4 g_WorldView;
     float4x4 g_WorldViewProjection;
     float3 g_BBoxStart;
-    float3 g_LightDir;
-    float3 g_MaterialColor;
+    float3 g_LightDir = float3(0,-1,0); // TODO remove light hack    
 };
 
 //*cbuffer cbEveryFrame {
@@ -146,8 +146,8 @@ SplatParticleGSIn SplatParticleVS(in SplatParticleVSIn Input) {
     result.VolumeSlice = int((0.5 * result.ParticlePosTexZDensity.z + 0.5)
             * float(g_VolumeDimensions.z)) - g_ParticleVoxelRadius 
             + int(Input.ParticleSlice);
-    result.ParticlePosTexZDensity.z = 1 - float(Input.ParticleSlice)
-            / g_HalfParticleVoxelDiameter;
+    result.ParticlePosTexZDensity.z = -(1 - float(Input.ParticleSlice)
+            / g_HalfParticleVoxelDiameter);
     result.ParticlePosTexZDensity.w = Input.ParticlePosDensity.w;            
     return result;
 }
@@ -197,7 +197,7 @@ SplatParticlePSOut SplatParticlePS(SplatParticlePSIn Input) {
 
 
 //--------------------------------------------------------------------------------------
-// Vertex shader for transform
+// Vertex shader for transformations
 // Input:  worldspace vertex position
 // Output: volume space position, clip space depth, clip space position
 // -
@@ -213,17 +213,6 @@ RaycastTransformVSOut RaycastTransformVS(in float3 Position : POSITION) {
 }
 
 //--------------------------------------------------------------------------------------
-// Null vertex shader
-// Input:  worldspace vertex position
-// Output: clip space vertex position
-// -
-//--------------------------------------------------------------------------------------
-float4 RaycastNullVS(in float3 Position : POSITION) : SV_POSITION {
-    //*Position *= g_vAspect;
-    return mul(float4(Position, 1), g_WorldViewProjection);    
-}
-
-//--------------------------------------------------------------------------------------
 // Pixel shader for finding the rayexit
 // Input:  volume space position, clip space depth, screen space position
 // Output: volume space position, clip space depth
@@ -233,25 +222,25 @@ float4 RaycastExitPS(RaycastTransformVSOut Input) : SV_Target {
     return Input.VolumePosClipDepth;
 }
 
-// Helper Function for calculating the local stepsize
+// Helper function for calculating the local stepsize
 float CalcLocalStepsize(float3 RayDir, float RayDirLen) {
 	float3 scaledRayDir = RayDir * g_VolumeSizeRatio;
-	return g_Stepsize * RayDirLen / length(scaledRayDir);
+	return g_StepSize * RayDirLen / length(scaledRayDir);
 }
 
 // Function for refining the iso trace
-float3 RefineIsosurface(float3 VolumeOffset, float3 SampleVolumePos) {
-	VolumeOffset /= 2;
-	SampleVolumePos -= VolumeOffset;
+float3 RefineIsosurface(float3 TextureOffset, float3 SampleTexturePos) {
+	TextureOffset /= 2;
+	SampleTexturePos -= TextureOffset;
 	for (int i = 0; i < g_NumRefineSteps; i++) {
-		VolumeOffset /= 2;
-		float isoVal = g_IsoVolume.SampleLevel(LinearPointClamp, SampleVolumePos, 0).r;
+		TextureOffset /= 2;
+		float isoVal = g_IsoVolume.SampleLevel(LinearPointClamp, SampleTexturePos, 0).r;
 		if (isoVal >= g_IsoLevel)
-			SampleVolumePos -= VolumeOffset;
+			SampleTexturePos -= TextureOffset;
 		else
-			SampleVolumePos += VolumeOffset;
+			SampleTexturePos += TextureOffset;
 	}	
-	return float3(SampleVolumePos);
+	return float3(SampleTexturePos);
 }
 
 //--------------------------------------------------------------------------------------
@@ -263,78 +252,83 @@ float3 RefineIsosurface(float3 VolumeOffset, float3 SampleVolumePos) {
 //--------------------------------------------------------------------------------------
 void RaycastTraceIso(
         in RaycastTransformVSOut Input, 
-        out float4 IntersectionPosDepth,
-        out float3 IntersectionNormal,
+        out float4 IntersectionNormalDepth,
         bool PerPixelStepsize) {
-    IntersectionPosDepth = 0;
-    IntersectionNormal = 0;    
+    IntersectionNormalDepth = float4(0,0,0,-1);
 
     float4 entryVolumePosClipDepth = Input.VolumePosClipDepth;
     float4 exitVolumePosClipDepth = g_ExitPoint.Load(
-            int3(entryVolumePosClipDepth.xy, 0));
+            int3(Input.Pos.xy, 0));
 
-    // ray entry, exit and direction    
-    float3 sampleVolumePos = entryVolumePosClipDepth.xyz;
+    // ray entry, exit and direction           
     float3 exitVolumePos = exitVolumePosClipDepth.xyz;
-    float3 volumeOffset = exitVolumePos - entryVolumePosClipDepth.xyz;
-    float  volumeRayLen = length(volumeOffset);
-    float  localStepsize = PerPixelStepsize
-            ? CalcLocalStepsize(volumeOffset, volumeRayLen)
-            : g_Stepsize;
-    volumeOffset /= (volumeRayLen * localStepsize);
+    float3 textureOffset = exitVolumePos - entryVolumePosClipDepth.xyz;
+    float volumeRayLen = length(textureOffset);
+    float localStepsize = PerPixelStepsize
+            ? CalcLocalStepsize(textureOffset, volumeRayLen)
+            : g_StepSize;
+            
+    float3 sampleTexturePos = entryVolumePosClipDepth.xyz;
+    textureOffset /= volumeRayLen;
+    textureOffset *= localStepsize;
+    sampleTexturePos.y = 1 - sampleTexturePos.y; // y in volume is 1-y in texture
+    textureOffset.y *= -1; // offset.y must therefore get flipped
+    
     int numSteps = ceil(volumeRayLen / localStepsize);
-    float isoVal;
+    float isoVal;    
     while(numSteps-- > 0) {
-        float isoVal = g_IsoVolume.SampleLevel(LinearPointClamp, sampleVolumePos, 0).r;
+        float isoVal = g_IsoVolume.SampleLevel(LinearPointClamp, sampleTexturePos, 0).r;
         if (isoVal >= g_IsoLevel)
 			break;
-        sampleVolumePos += volumeOffset;
+        sampleTexturePos += textureOffset;
     }
     if(numSteps <= 0) {
-        isoVal = g_IsoVolume.SampleLevel(LinearPointClamp, exitVolumePos, 0).r;
+        float3 exitTexturePos = exitVolumePos;
+        exitTexturePos.y = 1 - exitTexturePos.y;
+        isoVal = g_IsoVolume.SampleLevel(LinearPointClamp, exitTexturePos, 0).r;
         if (isoVal >= g_IsoLevel) {
-			sampleVolumePos = exitVolumePos;
+			sampleTexturePos = exitTexturePos;
 			numSteps = 1;
 		}
     }    
-	// refine isosurface
+	// if intersection found
 	if(numSteps > 0) {
-		IntersectionPosDepth = float4(RefineIsosurface(volumeOffset, sampleVolumePos), 0);
+	    // refine isosurface
+		sampleTexturePos = RefineIsosurface(textureOffset, sampleTexturePos);
+		float3 intersectionVolumePos = sampleTexturePos;
+		intersectionVolumePos.y = 1 - intersectionVolumePos.y;
 		// compute depth 		
-		IntersectionPosDepth.w = entryVolumePosClipDepth.w
-		        + length(entryVolumePosClipDepth.xyz - IntersectionPosDepth.xyz)
+		IntersectionNormalDepth.w = entryVolumePosClipDepth.w
+		        + length(entryVolumePosClipDepth.xyz - intersectionVolumePos)
 		        / volumeRayLen * (exitVolumePosClipDepth.w - Input.VolumePosClipDepth.w);
 		// generate normal
 		float3 grad;
 		grad.x = g_IsoVolume.SampleLevel(LinearPointClamp,
-		        IntersectionPosDepth.xyz + float3(g_TexDelta.x, 0, 0), 0)
+		        sampleTexturePos + float3(g_TexDelta.x, 0, 0), 0)
 		        -
                 g_IsoVolume.SampleLevel(LinearPointClamp,
-                IntersectionPosDepth.xyz - float3(g_TexDelta.x, 0, 0), 0);
+                sampleTexturePos - float3(g_TexDelta.x, 0, 0), 0);
 		grad.y = g_IsoVolume.SampleLevel(LinearPointClamp,
-		        IntersectionPosDepth.xyz + float3(0, g_TexDelta.y, 0), 0)
+		        sampleTexturePos - float3(0, g_TexDelta.y, 0), 0)
 		        -
                 g_IsoVolume.SampleLevel(LinearPointClamp,
-                IntersectionPosDepth.xyz - float3(0, g_TexDelta.y, 0), 0);
+                sampleTexturePos + float3(0, g_TexDelta.y, 0), 0);
 		grad.z = g_IsoVolume.SampleLevel(LinearPointClamp,
-		        IntersectionPosDepth.xyz + float3(0, 0, g_TexDelta.z), 0)
+		        sampleTexturePos + float3(0, 0, g_TexDelta.z), 0)
 		        -
                 g_IsoVolume.SampleLevel(LinearPointClamp,
-                IntersectionPosDepth.xyz - float3(0, 0 ,g_TexDelta.z), 0);
-		IntersectionNormal = normalize(mul(normalize(grad), (float3x3)g_WorldView));
-		// transform intersection position from volume to world space
-		IntersectionPosDepth.xyz = (IntersectionPosDepth.xyz * g_BBoxSize) + g_BBoxStart;
+                sampleTexturePos - float3(0, 0 ,g_TexDelta.z), 0);        
+		IntersectionNormalDepth.xyz = normalize(grad);
 	}    
 }
 
 void ShadeIso(
-        in float4 PositionDepth,
-        in float3 Normal,
+        in float4 NormalDepth,
         out float4 Color,
         out float Depth) {
-    float brightness = saturate(dot(g_LightDir,Normal.xyz));
+    float brightness = saturate(dot(g_LightDir, NormalDepth.xyz));
     Color = float4(g_MaterialColor * brightness, 1);
-    Depth = PositionDepth.w;
+    Depth = NormalDepth.w;
 }
 
 //--------------------------------------------------------------------------------------
@@ -348,16 +342,13 @@ RaycastTraceIsoAndShadePSOut RaycastTraceIsoAndShadePS(
         uniform bool PerPixelStepSize) {
     RaycastTraceIsoAndShadePSOut result;   
     
-    float4 intersectionWorldPosClipDepth;
-    float3 intersectionNormal;    
-    RaycastTraceIso(Input, intersectionWorldPosClipDepth, intersectionNormal,
-            PerPixelStepSize);
+    float4 intersectionNormalClipDepth;    
+    RaycastTraceIso(Input, intersectionNormalClipDepth, PerPixelStepSize);
             
-    if(intersectionWorldPosClipDepth.w == 0)
+    if(intersectionNormalClipDepth.w == -1)
         discard;
                         
-    ShadeIso(intersectionWorldPosClipDepth, intersectionNormal, result.Color,
-            result.Depth);
+    ShadeIso(intersectionNormalClipDepth, result.Color, result.Depth);
 
     return result;	
 }

@@ -13,6 +13,9 @@ struct fp_Vec3 {
     fp_Vec3<T>() : x(0), y(0), z(0) {}
     fp_Vec3<T>(int X, int Y, int Z) : x(X), y(Y), z(Z) {}
     fp_Vec3<T>(const fp_Vec3& Other) : x(Other.x), y(Other.y), z(Other.z) {}
+
+    fp_Vec3<T> Min() { return x < y ? (x < z ? x : z) : (y < z ? y : z); }
+    T Max() { return x > y ? (x > z ? x : z) : (y > z ? y : z); }
 };
 
 template<class T> fp_Vec3<T> operator+(const fp_Vec3<T>& A, const fp_Vec3<T>& B) {

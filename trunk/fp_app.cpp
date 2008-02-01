@@ -362,14 +362,16 @@ void CALLBACK FP_OnGUIEvent(
         CDXUTControl* Control, 
         void* UserContext ) {   
     bool resetSim;
-    float mcVoxelSize = -1.0f, mcIsoLevel = -1.0f;
+    float mcVoxelSize = -1.0f, mcIsoLevel = -1.0f, raycastIsoLevel = -1.0f;
     float oldSpriteSize = g_RenderSprites->GetSpriteSize();
     float newSpriteSize = oldSpriteSize;
     g_GUI.OnGUIEvent(Event, ControlID, Control, g_ActiveLight, g_NumActiveLights,
-            mcVoxelSize, mcIsoLevel, g_LightScale, newSpriteSize, resetSim,
-            g_MoveHorizontally, g_RenderType);
+            raycastIsoLevel, mcVoxelSize, mcIsoLevel, g_LightScale, newSpriteSize,
+            resetSim, g_MoveHorizontally, g_RenderType);
     if(oldSpriteSize != newSpriteSize)
         g_RenderSprites->SetSpriteSize(newSpriteSize);
+    if(raycastIsoLevel > 0.0f)
+        g_RenderRaycast->SetIsoLevel(raycastIsoLevel);
     if(mcIsoLevel > 0.0f)
         g_RenderMarchingCubes->m_IsoLevel = mcIsoLevel;
     if(mcVoxelSize > 0.0f && mcVoxelSize != g_CPUIsoVolume->m_VoxelSize)
@@ -554,7 +556,7 @@ D3DXVECTOR3 CalcRaycastVolumeStartPos(
         fp_Fluid* Fluid,
         fp_RenderRaycast* RenderRaycast) {
     D3DXVECTOR3 result = Fluid->m_CurrentGlassPosition;
-    result.y += Fluid->m_GlassFloor + FP_RAYCAST_GLASS_FLOOR_OFFSET;
+    result.y += Fluid->m_GlassFloor - FP_RAYCAST_VOLUME_BORDER;
     D3DXVECTOR3 volumeSize = RenderRaycast->GetVolumeSize();
     result.x -= volumeSize.x / 2.0f;
     result.z -= volumeSize.z / 2.0f;
