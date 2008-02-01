@@ -39,7 +39,7 @@
 			<DebugSettings
 				Command="$(TargetPath)"
 				WorkingDirectory=""
-				CommandArguments="-forceapi:10 -width:1024 -height:768"
+				CommandArguments="-forcevsync:0 -width:1024 -height:768"
 				Attach="false"
 				DebuggerType="3"
 				Remote="1"
@@ -95,7 +95,7 @@
 			<DebugSettings
 				Command="$(TargetPath)"
 				WorkingDirectory=""
-				CommandArguments="-forceapi:9 -width:1024 -height:768"
+				CommandArguments="-forcevsync:0 -width:1024 -height:768"
 				Attach="false"
 				DebuggerType="3"
 				Remote="1"
@@ -151,7 +151,7 @@
 			<DebugSettings
 				Command="$(TargetPath)"
 				WorkingDirectory=""
-				CommandArguments="-forceapi:9 -width:1024 -height:768"
+				CommandArguments="-forcevsync:0 -width:1024 -height:768"
 				Attach="false"
 				DebuggerType="3"
 				Remote="1"
