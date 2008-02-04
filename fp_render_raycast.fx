@@ -42,7 +42,7 @@ cbuffer Often {
     float4x4 g_WorldView;
     float4x4 g_WorldViewProjection;
     float3 g_BBoxStart;
-    float3 g_LightDir = float3(0,-1,0); // TODO remove light hack    
+    float3 g_LightDir = float3(0,1,0); // TODO remove light hack    
 };
 
 //*cbuffer cbEveryFrame {
@@ -257,8 +257,9 @@ float3 RefineIsosurface(float3 TextureOffset, float3 SampleTexturePos) {
 // If Intersection is found it get's refined.
 //--------------------------------------------------------------------------------------
 void RaycastTraceIso(
-        in RaycastTransformVSOut Input, 
+        in RaycastTransformVSOut Input,        
         out float4 IntersectionNormalDepth,
+        out float3 RayDirection,
         bool PerPixelStepsize) {
     IntersectionNormalDepth = float4(0,0,0,-1);
 
@@ -269,6 +270,7 @@ void RaycastTraceIso(
     // ray entry, exit and direction           
     float3 exitVolumePos = exitVolumePosClipDepth.xyz;
     float3 textureOffset = exitVolumePos - entryVolumePosClipDepth.xyz;
+    RayDirection = textureOffset;
     float volumeRayLen = length(textureOffset);
     float localStepsize = PerPixelStepsize
             ? CalcLocalStepsize(textureOffset, volumeRayLen)
@@ -324,16 +326,19 @@ void RaycastTraceIso(
 		        -
                 g_IsoVolume.SampleLevel(LinearClamp,
                 sampleTexturePos - float3(0, 0 ,g_TexDelta.z), 0);        
-		IntersectionNormalDepth.xyz = normalize(grad);
+		IntersectionNormalDepth.xyz = -normalize(grad);
 	}    
 }
 
 void ShadeIso(
         in float4 NormalDepth,
+        in float3 RayDirection,
         out float4 Color,
         out float Depth) {
-    float brightness = saturate(dot(g_LightDir, NormalDepth.xyz));
-    Color = float4(g_MaterialColor * brightness, 1);
+    float3 reflectDir = RayDirection - 2 * dot(NormalDepth.xyz, RayDirection) 
+            * NormalDepth.xyz;
+    float3 reflectionColor = g_Environment.Sample(LinearClamp, reflectDir);
+    Color = float4(reflectionColor/* * g_MaterialColor*/, 1);
     Depth = NormalDepth.w;
 }
 
@@ -348,13 +353,14 @@ RaycastTraceIsoAndShadePSOut RaycastTraceIsoAndShadePS(
         uniform bool PerPixelStepSize) {
     RaycastTraceIsoAndShadePSOut result;   
     
-    float4 intersectionNormalClipDepth;    
-    RaycastTraceIso(Input, intersectionNormalClipDepth, PerPixelStepSize);
+    float4 intersectionNormalClipDepth;
+    float3 rayDirection;
+    RaycastTraceIso(Input, intersectionNormalClipDepth, rayDirection, PerPixelStepSize);
             
     if(intersectionNormalClipDepth.w == -1)
         discard;
                         
-    ShadeIso(intersectionNormalClipDepth, result.Color, result.Depth);
+    ShadeIso(intersectionNormalClipDepth, rayDirection, result.Color, result.Depth);
 
     return result;	
 }
