@@ -38,6 +38,8 @@
 #define IDC_RAYCAST_ISO_LEVEL_STATIC           21
 #define IDC_RAYCAST_STEP_SCALE                 22
 #define IDC_RAYCAST_STEP_SCALE_STATIC          23
+#define IDC_RAYCAST_REFRACTION_RATIO           24
+#define IDC_RAYCAST_REFRACTION_RATIO_STATIC    25
 
 #define FP_GUI_HEIGHT              550
 
@@ -77,6 +79,7 @@ public:
             int& NumActiveLights,
             float& RaycastIsoLevel,
             float& RaycastStepScale,
+            float& RaycastRefractionRatio,
             float& MCVoxelSize,
             float& MCIsoLevel,
             float& LightScale,

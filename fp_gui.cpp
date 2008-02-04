@@ -82,6 +82,17 @@ fp_GUI::fp_GUI()
             (int) (FP_RAYCAST_DEFAULT_STEP_SCALE * 10.0f), false, (CDXUTSlider**)
             &m_RaycastSpecificControls.back() );
 
+    iYRaycast += 24;
+    StringCchPrintf( sz, 100, L"Refraction ratio: %0.2f", 
+            FP_RAYCAST_DEFAULT_REFRACTION_RATIO); 
+    m_RaycastSpecificControls.push_back(NULL);
+    m_SampleUI.AddStatic( IDC_RAYCAST_REFRACTION_RATIO_STATIC, sz, 35, iYRaycast += 24,
+            125, 22, false, (CDXUTStatic**)&m_RaycastSpecificControls.back());
+    m_RaycastSpecificControls.push_back(NULL);
+    m_SampleUI.AddSlider( IDC_RAYCAST_REFRACTION_RATIO, 50, iYRaycast += 24, 100, 22, 1, 
+            99, (int) (FP_RAYCAST_DEFAULT_REFRACTION_RATIO * 100.0f), false,
+            (CDXUTSlider**) &m_RaycastSpecificControls.back() );
+
     // Marching cubes controls
 
     iYMC += 24;    
@@ -207,6 +218,7 @@ void fp_GUI::OnGUIEvent(
         int& NumActiveLights,
         float& RaycastIsoLevel,
         float& RaycastStepScale,
+        float& RaycastRefractionRatio,
         float& MCVoxelSize,
         float& MCIsoLevel,
         float& LightScale,        
@@ -253,6 +265,14 @@ void fp_GUI::OnGUIEvent(
 
             StringCchPrintf( sz, 100, L"Step scale: %0.1f", RaycastStepScale); 
             m_SampleUI.GetStatic( IDC_RAYCAST_STEP_SCALE_STATIC )->SetText( sz );
+            break;
+
+        case IDC_RAYCAST_REFRACTION_RATIO: 
+            RaycastRefractionRatio = (float) (m_SampleUI.GetSlider(
+                    IDC_RAYCAST_REFRACTION_RATIO)->GetValue() * 0.01f);
+
+            StringCchPrintf( sz, 100, L"Refraction ratio: %0.2f", RaycastRefractionRatio); 
+            m_SampleUI.GetStatic( IDC_RAYCAST_REFRACTION_RATIO_STATIC )->SetText( sz );
             break;
 
         case IDC_MC_VOXEL_SIZE: 
