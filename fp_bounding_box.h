@@ -23,6 +23,7 @@ public:
 	D3DXVECTOR3 GetSize();
 	D3DXVECTOR3 GetCenter();
     D3DXMATRIX GetWorld();
+    D3DXMATRIX GetEnvironmentWorld();
     void SetStart(D3DXVECTOR3* Start);
     void SetSize(D3DXVECTOR3* Size);
 
@@ -32,6 +33,7 @@ protected:
 	D3DXVECTOR3 m_Size;
     bool m_SizeChangedSinceLastRender;
     D3DXMATRIX m_World;
+    D3DXMATRIX m_EnvironmentWorld;
 
 	ID3D10Buffer* m_VertexBuffer;
 	ID3D10Buffer* m_WireframeIndexBuffer;

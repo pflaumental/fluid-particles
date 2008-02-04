@@ -16,7 +16,7 @@ fp_RenderSprites::fp_RenderSprites(int NumParticles, fp_FluidParticle* Particles
         m_SpriteSize(FP_RENDER_DEFAULT_SPRITE_SIZE),
 		m_Texture9(NULL),
         m_VertexBuffer10(NULL),
-		m_Texture10RV(NULL),
+		m_Texture10SRV(NULL),
         m_Effect10(NULL),
         m_TechRenderSprites(NULL),
         m_EffectTexture(NULL),
@@ -130,7 +130,7 @@ HRESULT fp_RenderSprites::OnD3D10CreateDevice(
     WCHAR str[MAX_PATH];
     V_RETURN( DXUTFindDXSDKMediaFileCch( str, MAX_PATH, FP_RENDER_SPRITES_TEXTURE_FILE ) );
     D3DX10CreateShaderResourceViewFromFile(D3DDevice, str, NULL, NULL,
-            &m_Texture10RV, NULL);
+            &m_Texture10SRV, NULL);
 
     // Read the D3DX effect file
 	m_Effect10 = fp_Util::LoadEffect(D3DDevice, FP_RENDER_SPRITES_EFFECT_FILE);
@@ -141,7 +141,7 @@ HRESULT fp_RenderSprites::OnD3D10CreateDevice(
 
     // Obtain effect variables and set as needed
     m_EffectTexture = m_Effect10->GetVariableByName("g_ParticleDiffuse")->AsShaderResource();
-    V_RETURN(m_EffectTexture->SetResource(m_Texture10RV));
+    V_RETURN(m_EffectTexture->SetResource(m_Texture10SRV));
     m_EffectVarViewProjection = m_Effect10->GetVariableByName( "g_ViewProj" )->AsMatrix();
     m_EffectVarSpriteCornersWorldS = m_Effect10->GetVariableByName( "g_SpriteCornersWorldS" )->AsVector();
 
@@ -189,7 +189,7 @@ void fp_RenderSprites::OnD3D10FrameRender(
 	 D3DDevice->IASetVertexBuffers(0, 1, &m_VertexBuffer10, &stride, &offset);
 	 D3DDevice->IASetPrimitiveTopology( D3D10_PRIMITIVE_TOPOLOGY_POINTLIST );
 
-	 V(m_EffectTexture->SetResource(m_Texture10RV));
+	 V(m_EffectTexture->SetResource(m_Texture10SRV));
      V(m_EffectVarViewProjection->SetMatrix((float*) ViewProjection));
      D3DXVECTOR4 spriteCornersWorldS[4] = {
          D3DXVECTOR4(-1,1,0,0),
@@ -214,7 +214,7 @@ void fp_RenderSprites::OnD3D10FrameRender(
 }
 
 void fp_RenderSprites::OnD3D10DestroyDevice( void* UserContext ) {
-    SAFE_RELEASE(m_Texture10RV);
+    SAFE_RELEASE(m_Texture10SRV);
     SAFE_RELEASE(m_Effect10);
     SAFE_RELEASE(m_VertexLayout);
     SAFE_RELEASE(m_VertexBuffer10);

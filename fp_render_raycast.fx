@@ -38,6 +38,7 @@ cbuffer Sometimes {
 
 cbuffer Often {
     float4x4 g_WorldToNDS;
+    float4x4 g_World;
     float4x4 g_WorldView;
     float4x4 g_WorldViewProjection;
     float3 g_BBoxStart;
@@ -62,6 +63,7 @@ Texture2D g_IntersectionPosition1;
 Texture2D g_IntersectionNormal0;
 Texture2D g_IntersectionNormal1;
 Texture3D g_IsoVolume;
+TextureCube g_Environment;
 
 
 
@@ -124,9 +126,13 @@ SamplerState LinearPointClamp
     AddressW    = Clamp;
 };
 
-
-
-
+SamplerState LinearClamp
+{
+    Filter      = MIN_MAG_MIP_LINEAR;
+    AddressU    = Clamp;
+    AddressV    = Clamp;
+    AddressW    = Clamp;
+};
 
 //--------------------------------------------------------------------------------------
 // Shaders
@@ -277,7 +283,7 @@ void RaycastTraceIso(
     int numSteps = ceil(volumeRayLen / localStepsize);
     float isoVal;    
     while(numSteps-- > 0) {
-        float isoVal = g_IsoVolume.SampleLevel(LinearPointClamp, sampleTexturePos, 0).r;
+        float isoVal = g_IsoVolume.SampleLevel(LinearClamp, sampleTexturePos, 0).r;
         if (isoVal >= g_IsoLevel)
 			break;
         sampleTexturePos += textureOffset;
@@ -285,7 +291,7 @@ void RaycastTraceIso(
     if(numSteps <= 0) {
         float3 exitTexturePos = exitVolumePos;
         exitTexturePos.y = 1 - exitTexturePos.y;
-        isoVal = g_IsoVolume.SampleLevel(LinearPointClamp, exitTexturePos, 0).r;
+        isoVal = g_IsoVolume.SampleLevel(LinearClamp, exitTexturePos, 0).r;
         if (isoVal >= g_IsoLevel) {
 			sampleTexturePos = exitTexturePos;
 			numSteps = 1;
@@ -303,20 +309,20 @@ void RaycastTraceIso(
 		        / volumeRayLen * (exitVolumePosClipDepth.w - Input.VolumePosClipDepth.w);
 		// generate normal
 		float3 grad;
-		grad.x = g_IsoVolume.SampleLevel(LinearPointClamp,
+		grad.x = g_IsoVolume.SampleLevel(LinearClamp,
 		        sampleTexturePos + float3(g_TexDelta.x, 0, 0), 0)
 		        -
-                g_IsoVolume.SampleLevel(LinearPointClamp,
+                g_IsoVolume.SampleLevel(LinearClamp,
                 sampleTexturePos - float3(g_TexDelta.x, 0, 0), 0);
-		grad.y = g_IsoVolume.SampleLevel(LinearPointClamp,
+		grad.y = g_IsoVolume.SampleLevel(LinearClamp,
 		        sampleTexturePos - float3(0, g_TexDelta.y, 0), 0)
 		        -
-                g_IsoVolume.SampleLevel(LinearPointClamp,
+                g_IsoVolume.SampleLevel(LinearClamp,
                 sampleTexturePos + float3(0, g_TexDelta.y, 0), 0);
-		grad.z = g_IsoVolume.SampleLevel(LinearPointClamp,
+		grad.z = g_IsoVolume.SampleLevel(LinearClamp,
 		        sampleTexturePos + float3(0, 0, g_TexDelta.z), 0)
 		        -
-                g_IsoVolume.SampleLevel(LinearPointClamp,
+                g_IsoVolume.SampleLevel(LinearClamp,
                 sampleTexturePos - float3(0, 0 ,g_TexDelta.z), 0);        
 		IntersectionNormalDepth.xyz = normalize(grad);
 	}    
@@ -351,6 +357,26 @@ RaycastTraceIsoAndShadePSOut RaycastTraceIsoAndShadePS(
     ShadeIso(intersectionNormalClipDepth, result.Color, result.Depth);
 
     return result;	
+}
+
+//--------------------------------------------------------------------------------------
+// Vertex shader for environment rendering
+//--------------------------------------------------------------------------------------
+void EnvironmentVS(
+        in float3 PositionIn : POSITION,
+        out float4 PositionOut : SV_POSITION,
+        out float3 TexCoordsOut : TEXCOORD0) {
+    PositionOut = mul(float4(PositionIn, 1), g_WorldViewProjection);
+    TexCoordsOut = mul(float4(PositionIn, 1), g_World).xyz;
+}
+
+//--------------------------------------------------------------------------------------
+// Pixel shader for environment rendering
+//--------------------------------------------------------------------------------------
+void EnvironmentPS(in float4 Position : SV_POSITION,
+        in float3 TexCoords : TEXCOORD0,
+        out float4 Color : SV_TARGET) {
+    Color = g_Environment.Sample(LinearClamp, TexCoords);
 }
 
 
@@ -547,4 +573,14 @@ technique10 RenderRaycast {
         SetDepthStencilState(DisableDepth, 0);
         SetRasterizerState(CullBack);        
     }
+    
+    pass P4_RenderEnvironment {
+        SetVertexShader(CompileShader( vs_4_0, EnvironmentVS()));
+        SetGeometryShader(NULL);
+        SetPixelShader(CompileShader(ps_4_0, EnvironmentPS()));
+        
+        SetBlendState(NoBlending, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
+        SetDepthStencilState(DisableDepth, 0);
+        SetRasterizerState(CullNone);        
+    }    
 }

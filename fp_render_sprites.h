@@ -71,7 +71,7 @@ private:
     // D3D10 resources
     ID3D10Buffer* m_VertexBuffer10;
     ID3D10InputLayout* m_VertexLayout;
-    ID3D10ShaderResourceView * m_Texture10RV;
+    ID3D10ShaderResourceView * m_Texture10SRV;
     ID3D10Effect* m_Effect10;
     ID3D10EffectTechnique*  m_TechRenderSprites;
     ID3D10EffectShaderResourceVariable* m_EffectTexture;
