@@ -1,9 +1,10 @@
 #include "DXUT.h"
-//#include "SDKmisc.h"
+#include "SDKmisc.h"
 #include "fp_render_raycast.h"
 #include "fp_util.h"
 
 #define FP_RENDER_RAYCAST_EFFECT_FILE L"fp_render_raycast.fx"
+#define FP_RENDER_RAYCAST_CUBEMAP_FILE L"Media/CubeMaps/LobbyCube.dds" 
 
 const D3D10_INPUT_ELEMENT_DESC fp_SplatParticleVertex::Layout[] = {
         {"POSITION_DENSITY",  0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0,
@@ -38,16 +39,22 @@ fp_RenderRaycast::fp_RenderRaycast(
     m_EffectVarExitPoint(NULL),
     m_EffectVarStepSize(NULL),
     m_EffectVarVolumeSizeRatio(NULL),
+    m_EffectVarWorld(NULL),
     m_EffectVarWorldView(NULL),
     m_EffectVarWorldViewProjection(NULL),
     m_EffectVarIsoVolume(NULL),
     m_EffectVarBBoxStart(NULL),
     m_EffectVarBBoxSize(NULL),
     m_EffectVarIsoLevel(NULL),
-    m_EffectVarTexDelta(NULL) {
+    m_EffectVarTexDelta(NULL),
+    m_EnvironmentMapSRV(NULL){
     SetFluid(Fluid);
     D3DXVECTOR3 volumeSize = GetVolumeSize();
     m_BBox.SetSize(&volumeSize);
+    D3DXVECTOR3 v = D3DXVECTOR3(20, 20, 20);
+    m_EnvironmentBox.SetSize(&v);
+    v = D3DXVECTOR3(-10, -10, -10);
+    m_EnvironmentBox.SetStart(&v);
 }
 
 fp_RenderRaycast::~fp_RenderRaycast() {
@@ -107,6 +114,12 @@ HRESULT fp_RenderRaycast::OnD3D10CreateDevice(
     V_RETURN(D3DDevice->CreateShaderResourceView(m_WValsMulParticleMassTexture,
             &srvDesc, &m_WValsMulParticleMassSRV));
 
+    // Create environment map
+    WCHAR str[MAX_PATH];    
+    V_RETURN(DXUTFindDXSDKMediaFileCch(str, MAX_PATH, FP_RENDER_RAYCAST_CUBEMAP_FILE));
+    V_RETURN(D3DX10CreateShaderResourceViewFromFile(D3DDevice, str, NULL, NULL,
+            &m_EnvironmentMapSRV, NULL));
+
     // Read the D3DX effect file
     m_Effect = fp_Util::LoadEffect(D3DDevice, FP_RENDER_RAYCAST_EFFECT_FILE);
 
@@ -129,6 +142,8 @@ HRESULT fp_RenderRaycast::OnD3D10CreateDevice(
             "g_BBoxStart")->AsVector();
     m_EffectVarBBoxSize = m_Effect->GetVariableByName(
             "g_BBoxSize")->AsVector();
+    m_EffectVarWorld = m_Effect->GetVariableByName(
+            "g_World")->AsMatrix();
     m_EffectVarWorldView = m_Effect->GetVariableByName(
             "g_WorldView")->AsMatrix();
     m_EffectVarWorldViewProjection = m_Effect->GetVariableByName(
@@ -145,6 +160,8 @@ HRESULT fp_RenderRaycast::OnD3D10CreateDevice(
             "g_IsoLevel")->AsScalar();
     m_EffectVarTexDelta = m_Effect->GetVariableByName(
             "g_TexDelta")->AsVector();
+    m_EffectVarEnvironmentMap = m_Effect->GetVariableByName(
+            "g_Environment")->AsShaderResource();
     BOOL allValid = m_EffectVarCornersPos->IsValid();
     allValid |= m_EffectVarHalfParticleVoxelDiameter->IsValid();
     allValid |= m_EffectVarParticleVoxelRadius->IsValid();
@@ -155,12 +172,14 @@ HRESULT fp_RenderRaycast::OnD3D10CreateDevice(
     allValid |= m_EffectVarBBoxSize->IsValid();
     allValid |= m_EffectVarWorldViewProjection->IsValid();
     allValid |= m_EffectVarWorldView->IsValid();
+    allValid |= m_EffectVarWorld->IsValid();
     allValid |= m_EffectVarExitPoint->IsValid();
     allValid |= m_EffectVarStepSize->IsValid();
     allValid |= m_EffectVarVolumeSizeRatio->IsValid();
     allValid |= m_EffectVarIsoVolume->IsValid();
     allValid |= m_EffectVarIsoLevel->IsValid();
     allValid |= m_EffectVarTexDelta->IsValid();
+    allValid |= m_EffectVarEnvironmentMap->IsValid();
     if(!allValid) return E_FAIL;
 
     // Set effect variables as needed
@@ -181,6 +200,7 @@ HRESULT fp_RenderRaycast::OnD3D10CreateDevice(
     texDelta.y = 1.0f / m_VolumeDimensions.y;
     texDelta.z = 1.0f / m_VolumeDimensions.z;
     V_RETURN(m_EffectVarTexDelta->SetFloatVector((float*)&texDelta));
+    D3DXVECTOR3 environmentBoxSize = m_EnvironmentBox.GetSize();
 
     // Create vertex buffer
     D3D10_PASS_DESC passDesc;
@@ -188,7 +208,8 @@ HRESULT fp_RenderRaycast::OnD3D10CreateDevice(
     int numElements = sizeof(fp_SplatParticleVertex::Layout)
             / sizeof(fp_SplatParticleVertex::Layout[0]);
     V_RETURN(D3DDevice->CreateInputLayout(fp_SplatParticleVertex::Layout, numElements,
-            passDesc.pIAInputSignature, passDesc.IAInputSignatureSize, &m_SplatParticleVertexLayout));
+            passDesc.pIAInputSignature, passDesc.IAInputSignatureSize, 
+            &m_SplatParticleVertexLayout));
 
     D3D10_BUFFER_DESC bufferDesc;
     bufferDesc.Usage = D3D10_USAGE_DYNAMIC;
@@ -199,6 +220,7 @@ HRESULT fp_RenderRaycast::OnD3D10CreateDevice(
     V_RETURN(D3DDevice->CreateBuffer(&bufferDesc, NULL, &m_SplatParticleVertexBuffer));
 
     m_BBox.OnD3D10CreateDevice(D3DDevice, m_TechRenderRaycast);
+    m_EnvironmentBox.OnD3D10CreateDevice(D3DDevice, m_TechRenderRaycast);
 
     return S_OK;
 }
@@ -217,8 +239,10 @@ HRESULT fp_RenderRaycast::OnD3D10ResizedSwapChain(
 void fp_RenderRaycast::OnD3D10FrameRender(
         ID3D10Device* D3DDevice,
         const D3DXMATRIX*  View,
+        const D3DXMATRIX*  Projection,
         const D3DXMATRIX*  ViewProjection) {  
     //HRESULT hr;
+    RenderEnvironment(D3DDevice, View, Projection);
     FillVolumeTexture(D3DDevice);
     RenderVolume(D3DDevice, View, ViewProjection);
 
@@ -229,6 +253,8 @@ void fp_RenderRaycast::OnD3D10FrameRender(
 void fp_RenderRaycast::OnD3D10DestroyDevice( void* UserContext ) {
     DestroyVolumeTexture();
     m_BBox.OnD3D10DestroyDevice();
+    m_EnvironmentBox.OnD3D10DestroyDevice();
+    SAFE_RELEASE(m_EnvironmentMapSRV);
     SAFE_RELEASE(m_WValsMulParticleMassTexture);
     SAFE_RELEASE(m_WValsMulParticleMassSRV);
     SAFE_RELEASE(m_SplatParticleVertexLayout);
@@ -436,11 +462,32 @@ void fp_RenderRaycast::DestroyVolumeTexture() {
     SAFE_RELEASE(m_VolumeSRV);
 }
 
+void fp_RenderRaycast::RenderEnvironment(
+        ID3D10Device* D3DDevice,
+        const D3DXMATRIX*  View,
+        const D3DXMATRIX*  Projection) {
+    HRESULT hr;
+    
+    D3DXMATRIX world = m_EnvironmentBox.GetEnvironmentWorld();
+    D3DXMATRIX worldViewProjection = *View; 
+    worldViewProjection._41 = worldViewProjection._42 = worldViewProjection._43 = 0.0f;    
+    worldViewProjection = world * worldViewProjection;
+    worldViewProjection = worldViewProjection * *Projection;
+
+    V(m_EffectVarWorld->SetMatrix((float*)world));
+    V(m_EffectVarWorldViewProjection->SetMatrix((float*)worldViewProjection));
+    m_EffectVarEnvironmentMap->SetResource(m_EnvironmentMapSRV);
+
+    m_TechRenderRaycast->GetPassByIndex(4)->Apply(0);
+    m_EnvironmentBox.OnD3D10FrameRenderSolid(D3DDevice, true);
+}
+
 void fp_RenderRaycast::RenderVolume(
         ID3D10Device* D3DDevice,
         const D3DXMATRIX*  View,
         const D3DXMATRIX*  ViewProjection) {
     HRESULT hr;
+    
     // Set matrizes
     D3DXMATRIX world = m_BBox.GetWorld();
     D3DXMATRIX worldView = world * *View;

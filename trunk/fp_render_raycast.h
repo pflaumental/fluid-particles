@@ -70,6 +70,7 @@ public:
     void    OnD3D10FrameRender(
             ID3D10Device* D3DDevice,
             const D3DXMATRIX*  View,
+            const D3DXMATRIX*  Projection,
             const D3DXMATRIX*  ViewProjection);
 
 private:
@@ -80,6 +81,8 @@ private:
     ID3D10Texture1D *m_WValsMulParticleMassTexture;
     ID3D10ShaderResourceView *m_WValsMulParticleMassSRV;
     int m_WValsMulParticleMassLength;
+
+    ID3D10ShaderResourceView *m_EnvironmentMapSRV;
 
     fp_RenderTarget2D* m_ExitPoint;
 
@@ -100,6 +103,7 @@ private:
     ID3D10EffectScalarVariable* m_EffectVarIsoLevel;
     ID3D10EffectShaderResourceVariable* m_EffectVarIsoVolume;
     ID3D10EffectVectorVariable* m_EffectVarTexDelta;
+    ID3D10EffectMatrixVariable* m_EffectVarWorld;
     ID3D10EffectMatrixVariable* m_EffectVarWorldView;
     ID3D10EffectMatrixVariable* m_EffectVarWorldViewProjection;    
     ID3D10EffectShaderResourceVariable* m_EffectVarExitPoint;
@@ -107,6 +111,8 @@ private:
     ID3D10EffectVectorVariable* m_EffectVarBBoxSize;
     ID3D10EffectScalarVariable* m_EffectVarStepSize;
     ID3D10EffectVectorVariable* m_EffectVarVolumeSizeRatio;
+
+    ID3D10EffectShaderResourceVariable* m_EffectVarEnvironmentMap;
 
     fp_VolumeIndex m_VolumeDimensions;
     
@@ -118,11 +124,17 @@ private:
     float m_IsoLevel;
     float m_StepScale;
 
-    fp_BoundingBox m_BBox;    
+    fp_BoundingBox m_BBox;
+    fp_BoundingBox m_EnvironmentBox;
 
     HRESULT CreateVolumeTexture(ID3D10Device* pd3dDevice);
     void FillVolumeTexture(ID3D10Device* D3DDevice); 
     void DestroyVolumeTexture();
+
+    void RenderEnvironment(
+            ID3D10Device* D3DDevice,
+            const D3DXMATRIX* View,
+            const D3DXMATRIX* Projection);
 
     void RenderVolume(
             ID3D10Device* D3DDevice,

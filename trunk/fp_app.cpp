@@ -173,7 +173,7 @@ int WINAPI wWinMain(
     DXUTInit( true, true, NULL ); // Parse the command line, show msgboxes on error, no extra command line params
     DXUTSetCursorSettings( true, true ); // Show the cursor and clip it when in full screen
     DXUTCreateWindow( L"Fluid particles" );
-    DXUTCreateDevice( true, 640, 480 );
+    DXUTCreateDevice( true, 1024, 768 );
     DXUTMainLoop(); // Enter into the DXUT render loop    
 
     FP_FinishApp();
@@ -523,7 +523,8 @@ void CALLBACK FP_OnD3D10FrameRender(
     else if(g_RenderType == FP_GUI_RENDERTYPE_MARCHING_CUBES)
         g_RenderMarchingCubes->OnD3D10FrameRender(D3DDevice, &viewProjection);
     else if(g_RenderType == FP_GUI_RENDERTYPE_RAYCAST)
-        g_RenderRaycast->OnD3D10FrameRender(D3DDevice, &view, &viewProjection);
+        g_RenderRaycast->OnD3D10FrameRender(D3DDevice, &view, &projection,
+                &viewProjection);
 
     // Render GUI
     g_GUI.OnD3D10FrameRender(D3DDevice, ElapsedTime, g_Camera.GetEyePt(),

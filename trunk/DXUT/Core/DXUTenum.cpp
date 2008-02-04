@@ -232,8 +232,8 @@ CD3D9Enumeration::CD3D9Enumeration()
     m_pIsD3D9DeviceAcceptableFuncUserContext = NULL;
     m_bRequirePostPixelShaderBlending = true;
 
-    m_nMinWidth = 640;
-    m_nMinHeight = 480;
+    m_nMinWidth = 1024;
+    m_nMinHeight = 768;
     m_nMaxWidth = UINT_MAX;
     m_nMaxHeight = UINT_MAX;
 
@@ -1250,12 +1250,12 @@ void DXUTBuildOptimalD3D9DeviceSettings( DXUTD3D9DeviceSettings* pOptimalDeviceS
     //---------------------
     if( pMatchOptions->eResolution == DXUTMT_IGNORE_INPUT )
     {
-        // If windowed, default to 640x480
+        // If windowed, default to 1024x768
         // If fullscreen, default to the desktop res for quick mode change
         if( pOptimalDeviceSettings->pp.Windowed )
         {
-            pOptimalDeviceSettings->pp.BackBufferWidth = 640;
-            pOptimalDeviceSettings->pp.BackBufferHeight = 480;
+            pOptimalDeviceSettings->pp.BackBufferWidth = 1024;
+            pOptimalDeviceSettings->pp.BackBufferHeight = 768;
         }
         else
         {
@@ -1848,9 +1848,9 @@ void DXUTBuildValidD3D9DeviceSettings( DXUTD3D9DeviceSettings* pValidDeviceSetti
         {
             if( pBestDeviceSettingsCombo->Windowed )
             {
-                // The framework defaults to 640x480 for windowed
-                displayModeIn.Width = 640;
-                displayModeIn.Height = 480;
+                // The framework defaults to 1024x768 for windowed
+                displayModeIn.Width = 1024;
+                displayModeIn.Height = 768;
             }
             else
             {
@@ -2307,8 +2307,8 @@ CD3D10Enumeration::CD3D10Enumeration()
     m_IsD3D10DeviceAcceptableFunc = NULL;
     m_pIsD3D10DeviceAcceptableFuncUserContext = NULL;
 
-    m_nMinWidth = 640;
-    m_nMinHeight = 480;
+    m_nMinWidth = 1024;
+    m_nMinHeight = 768;
     m_nMaxWidth = UINT_MAX;
     m_nMaxHeight = UINT_MAX;
     m_bEnumerateAllAdapterFormats = false;
@@ -3045,7 +3045,7 @@ void DXUTBuildOptimalD3D10DeviceSettings( DXUTD3D10DeviceSettings* pOptimalDevic
     ZeroMemory( pOptimalDeviceSettings, sizeof(DXUTD3D10DeviceSettings) );
 
     // Retrieve the desktop display mode.
-    DXGI_MODE_DESC adapterDesktopDisplayMode = { 640, 480, { 60, 1 }, DXGI_FORMAT_R8G8B8A8_UNORM };
+    DXGI_MODE_DESC adapterDesktopDisplayMode = { 1024, 768, { 60, 1 }, DXGI_FORMAT_R8G8B8A8_UNORM };
     DXUTGetD3D10AdapterDisplayMode( pOptimalDeviceSettings->AdapterOrdinal, 0, &adapterDesktopDisplayMode );
 
     //---------------------
@@ -3090,12 +3090,12 @@ void DXUTBuildOptimalD3D10DeviceSettings( DXUTD3D10DeviceSettings* pOptimalDevic
     //---------------------
     if( pMatchOptions->eResolution == DXUTMT_IGNORE_INPUT )
     {
-        // If windowed, default to 640x480
+        // If windowed, default to 1024x768
         // If fullscreen, default to the desktop res for quick mode change
         if( pOptimalDeviceSettings->sd.Windowed )
         {
-            pOptimalDeviceSettings->sd.BufferDesc.Width = 640;
-            pOptimalDeviceSettings->sd.BufferDesc.Height = 480;
+            pOptimalDeviceSettings->sd.BufferDesc.Width = 1024;
+            pOptimalDeviceSettings->sd.BufferDesc.Height = 768;
         }
         else
         {
@@ -3541,9 +3541,9 @@ void DXUTBuildValidD3D10DeviceSettings( DXUTD3D10DeviceSettings* pValidDeviceSet
         {
             if( pBestDeviceSettingsCombo->Windowed )
             {
-                // The framework defaults to 640x480 for windowed
-                displayModeIn.Width = 640;
-                displayModeIn.Height = 480;
+                // The framework defaults to 1024x768 for windowed
+                displayModeIn.Width = 1024;
+                displayModeIn.Height = 768;
             }
             else
             {
@@ -3874,8 +3874,8 @@ HRESULT WINAPI DXUTGetD3D10AdapterDisplayMode( UINT AdapterOrdinal, UINT nOutput
     CD3D10EnumOutputInfo *pOutputInfo = pD3DEnum->GetOutputInfo( AdapterOrdinal, nOutput );
     if( pOutputInfo )
     {
-        pModeDesc->Width = 640;
-        pModeDesc->Height = 480;
+        pModeDesc->Width = 1024;
+        pModeDesc->Height = 768;
         pModeDesc->RefreshRate.Numerator = 60;
         pModeDesc->RefreshRate.Denominator = 1;
         pModeDesc->Format = DXGI_FORMAT_R8G8B8A8_UNORM;

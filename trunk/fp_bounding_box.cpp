@@ -10,6 +10,8 @@ fp_BoundingBox::fp_BoundingBox(D3DXVECTOR3* Start, D3DXVECTOR3* Size) :
     m_Start = (Start != NULL) ? *Start : D3DXVECTOR3(-1, -1, -1);
     m_Size = (Size != NULL) ? *Size : D3DXVECTOR3(2, 2, 2);
     D3DXMatrixTranslation(&m_World, m_Start.x, m_Start.y, m_Start.z);
+    D3DXMatrixTranslation(&m_EnvironmentWorld, -m_Size.x / 2, -m_Size.y / 2, 
+            -m_Size.z / 2);
 }
 
 
@@ -149,6 +151,10 @@ D3DXMATRIX fp_BoundingBox::GetWorld() {
     return m_World;
 }
 
+D3DXMATRIX fp_BoundingBox::GetEnvironmentWorld() {
+    return m_EnvironmentWorld;
+}
+
 void fp_BoundingBox::SetStart(D3DXVECTOR3* Start) {
     m_Start = *Start;
     D3DXMatrixTranslation(&m_World, Start->x, Start->y, Start->z);
@@ -157,6 +163,8 @@ void fp_BoundingBox::SetStart(D3DXVECTOR3* Start) {
 void fp_BoundingBox::SetSize(D3DXVECTOR3* Size) {
     m_Size = *Size;
     m_SizeChangedSinceLastRender = true;
+    D3DXMatrixTranslation(&m_EnvironmentWorld, -m_Size.x / 2, -m_Size.y / 2,
+            -m_Size.z / 2);
 }
 
 void fp_BoundingBox::FillVertexBuffer(ID3D10Device* D3DDevice) {
