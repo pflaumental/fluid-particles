@@ -47,7 +47,11 @@ fp_RenderRaycast::fp_RenderRaycast(
     m_EffectVarBBoxSize(NULL),
     m_EffectVarIsoLevel(NULL),
     m_EffectVarTexDelta(NULL),
-    m_EnvironmentMapSRV(NULL){
+    m_EnvironmentMapSRV(NULL),
+    m_EffectVarRefractionRatio(NULL),
+    m_EffectVarRefractionRatioSq(NULL),    
+    m_EffectVarR0(NULL),
+    m_EffectVarOneMinusR0(NULL) {
     SetFluid(Fluid);
     D3DXVECTOR3 volumeSize = GetVolumeSize();
     m_BBox.SetSize(&volumeSize);
@@ -162,6 +166,14 @@ HRESULT fp_RenderRaycast::OnD3D10CreateDevice(
             "g_TexDelta")->AsVector();
     m_EffectVarEnvironmentMap = m_Effect->GetVariableByName(
             "g_Environment")->AsShaderResource();
+    m_EffectVarRefractionRatio = m_Effect->GetVariableByName(
+            "g_RefractionRatio")->AsScalar();
+    m_EffectVarRefractionRatioSq = m_Effect->GetVariableByName(
+            "g_RefractionRatioSq")->AsScalar();
+    m_EffectVarR0 = m_Effect->GetVariableByName(
+            "g_R0")->AsScalar();
+    m_EffectVarOneMinusR0 = m_Effect->GetVariableByName(
+            "g_OneMinusR0")->AsScalar();
     BOOL allValid = m_EffectVarCornersPos->IsValid();
     allValid |= m_EffectVarHalfParticleVoxelDiameter->IsValid();
     allValid |= m_EffectVarParticleVoxelRadius->IsValid();
@@ -180,6 +192,10 @@ HRESULT fp_RenderRaycast::OnD3D10CreateDevice(
     allValid |= m_EffectVarIsoLevel->IsValid();
     allValid |= m_EffectVarTexDelta->IsValid();
     allValid |= m_EffectVarEnvironmentMap->IsValid();
+    allValid |= m_EffectVarRefractionRatio->IsValid();
+    allValid |= m_EffectVarRefractionRatioSq->IsValid();
+    allValid |= m_EffectVarR0->IsValid();
+    allValid |= m_EffectVarOneMinusR0->IsValid();
     if(!allValid) return E_FAIL;
 
     // Set effect variables as needed
@@ -190,7 +206,7 @@ HRESULT fp_RenderRaycast::OnD3D10CreateDevice(
     D3DXVECTOR3 start = m_BBox.GetStart();
     SetVolumeStartPos(&start);
     SetStepScale(m_StepScale);
-    float maxDim = m_VolumeDimensions.Max();
+    float maxDim = (float) m_VolumeDimensions.Max();
     D3DXVECTOR3 volumeSizeRatio = D3DXVECTOR3(m_VolumeDimensions.x / maxDim,
             m_VolumeDimensions.y / maxDim, m_VolumeDimensions.y / maxDim);
     V_RETURN(m_EffectVarVolumeSizeRatio->SetFloatVector((float*)&volumeSizeRatio));
@@ -201,6 +217,7 @@ HRESULT fp_RenderRaycast::OnD3D10CreateDevice(
     texDelta.z = 1.0f / m_VolumeDimensions.z;
     V_RETURN(m_EffectVarTexDelta->SetFloatVector((float*)&texDelta));
     D3DXVECTOR3 environmentBoxSize = m_EnvironmentBox.GetSize();
+    SetRefractionRatio(FP_RAYCAST_DEFAULT_REFRACTION_RATIO);
 
     // Create vertex buffer
     D3D10_PASS_DESC passDesc;
@@ -242,9 +259,9 @@ void fp_RenderRaycast::OnD3D10FrameRender(
         const D3DXMATRIX*  Projection,
         const D3DXMATRIX*  ViewProjection) {  
     //HRESULT hr;
-    RenderEnvironment(D3DDevice, View, Projection);
+    RenderEnvironment(D3DDevice, View, Projection);    
     FillVolumeTexture(D3DDevice);
-    RenderVolume(D3DDevice, View, ViewProjection);
+    RenderVolume(D3DDevice, View, ViewProjection);    
 
     // TODO: find out why things get messed up when pass does not get reseted
     m_TechRenderRaycast->GetPassByIndex(0)->Apply(0);
@@ -327,6 +344,15 @@ void fp_RenderRaycast::SetVoxelSize(float VoxelSize) {
         }
         m_WValsMulParticleMassTexture->Unmap(0);        
     }
+}
+
+void fp_RenderRaycast::SetRefractionRatio(float RefractionRatio) {
+    m_EffectVarRefractionRatio->SetFloat(RefractionRatio);
+    m_EffectVarRefractionRatioSq->SetFloat(RefractionRatio * RefractionRatio);
+    float r0 = pow(1.0f - RefractionRatio, 2)
+            / pow(1.0f + RefractionRatio, 2);
+    m_EffectVarR0->SetFloat(r0);
+    m_EffectVarOneMinusR0->SetFloat(1.0f - r0);
 }
 
 D3DXVECTOR3 fp_RenderRaycast::GetVolumeSize() {
@@ -487,7 +513,7 @@ void fp_RenderRaycast::RenderVolume(
         const D3DXMATRIX*  View,
         const D3DXMATRIX*  ViewProjection) {
     HRESULT hr;
-    
+ 
     // Set matrizes
     D3DXMATRIX world = m_BBox.GetWorld();
     D3DXMATRIX worldView = world * *View;

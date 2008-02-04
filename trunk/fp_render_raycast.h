@@ -36,6 +36,7 @@ public:
     void SetIsoLevel(float IsoLevel);
     void SetStepScale(float StepScale);
     void SetVoxelSize(float VoxelSize);
+    void SetRefractionRatio(float RefractionRatio);
     D3DXVECTOR3 GetVolumeSize();
     fp_VolumeIndex GetVolumeTextureSize();
     
@@ -113,6 +114,10 @@ private:
     ID3D10EffectVectorVariable* m_EffectVarVolumeSizeRatio;
 
     ID3D10EffectShaderResourceVariable* m_EffectVarEnvironmentMap;
+    ID3D10EffectScalarVariable* m_EffectVarRefractionRatio;
+    ID3D10EffectScalarVariable* m_EffectVarRefractionRatioSq;
+    ID3D10EffectScalarVariable* m_EffectVarR0;
+    ID3D10EffectScalarVariable* m_EffectVarOneMinusR0;
 
     fp_VolumeIndex m_VolumeDimensions;
     

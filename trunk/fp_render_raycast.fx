@@ -34,6 +34,10 @@ cbuffer Sometimes {
     float4 g_CornersPos[4]; // normalized device space corner offsets
     float3 g_BBoxSize;
     float g_IsoLevel;
+    float g_RefractionRatio;
+    float g_RefractionRatioSq;
+    float g_R0; // (1 - refractionRatio)^2 / (1 + refreactionRatio)^2
+    float g_OneMinusR0;
 };
 
 cbuffer Often {
@@ -250,19 +254,16 @@ float3 RefineIsosurface(float3 TextureOffset, float3 SampleTexturePos) {
 }
 
 //--------------------------------------------------------------------------------------
-// Function for tracing iso surface
+// Pixel shader for tracing and shading the iso surface
 // Input:  volume space position, clip space depth, screen space position
-// Output: worldspace position and normal of the first intersection
-// Traces the iso volume along the view ray to find the first intersection.
-// If Intersection is found it get's refined.
+// Output: color and depth
+// Traces the iso volume along the view ray to find the first intersection. TODO
 //--------------------------------------------------------------------------------------
-void RaycastTraceIso(
-        in RaycastTransformVSOut Input,        
-        out float4 IntersectionNormalDepth,
-        out float3 RayDirection,
-        bool PerPixelStepsize) {
-    IntersectionNormalDepth = float4(0,0,0,-1);
-
+RaycastTraceIsoAndShadePSOut RaycastTraceIsoAndShadePS(
+        RaycastTransformVSOut Input,
+        uniform bool PerPixelStepSize) {
+    RaycastTraceIsoAndShadePSOut result;
+    
     float4 entryVolumePosClipDepth = Input.VolumePosClipDepth;
     float4 exitVolumePosClipDepth = g_ExitPoint.Load(
             int3(Input.Pos.xy, 0));
@@ -270,9 +271,9 @@ void RaycastTraceIso(
     // ray entry, exit and direction           
     float3 exitVolumePos = exitVolumePosClipDepth.xyz;
     float3 textureOffset = exitVolumePos - entryVolumePosClipDepth.xyz;
-    RayDirection = textureOffset;
+    float3 rayDir = textureOffset;
     float volumeRayLen = length(textureOffset);
-    float localStepsize = PerPixelStepsize
+    float localStepsize = PerPixelStepSize
             ? CalcLocalStepsize(textureOffset, volumeRayLen)
             : g_StepSize;
             
@@ -294,76 +295,65 @@ void RaycastTraceIso(
         float3 exitTexturePos = exitVolumePos;
         exitTexturePos.y = 1 - exitTexturePos.y;
         isoVal = g_IsoVolume.SampleLevel(LinearClamp, exitTexturePos, 0).r;
-        if (isoVal >= g_IsoLevel) {
-			sampleTexturePos = exitTexturePos;
-			numSteps = 1;
-		}
+        if (isoVal < g_IsoLevel)
+            discard;
+		sampleTexturePos = exitTexturePos;
     }    
 	// if intersection found
-	if(numSteps > 0) {
-	    // refine isosurface
-		sampleTexturePos = RefineIsosurface(textureOffset, sampleTexturePos);
-		float3 intersectionVolumePos = sampleTexturePos;
-		intersectionVolumePos.y = 1 - intersectionVolumePos.y;
-		// compute depth 		
-		IntersectionNormalDepth.w = entryVolumePosClipDepth.w
-		        + length(entryVolumePosClipDepth.xyz - intersectionVolumePos)
-		        / volumeRayLen * (exitVolumePosClipDepth.w - Input.VolumePosClipDepth.w);
-		// generate normal
-		float3 grad;
-		grad.x = g_IsoVolume.SampleLevel(LinearClamp,
-		        sampleTexturePos + float3(g_TexDelta.x, 0, 0), 0)
-		        -
-                g_IsoVolume.SampleLevel(LinearClamp,
-                sampleTexturePos - float3(g_TexDelta.x, 0, 0), 0);
-		grad.y = g_IsoVolume.SampleLevel(LinearClamp,
-		        sampleTexturePos - float3(0, g_TexDelta.y, 0), 0)
-		        -
-                g_IsoVolume.SampleLevel(LinearClamp,
-                sampleTexturePos + float3(0, g_TexDelta.y, 0), 0);
-		grad.z = g_IsoVolume.SampleLevel(LinearClamp,
-		        sampleTexturePos + float3(0, 0, g_TexDelta.z), 0)
-		        -
-                g_IsoVolume.SampleLevel(LinearClamp,
-                sampleTexturePos - float3(0, 0 ,g_TexDelta.z), 0);        
-		IntersectionNormalDepth.xyz = -normalize(grad);
-	}    
-}
 
-void ShadeIso(
-        in float4 NormalDepth,
-        in float3 RayDirection,
-        out float4 Color,
-        out float Depth) {
-    float3 reflectDir = RayDirection - 2 * dot(NormalDepth.xyz, RayDirection) 
-            * NormalDepth.xyz;
-    float3 reflectionColor = g_Environment.Sample(LinearClamp, reflectDir);
-    Color = float4(reflectionColor/* * g_MaterialColor*/, 1);
-    Depth = NormalDepth.w;
-}
-
-//--------------------------------------------------------------------------------------
-// Pixel shader for tracing and shading the iso surface
-// Input:  volume space position, clip space depth, screen space position
-// Output: worldspace position and normal of the first intersection
-// comment TODO
-//--------------------------------------------------------------------------------------
-RaycastTraceIsoAndShadePSOut RaycastTraceIsoAndShadePS(
-        RaycastTransformVSOut Input,
-        uniform bool PerPixelStepSize) {
-    RaycastTraceIsoAndShadePSOut result;   
+    // refine isosurface
+	sampleTexturePos = RefineIsosurface(textureOffset, sampleTexturePos);
+	float3 intersectionVolumePos = sampleTexturePos;
+	intersectionVolumePos.y = 1 - intersectionVolumePos.y;
+	// compute depth 		
+	result.Depth = entryVolumePosClipDepth.w
+	        + length(entryVolumePosClipDepth.xyz - intersectionVolumePos)
+	        / volumeRayLen * (exitVolumePosClipDepth.w - Input.VolumePosClipDepth.w);
+	// generate normal
+	float3 grad;
+	grad.x = g_IsoVolume.SampleLevel(LinearClamp,
+	        sampleTexturePos + float3(g_TexDelta.x, 0, 0), 0)
+	        -
+            g_IsoVolume.SampleLevel(LinearClamp,
+            sampleTexturePos - float3(g_TexDelta.x, 0, 0), 0);
+	grad.y = g_IsoVolume.SampleLevel(LinearClamp,
+	        sampleTexturePos - float3(0, g_TexDelta.y, 0), 0)
+	        -
+            g_IsoVolume.SampleLevel(LinearClamp,
+            sampleTexturePos + float3(0, g_TexDelta.y, 0), 0);
+	grad.z = g_IsoVolume.SampleLevel(LinearClamp,
+	        sampleTexturePos + float3(0, 0, g_TexDelta.z), 0)
+	        -
+            g_IsoVolume.SampleLevel(LinearClamp,
+            sampleTexturePos - float3(0, 0 ,g_TexDelta.z), 0);        
+	float3 intersectionNormal = -normalize(grad);
+	
+	// Calculate reflection
+	float3 reflectDir = reflect(rayDir, intersectionNormal);
+    float3 reflectColor = g_Environment.SampleLevel(LinearClamp, reflectDir, 2);
     
-    float4 intersectionNormalClipDepth;
-    float3 rayDirection;
-    RaycastTraceIso(Input, intersectionNormalClipDepth, rayDirection, PerPixelStepSize);
-            
-    if(intersectionNormalClipDepth.w == -1)
-        discard;
-                        
-    ShadeIso(intersectionNormalClipDepth, rayDirection, result.Color, result.Depth);
-
-    return result;	
+    // Calculate refraction
+    // sinThetaR = (ni/nr) * sinThetaI
+    // => R = ((ni/nr)*(N*V) - sqrt(1 - (ni/nr)^2*(1.0f-(N*V)^2))) * N - (ni/nr) * V    
+    float NV = dot(intersectionNormal, -rayDir);    
+    float cosThetaR = sqrt(1 - g_RefractionRatioSq * (1 - NV * NV));
+    float beforeNTerm = g_RefractionRatio * NV - cosThetaR;
+    float3 refractDir = beforeNTerm * intersectionNormal + g_RefractionRatio * rayDir;
+    
+    // TODO: calculate exit ray
+    
+    float3 refractColor = g_Environment.SampleLevel(LinearClamp, refractDir, 2);
+    
+    // Calculate fresnel term
+    float fresnel = g_R0 + g_OneMinusR0 * pow(1 - dot(-rayDir, intersectionNormal), 5);
+    
+    result.Color = float4(fresnel * reflectColor + (1 - fresnel) * refractColor, 1);
+    return result;
 }
+
+
+
+
 
 //--------------------------------------------------------------------------------------
 // Vertex shader for environment rendering
