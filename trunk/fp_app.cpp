@@ -310,7 +310,9 @@ void CALLBACK FP_OnFrameMove( double Time, float ElapsedTime, void* UserContext 
         else
             g_Sim->m_CurrentGlassPosition.y -= 100.0f * mouseDragY;
     }
-    g_Sim->Update(ElapsedTime);
+    for (int i = 0; i < FP_SIMULATION_STEPS_PER_FRAME; i++) {
+        g_Sim->Update(ElapsedTime * FP_TIME_FACTOR / FP_SIMULATION_STEPS_PER_FRAME);
+    }
     if(g_RenderType == FP_GUI_RENDERTYPE_MARCHING_CUBES) {
         g_CPUIsoVolume->ConstructFromFluid();
         g_RenderMarchingCubes->ConstructMesh();
