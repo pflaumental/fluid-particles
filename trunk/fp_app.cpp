@@ -392,6 +392,8 @@ void CALLBACK FP_OnGUIEvent(
         g_RenderSprites->m_Particles = g_Sim->m_Particles;
         g_RenderMarchingCubes->m_IsoVolume = g_CPUIsoVolume;
         g_RenderRaycast->SetFluid(g_Sim);
+        D3DXVECTOR3 volumeStartPos = CalcRaycastVolumeStartPos(g_Sim, g_RenderRaycast);
+        g_RenderRaycast->SetVolumeStartPos(&volumeStartPos);
     }
 }
 
