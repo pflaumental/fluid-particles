@@ -4,7 +4,7 @@
 #include "fp_util.h"
 
 #define FP_RENDER_RAYCAST_EFFECT_FILE L"fp_render_raycast.fx"
-#define FP_RENDER_RAYCAST_CUBEMAP_FILE L"Media/CubeMaps/rnl_cross.dds" 
+#define FP_RENDER_RAYCAST_CUBEMAP_FILE L"Media/CubeMaps/LobbyCube.dds" 
 
 const D3D10_INPUT_ELEMENT_DESC fp_SplatParticleVertex::Layout[] = {
         {"POSITION_DENSITY",  0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0,
