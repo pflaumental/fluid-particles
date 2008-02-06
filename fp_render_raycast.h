@@ -72,7 +72,8 @@ public:
             ID3D10Device* D3DDevice,
             const D3DXMATRIX*  View,
             const D3DXMATRIX*  Projection,
-            const D3DXMATRIX*  ViewProjection);
+            const D3DXMATRIX*  ViewProjection,
+            const D3DXMATRIX*  InvView);
 
 private:
     ID3D10Texture3D *m_VolumeTexture;
@@ -106,7 +107,8 @@ private:
     ID3D10EffectVectorVariable* m_EffectVarTexDelta;
     ID3D10EffectMatrixVariable* m_EffectVarWorld;
     ID3D10EffectMatrixVariable* m_EffectVarWorldView;
-    ID3D10EffectMatrixVariable* m_EffectVarWorldViewProjection;    
+    ID3D10EffectMatrixVariable* m_EffectVarWorldViewProjection;
+    ID3D10EffectMatrixVariable* m_EffectVarInvView;
     ID3D10EffectShaderResourceVariable* m_EffectVarExitPoint;
     ID3D10EffectVectorVariable* m_EffectVarBBoxStart;
     ID3D10EffectVectorVariable* m_EffectVarBBoxSize;
@@ -144,7 +146,8 @@ private:
     void RenderVolume(
             ID3D10Device* D3DDevice,
             const D3DXMATRIX* View,
-            const D3DXMATRIX* ViewProjection); 
+            const D3DXMATRIX* ViewProjection,
+            const D3DXMATRIX*  InvView); 
 };
 
 #endif

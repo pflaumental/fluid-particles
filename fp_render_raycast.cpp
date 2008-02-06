@@ -4,7 +4,7 @@
 #include "fp_util.h"
 
 #define FP_RENDER_RAYCAST_EFFECT_FILE L"fp_render_raycast.fx"
-#define FP_RENDER_RAYCAST_CUBEMAP_FILE L"Media/CubeMaps/LobbyCube.dds" 
+#define FP_RENDER_RAYCAST_CUBEMAP_FILE L"Media/CubeMaps/rnl_cross.dds" 
 
 const D3D10_INPUT_ELEMENT_DESC fp_SplatParticleVertex::Layout[] = {
         {"POSITION_DENSITY",  0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0,
@@ -42,6 +42,7 @@ fp_RenderRaycast::fp_RenderRaycast(
     m_EffectVarWorld(NULL),
     m_EffectVarWorldView(NULL),
     m_EffectVarWorldViewProjection(NULL),
+    m_EffectVarInvView(NULL),
     m_EffectVarIsoVolume(NULL),
     m_EffectVarBBoxStart(NULL),
     m_EffectVarBBoxSize(NULL),
@@ -152,6 +153,8 @@ HRESULT fp_RenderRaycast::OnD3D10CreateDevice(
             "g_WorldView")->AsMatrix();
     m_EffectVarWorldViewProjection = m_Effect->GetVariableByName(
             "g_WorldViewProjection")->AsMatrix();
+    m_EffectVarInvView = m_Effect->GetVariableByName(
+            "g_InvView")->AsMatrix();
     m_EffectVarExitPoint = m_Effect->GetVariableByName(
             "g_ExitPoint")->AsShaderResource();
     m_EffectVarStepSize = m_Effect->GetVariableByName(
@@ -182,6 +185,7 @@ HRESULT fp_RenderRaycast::OnD3D10CreateDevice(
     allValid |= m_EffectVarWValsMulParticleMass->IsValid();
     allValid |= m_EffectVarBBoxStart->IsValid();
     allValid |= m_EffectVarBBoxSize->IsValid();
+    allValid |= m_EffectVarInvView->IsValid();
     allValid |= m_EffectVarWorldViewProjection->IsValid();
     allValid |= m_EffectVarWorldView->IsValid();
     allValid |= m_EffectVarWorld->IsValid();
@@ -257,11 +261,12 @@ void fp_RenderRaycast::OnD3D10FrameRender(
         ID3D10Device* D3DDevice,
         const D3DXMATRIX*  View,
         const D3DXMATRIX*  Projection,
-        const D3DXMATRIX*  ViewProjection) {  
+        const D3DXMATRIX*  ViewProjection,
+        const D3DXMATRIX*  InvView) {  
     //HRESULT hr;
     RenderEnvironment(D3DDevice, View, Projection);    
     FillVolumeTexture(D3DDevice);
-    RenderVolume(D3DDevice, View, ViewProjection);    
+    RenderVolume(D3DDevice, View, ViewProjection, InvView);    
 
     // TODO: find out why things get messed up when pass does not get reseted
     m_TechRenderRaycast->GetPassByIndex(0)->Apply(0);
@@ -511,15 +516,17 @@ void fp_RenderRaycast::RenderEnvironment(
 void fp_RenderRaycast::RenderVolume(
         ID3D10Device* D3DDevice,
         const D3DXMATRIX*  View,
-        const D3DXMATRIX*  ViewProjection) {
+        const D3DXMATRIX*  ViewProjection,
+        const D3DXMATRIX*  InvView) {
     HRESULT hr;
  
     // Set matrizes
     D3DXMATRIX world = m_BBox.GetWorld();
     D3DXMATRIX worldView = world * *View;
     D3DXMATRIX worldViewProjection = world * *ViewProjection;
-    V(m_EffectVarWorldView->SetMatrix((float*)&worldView));
+    V(m_EffectVarWorldView->SetMatrix((float*)&worldView));    
     V(m_EffectVarWorldViewProjection->SetMatrix((float*)&worldViewProjection));
+    V(m_EffectVarInvView->SetMatrix((float*)InvView));
     
     // Find the ray exit
     m_ExitPoint->Bind(true, false);
