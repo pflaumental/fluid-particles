@@ -239,76 +239,74 @@ float CalcLocalStepsize(float3 RayDir, float RayDirLen) {
 }
 
 // Function for refining the iso trace
-float3 RefineIsosurface(float3 TextureOffset, float3 SampleTexturePos) {
+float3 RefineIsoSurface(float3 TextureOffset, float3 SampleTexturePos, bool findEntry) {
 	TextureOffset /= 2;
 	SampleTexturePos -= TextureOffset;
 	for (int i = 0; i < g_NumRefineSteps; i++) {
 		TextureOffset /= 2;
 		float isoVal = g_IsoVolume.SampleLevel(LinearPointClamp, SampleTexturePos, 0).r;
 		if (isoVal >= g_IsoLevel)
-			SampleTexturePos -= TextureOffset;
+			SampleTexturePos = findEntry ? SampleTexturePos - TextureOffset
+			        : SampleTexturePos + TextureOffset;
 		else
-			SampleTexturePos += TextureOffset;
+			SampleTexturePos = findEntry ? SampleTexturePos + TextureOffset
+			        : SampleTexturePos - TextureOffset;
 	}	
 	return float3(SampleTexturePos);
 }
 
-//--------------------------------------------------------------------------------------
-// Pixel shader for tracing and shading the iso surface
-// Input:  volume space position, clip space depth, screen space position
-// Output: color and depth
-// Traces the iso volume along the view ray to find the first intersection. TODO
-//--------------------------------------------------------------------------------------
-RaycastTraceIsoAndShadePSOut RaycastTraceIsoAndShadePS(
-        RaycastTransformVSOut Input,
-        uniform bool PerPixelStepSize) {
-    RaycastTraceIsoAndShadePSOut result;
-    
-    float4 entryVolumePosClipDepth = Input.VolumePosClipDepth;
-    float4 exitVolumePosClipDepth = g_ExitPoint.Load(
-            int3(Input.Pos.xy, 0));
-
-    // ray entry, exit and direction           
-    float3 exitVolumePos = exitVolumePosClipDepth.xyz;
-    float3 textureOffset = exitVolumePos - entryVolumePosClipDepth.xyz;
-    float3 rayDir = textureOffset;
+// Function for tracing the iso surface
+void TraceIsoSurface(
+        out float3 RayDir,
+        out float3 IntersectionVolumePos,
+        out float3 IntersectionVolumeNormal,
+        out float IntersectionClipDepth,
+        in bool PerPixelStepSize,
+        in float4 EntryVolumePosClipDepth,
+        in float4 ExitVolumePosClipDepth) {
+    // ray entry, exit and direction
+    float3 textureOffset = ExitVolumePosClipDepth.xyz - EntryVolumePosClipDepth.xyz;
+    RayDir = textureOffset;
     float volumeRayLen = length(textureOffset);
     float localStepsize = PerPixelStepSize
             ? CalcLocalStepsize(textureOffset, volumeRayLen)
             : g_StepSize;
             
-    float3 sampleTexturePos = entryVolumePosClipDepth.xyz;
+    float3 sampleTexturePos = EntryVolumePosClipDepth.xyz;
     textureOffset /= volumeRayLen;
     textureOffset *= localStepsize;
     sampleTexturePos.y = 1 - sampleTexturePos.y; // y in volume is 1-y in texture
     textureOffset.y *= -1; // offset.y must therefore get flipped
     
-    int numSteps = ceil(volumeRayLen / localStepsize);
-    float isoVal;    
+    int numSteps = ceil(volumeRayLen / localStepsize);        
+    float isoVal; 
     while(numSteps-- > 0) {
-        float isoVal = g_IsoVolume.SampleLevel(LinearClamp, sampleTexturePos, 0).r;
+        isoVal = g_IsoVolume.SampleLevel(LinearClamp, sampleTexturePos, 0).r;
         if (isoVal >= g_IsoLevel)
 			break;
         sampleTexturePos += textureOffset;
     }
     if(numSteps <= 0) {
-        float3 exitTexturePos = exitVolumePos;
+        float3 exitTexturePos = ExitVolumePosClipDepth.xyz;
         exitTexturePos.y = 1 - exitTexturePos.y;
         isoVal = g_IsoVolume.SampleLevel(LinearClamp, exitTexturePos, 0).r;
         if (isoVal < g_IsoLevel)
             discard;
 		sampleTexturePos = exitTexturePos;
-    }    
+    }
 	// if intersection found
-
     // refine isosurface
-	sampleTexturePos = RefineIsosurface(textureOffset, sampleTexturePos);
-	float3 intersectionVolumePos = sampleTexturePos;
-	intersectionVolumePos.y = 1 - intersectionVolumePos.y;
+	sampleTexturePos = RefineIsoSurface(textureOffset, sampleTexturePos, true);
+	
+	IntersectionVolumePos = sampleTexturePos;
+	IntersectionVolumePos.y = 1 - IntersectionVolumePos.y;	
+	
+	// depth is calculated inside this function for io-hiding reasons
 	// compute depth 		
-	result.Depth = entryVolumePosClipDepth.w
-	        + length(entryVolumePosClipDepth.xyz - intersectionVolumePos)
-	        / volumeRayLen * (exitVolumePosClipDepth.w - Input.VolumePosClipDepth.w);
+	IntersectionClipDepth = EntryVolumePosClipDepth.w
+	        + length(EntryVolumePosClipDepth.xyz - IntersectionVolumePos)
+	        / volumeRayLen * (ExitVolumePosClipDepth.w - EntryVolumePosClipDepth.w);  
+	        	
 	// generate normal
 	float3 grad;
 	grad.x = g_IsoVolume.SampleLevel(LinearClamp,
@@ -326,28 +324,50 @@ RaycastTraceIsoAndShadePSOut RaycastTraceIsoAndShadePS(
 	        -
             g_IsoVolume.SampleLevel(LinearClamp,
             sampleTexturePos - float3(0, 0 ,g_TexDelta.z), 0);        
-	float3 intersectionNormal = -normalize(grad);
-	
+	IntersectionVolumeNormal = -normalize(grad);    
+}
+
+//--------------------------------------------------------------------------------------
+// Pixel shader for tracing and shading the iso surface
+// Input:  volume space position, clip space depth, screen space position
+// Output: color and depth
+// Traces the iso volume along the view ray to find the first intersection. TODO
+//--------------------------------------------------------------------------------------
+RaycastTraceIsoAndShadePSOut RaycastTraceIsoAndShadePS(
+        RaycastTransformVSOut Input,
+        uniform bool PerPixelStepSize) {
+    RaycastTraceIsoAndShadePSOut result;
+    
+    float4 entryVolumePosClipDepth = Input.VolumePosClipDepth;
+    float4 exitVolumePosClipDepth = g_ExitPoint.Load(
+            int3(Input.Pos.xy, 0));
+            
+    // Trace the iso surface            
+	float3 rayDir, intersectionVolumePos, intersectionVolumeNormal;
+    TraceIsoSurface(rayDir, intersectionVolumePos, intersectionVolumeNormal, result.Depth,
+        PerPixelStepSize, entryVolumePosClipDepth, exitVolumePosClipDepth);
+
 	// Calculate reflection
-	float3 reflectDir = reflect(rayDir, intersectionNormal);
+	float3 reflectDir = reflect(rayDir, intersectionVolumeNormal);
     float3 reflectColor = g_Environment.SampleLevel(LinearClamp, reflectDir, 2);
     
     // Calculate refraction
     // sinThetaR = (ni/nr) * sinThetaI
     // => R = ((ni/nr)*(N*V) - sqrt(1 - (ni/nr)^2*(1.0f-(N*V)^2))) * N - (ni/nr) * V    
-    float NV = dot(intersectionNormal, -rayDir);    
+    float NV = dot(intersectionVolumeNormal, -rayDir);    
     float cosThetaR = sqrt(1 - g_RefractionRatioSq * (1 - NV * NV));
     float beforeNTerm = g_RefractionRatio * NV - cosThetaR;
-    float3 refractDir = beforeNTerm * intersectionNormal + g_RefractionRatio * rayDir;
+    float3 refractDir = beforeNTerm * intersectionVolumeNormal + g_RefractionRatio * rayDir;
     
     // TODO: calculate exit ray
     
     float3 refractColor = g_Environment.SampleLevel(LinearClamp, refractDir, 2);
     
     // Calculate fresnel term
-    float fresnel = g_R0 + g_OneMinusR0 * pow(1 - dot(-rayDir, intersectionNormal), 5);
+    float fresnel = g_R0 + g_OneMinusR0 * pow(1 - dot(-rayDir, intersectionVolumeNormal), 5);
     
     result.Color = float4(fresnel * reflectColor + (1 - fresnel) * refractColor, 1);
+  
     return result;
 }
 
