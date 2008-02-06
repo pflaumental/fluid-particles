@@ -17,6 +17,7 @@ cbuffer Immutable {
         float2(-1,-1),
         float2( 1,-1),
     };
+    float FLOATMAX = 1000000000;
 };
 
 cbuffer Once {
@@ -45,6 +46,7 @@ cbuffer Often {
     float4x4 g_World;
     float4x4 g_WorldView;
     float4x4 g_WorldViewProjection;
+    float4x4 g_InvView;
     float3 g_BBoxStart;
     float3 g_LightDir = float3(0,1,0); // TODO remove light hack    
 };
@@ -232,25 +234,41 @@ float4 RaycastExitPS(RaycastTransformVSOut Input) : SV_Target {
     return Input.VolumePosClipDepth;
 }
 
-// Helper function for calculating the local stepsize
+// Function for finding the intersection of ray with a box (in which it starts)
+float LengthInBox(in float3 StartVolumePos, in float3 VolumeDir) {
+    float tx = FLOATMAX, ty = FLOATMAX, tz = FLOATMAX;
+    if(VolumeDir.x < 0)
+        tx = -StartVolumePos.x / VolumeDir.x;
+    if (VolumeDir.x > 0)
+        tx = (1 - StartVolumePos.x) / VolumeDir.x;
+    if(VolumeDir.y < 0)
+        ty = -StartVolumePos.y / VolumeDir.y;
+    if (VolumeDir.y > 0)
+        ty = (1 - StartVolumePos.y) / VolumeDir.y;
+    if(VolumeDir.z < 0)
+        tz = -StartVolumePos.z / VolumeDir.z;
+    if (VolumeDir.z > 0)
+        tz = (1 - StartVolumePos.z) / VolumeDir.z;
+    return tx < ty ? (tx < tz ? tx : tz) : (ty < tz ? ty : tz);
+}
+
+// Function for calculating the local stepsize
 float CalcLocalStepsize(float3 RayDir, float RayDirLen) {
 	float3 scaledRayDir = RayDir * g_VolumeSizeRatio;
 	return g_StepSize * RayDirLen / length(scaledRayDir);
 }
 
 // Function for refining the iso trace
-float3 RefineIsoSurface(float3 TextureOffset, float3 SampleTexturePos, bool findEntry) {
+float3 RefineIsoSurface(float3 TextureOffset, float3 SampleTexturePos, bool FindEntry) {
 	TextureOffset /= 2;
 	SampleTexturePos -= TextureOffset;
 	for (int i = 0; i < g_NumRefineSteps; i++) {
 		TextureOffset /= 2;
 		float isoVal = g_IsoVolume.SampleLevel(LinearPointClamp, SampleTexturePos, 0).r;
-		if (isoVal >= g_IsoLevel)
-			SampleTexturePos = findEntry ? SampleTexturePos - TextureOffset
-			        : SampleTexturePos + TextureOffset;
+		if (FindEntry ? isoVal >= g_IsoLevel : isoVal <= g_IsoLevel)
+			SampleTexturePos = SampleTexturePos - TextureOffset;
 		else
-			SampleTexturePos = findEntry ? SampleTexturePos + TextureOffset
-			        : SampleTexturePos - TextureOffset;
+			SampleTexturePos = SampleTexturePos + TextureOffset;
 	}	
 	return float3(SampleTexturePos);
 }
@@ -262,50 +280,51 @@ void TraceIsoSurface(
         out float3 IntersectionVolumeNormal,
         out float IntersectionClipDepth,
         in bool PerPixelStepSize,
-        in float4 EntryVolumePosClipDepth,
-        in float4 ExitVolumePosClipDepth) {
+        in bool FindEntry,
+        in float4 StartVolumePosClipDepth,
+        in float4 EndVolumePosClipDepth) {
     // ray entry, exit and direction
-    float3 textureOffset = ExitVolumePosClipDepth.xyz - EntryVolumePosClipDepth.xyz;
+    float3 textureOffset = EndVolumePosClipDepth.xyz - StartVolumePosClipDepth.xyz;
     RayDir = textureOffset;
     float volumeRayLen = length(textureOffset);
     float localStepsize = PerPixelStepSize
             ? CalcLocalStepsize(textureOffset, volumeRayLen)
             : g_StepSize;
             
-    float3 sampleTexturePos = EntryVolumePosClipDepth.xyz;
+    float3 sampleTexturePos = StartVolumePosClipDepth.xyz;
     textureOffset /= volumeRayLen;
     textureOffset *= localStepsize;
     sampleTexturePos.y = 1 - sampleTexturePos.y; // y in volume is 1-y in texture
     textureOffset.y *= -1; // offset.y must therefore get flipped
     
     int numSteps = ceil(volumeRayLen / localStepsize);        
-    float isoVal; 
+    float isoVal;
     while(numSteps-- > 0) {
         isoVal = g_IsoVolume.SampleLevel(LinearClamp, sampleTexturePos, 0).r;
-        if (isoVal >= g_IsoLevel)
+        if (FindEntry ? isoVal >= g_IsoLevel : isoVal <= g_IsoLevel)
 			break;
         sampleTexturePos += textureOffset;
     }
     if(numSteps <= 0) {
-        float3 exitTexturePos = ExitVolumePosClipDepth.xyz;
+        float3 exitTexturePos = EndVolumePosClipDepth.xyz;
         exitTexturePos.y = 1 - exitTexturePos.y;
         isoVal = g_IsoVolume.SampleLevel(LinearClamp, exitTexturePos, 0).r;
-        if (isoVal < g_IsoLevel)
+        if (FindEntry ? isoVal < g_IsoLevel : isoVal > g_IsoLevel)
             discard;
 		sampleTexturePos = exitTexturePos;
     }
 	// if intersection found
     // refine isosurface
-	sampleTexturePos = RefineIsoSurface(textureOffset, sampleTexturePos, true);
+	sampleTexturePos = RefineIsoSurface(textureOffset, sampleTexturePos, FindEntry);
 	
 	IntersectionVolumePos = sampleTexturePos;
 	IntersectionVolumePos.y = 1 - IntersectionVolumePos.y;	
 	
-	// depth is calculated inside this function for io-hiding reasons
+	// depth is calculated inside this function for memory latency hiding reasons
 	// compute depth 		
-	IntersectionClipDepth = EntryVolumePosClipDepth.w
-	        + length(EntryVolumePosClipDepth.xyz - IntersectionVolumePos)
-	        / volumeRayLen * (ExitVolumePosClipDepth.w - EntryVolumePosClipDepth.w);  
+	IntersectionClipDepth = StartVolumePosClipDepth.w
+	        + length(StartVolumePosClipDepth.xyz - IntersectionVolumePos)
+	        / volumeRayLen * (EndVolumePosClipDepth.w - StartVolumePosClipDepth.w);  
 	        	
 	// generate normal
 	float3 grad;
@@ -340,31 +359,48 @@ RaycastTraceIsoAndShadePSOut RaycastTraceIsoAndShadePS(
     
     float4 entryVolumePosClipDepth = Input.VolumePosClipDepth;
     float4 exitVolumePosClipDepth = g_ExitPoint.Load(
-            int3(Input.Pos.xy, 0));
+            int3(Input.Pos.xy, 0));            
             
     // Trace the iso surface            
-	float3 rayDir, intersectionVolumePos, intersectionVolumeNormal;
-    TraceIsoSurface(rayDir, intersectionVolumePos, intersectionVolumeNormal, result.Depth,
-        PerPixelStepSize, entryVolumePosClipDepth, exitVolumePosClipDepth);
+	float3 rayDir, intersection1VolumePos, intersection1VolumeNormal;
+    TraceIsoSurface(rayDir, intersection1VolumePos, intersection1VolumeNormal, result.Depth,
+        PerPixelStepSize, true, entryVolumePosClipDepth, exitVolumePosClipDepth);
 
 	// Calculate reflection
-	float3 reflectDir = reflect(rayDir, intersectionVolumeNormal);
+	float3 reflectDir = reflect(rayDir, intersection1VolumeNormal);
+	// Reflection of a round body minifies => use lower detail mip
     float3 reflectColor = g_Environment.SampleLevel(LinearClamp, reflectDir, 2);
     
-    // Calculate refraction
+    // Calculate first refraction
     // sinThetaR = (ni/nr) * sinThetaI
     // => R = ((ni/nr)*(N*V) - sqrt(1 - (ni/nr)^2*(1.0f-(N*V)^2))) * N - (ni/nr) * V    
-    float NV = dot(intersectionVolumeNormal, -rayDir);    
+    float NV = dot(intersection1VolumeNormal, -rayDir);    
     float cosThetaR = sqrt(1 - g_RefractionRatioSq * (1 - NV * NV));
     float beforeNTerm = g_RefractionRatio * NV - cosThetaR;
-    float3 refractDir = beforeNTerm * intersectionVolumeNormal + g_RefractionRatio * rayDir;
+    float3 refract1Dir = normalize(beforeNTerm * intersection1VolumeNormal
+            + g_RefractionRatio * rayDir);
+    float refract1Len = LengthInBox(intersection1VolumePos, refract1Dir);
+    float4 refract1Start = float4(intersection1VolumePos + 0.01 * refract1Dir, 1);
+    float4 refract1End = float4(intersection1VolumePos + refract1Len * refract1Dir, 1);
+
+    // Trace the refraction ray exit-intersection with the iso surface
+    float3 intersection2VolumePos, intersection2VolumeNormal, dummy;
+    TraceIsoSurface(dummy, intersection2VolumePos, intersection2VolumeNormal, dummy,
+        PerPixelStepSize, false, refract1Start, refract1End);
+        
+    // Calculate the second refraction
+    NV = dot(-intersection2VolumeNormal, -refract1Dir);    
+    cosThetaR = sqrt(1 - (1 / g_RefractionRatioSq) * (1 - NV * NV));
+    beforeNTerm = (1 / g_RefractionRatioSq) * NV - cosThetaR;
+    float3 refract2Dir = -beforeNTerm * intersection2VolumeNormal
+            + (1 / g_RefractionRatioSq) * refract1Dir;
     
-    // TODO: calculate exit ray
-    
-    float3 refractColor = g_Environment.SampleLevel(LinearClamp, refractDir, 2);
+    // Refraction of a round body magnifies => use most detailed mip
+    float3 refractColor = g_Environment.SampleLevel(LinearClamp, refract2Dir, 0);    
     
     // Calculate fresnel term
-    float fresnel = g_R0 + g_OneMinusR0 * pow(1 - dot(-rayDir, intersectionVolumeNormal), 5);
+    float fresnel = g_R0 + g_OneMinusR0 * pow(1 - dot(-rayDir, intersection1VolumeNormal),
+            5);
     
     result.Color = float4(fresnel * reflectColor + (1 - fresnel) * refractColor, 1);
   
