@@ -12,6 +12,7 @@
 #pragma warning(default:4995)
 
 #include "fp_global.h"
+#include "fp_util.h"
 
 //--------------------------------------------------------------------------------------
 // UI control IDs
@@ -40,6 +41,7 @@
 #define IDC_RAYCAST_STEP_SCALE_STATIC          23
 #define IDC_RAYCAST_REFRACTION_RATIO           24
 #define IDC_RAYCAST_REFRACTION_RATIO_STATIC    25
+#define IDC_RAYCAST_SELECT_CUBEMAP             26
 
 #define FP_GUI_HEIGHT              550
 
@@ -59,6 +61,8 @@ public:
     D3DXVECTOR3 m_LightDir[FP_MAX_LIGHTS];
     D3DXVECTOR4 m_LightDiffuse[FP_MAX_LIGHTS];
     D3DXCOLOR m_LightDiffuseColor[FP_MAX_LIGHTS];
+
+    void SetCubeMapNames(fp_StringList* CubeMapNames, int CurrentCubeMap);
 
     fp_GUI();
 
@@ -86,7 +90,8 @@ public:
             float& ParticeScale,
             bool& ResetSim,
             bool& MoveHorizontally,
-            int& RenderType);
+            int& RenderType,
+            int& SelectedCubeMap);
 
     // DX9 specific
     HRESULT OnD3D9CreateDevice(

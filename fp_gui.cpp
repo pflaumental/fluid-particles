@@ -7,6 +7,15 @@ extern void CALLBACK FP_OnGUIEvent(
         CDXUTControl* pControl,
         void* pUserContext );
 
+
+void fp_GUI::SetCubeMapNames(fp_StringList* CubeMapNames, int CurrentCubeMap) {
+    CDXUTComboBox* comboBox = m_SampleUI.GetComboBox(IDC_RAYCAST_SELECT_CUBEMAP);
+    for(int i=0, size=CubeMapNames->size(); i < size; i++) {
+        comboBox->AddItem((*CubeMapNames)[i].c_str(), (LPVOID)i);
+    }
+    comboBox->SetSelectedByIndex(CurrentCubeMap);
+}
+
 //--------------------------------------------------------------------------------------
 // Constructor
 //--------------------------------------------------------------------------------------
@@ -61,6 +70,9 @@ fp_GUI::fp_GUI()
     iYRaycast = iYMC = iYSprite = iYCommon;
 
     // Raycast controls
+    comboBox = NULL;
+    m_SampleUI.AddComboBox( IDC_RAYCAST_SELECT_CUBEMAP, 35, iYRaycast += 24, 125, 24,
+            L'C', false, &comboBox );
 
     iYRaycast += 24;
     StringCchPrintf( sz, 100, L"Iso level: %0.3f", FP_RAYCAST_DEFAULT_ISO_LEVEL ); 
@@ -225,7 +237,8 @@ void fp_GUI::OnGUIEvent(
         float& ParticleScale,
         bool& ResetSim,
         bool& MoveHorizontally,
-        int& RenderType) {   
+        int& RenderType,
+        int& SelectedCubeMap) {   
     WCHAR sz[100];
     ResetSim = false;
     switch( ControlID ) {
@@ -249,7 +262,16 @@ void fp_GUI::OnGUIEvent(
 
         case IDC_MOVE_HORIZONTALLY: 
             MoveHorizontally = m_SampleUI.GetCheckBox(IDC_MOVE_HORIZONTALLY)->GetChecked();
-            break;       
+            break;    
+
+        case IDC_RAYCAST_SELECT_CUBEMAP: {
+            DXUTComboBoxItem *item = ((CDXUTComboBox*)Control)->GetSelectedItem();
+            if( item ) 
+                #pragma warning( disable : 4311)
+                SelectedCubeMap = (int)item->pData;
+                #pragma warning( default : 4311)
+            break;
+        }
 
         case IDC_RAYCAST_ISO_LEVEL: 
             RaycastIsoLevel = (float) (m_SampleUI.GetSlider(

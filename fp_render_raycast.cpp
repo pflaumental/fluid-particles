@@ -4,7 +4,8 @@
 #include "fp_util.h"
 
 #define FP_RENDER_RAYCAST_EFFECT_FILE L"fp_render_raycast.fx"
-#define FP_RENDER_RAYCAST_CUBEMAP_FILE L"Media/CubeMaps/rnl_cross.dds" 
+#define FP_RENDER_RAYCAST_CUBEMAP_DIR L"Media/CubeMaps/"
+#define FP_RENDER_RAYCAST_DEFAULT_CUBEMAP L"Park.dds"
 
 const D3D10_INPUT_ELEMENT_DESC fp_SplatParticleVertex::Layout[] = {
         {"POSITION_DENSITY",  0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0,
@@ -51,8 +52,11 @@ fp_RenderRaycast::fp_RenderRaycast(
     m_EnvironmentMapSRV(NULL),
     m_EffectVarRefractionRatio(NULL),
     m_EffectVarRefractionRatioSq(NULL),    
+    m_EffectVarRefractionRatioInv(NULL),
+    m_EffectVarRefractionRatioInvSq(NULL),
     m_EffectVarR0(NULL),
-    m_EffectVarOneMinusR0(NULL) {
+    m_EffectVarOneMinusR0(NULL),
+    m_CurrentCubeMap(0) {
     SetFluid(Fluid);
     D3DXVECTOR3 volumeSize = GetVolumeSize();
     m_BBox.SetSize(&volumeSize);
@@ -119,11 +123,22 @@ HRESULT fp_RenderRaycast::OnD3D10CreateDevice(
     V_RETURN(D3DDevice->CreateShaderResourceView(m_WValsMulParticleMassTexture,
             &srvDesc, &m_WValsMulParticleMassSRV));
 
-    // Create environment map
-    WCHAR str[MAX_PATH];    
-    V_RETURN(DXUTFindDXSDKMediaFileCch(str, MAX_PATH, FP_RENDER_RAYCAST_CUBEMAP_FILE));
-    V_RETURN(D3DX10CreateShaderResourceViewFromFile(D3DDevice, str, NULL, NULL,
-            &m_EnvironmentMapSRV, NULL));
+    // Create environment maps
+    WCHAR absolutePath[MAX_PATH], relativePath[MAX_PATH];
+    //V_RETURN(DXUTFindDXSDKMediaFileCch(str, MAX_PATH, FP_RENDER_RAYCAST_CUBEMAP_FILE));
+    //V_RETURN(D3DX10CreateShaderResourceViewFromFile(D3DDevice, str, NULL, NULL,
+    //        &m_EnvironmentMapSRV, NULL));
+    fp_Util::ListDirectory(&m_CubeMapNames, FP_RENDER_RAYCAST_CUBEMAP_DIR, L"dds");
+    for(size_t i=0, size=m_CubeMapNames.size(); i < size; i++) {
+        if(m_CubeMapNames[i].compare(FP_RENDER_RAYCAST_DEFAULT_CUBEMAP) == 0)
+            m_CurrentCubeMap = i;
+        StringCchPrintf(relativePath, MAX_PATH, L"%s%s", FP_RENDER_RAYCAST_CUBEMAP_DIR, 
+                m_CubeMapNames[i].c_str());
+        V_RETURN(DXUTFindDXSDKMediaFileCch(absolutePath, MAX_PATH, relativePath));
+        m_EnvironmentMapSRV.push_back(NULL);
+        V_RETURN(D3DX10CreateShaderResourceViewFromFile(D3DDevice, absolutePath, NULL,
+                NULL, &m_EnvironmentMapSRV.back(), NULL));        
+    }
 
     // Read the D3DX effect file
     m_Effect = fp_Util::LoadEffect(D3DDevice, FP_RENDER_RAYCAST_EFFECT_FILE);
@@ -173,6 +188,10 @@ HRESULT fp_RenderRaycast::OnD3D10CreateDevice(
             "g_RefractionRatio")->AsScalar();
     m_EffectVarRefractionRatioSq = m_Effect->GetVariableByName(
             "g_RefractionRatioSq")->AsScalar();
+    m_EffectVarRefractionRatioInv = m_Effect->GetVariableByName(
+            "g_RefractionRatioInv")->AsScalar();
+    m_EffectVarRefractionRatioInvSq = m_Effect->GetVariableByName(
+            "g_RefractionRatioInvSq")->AsScalar();
     m_EffectVarR0 = m_Effect->GetVariableByName(
             "g_R0")->AsScalar();
     m_EffectVarOneMinusR0 = m_Effect->GetVariableByName(
@@ -198,6 +217,8 @@ HRESULT fp_RenderRaycast::OnD3D10CreateDevice(
     allValid |= m_EffectVarEnvironmentMap->IsValid();
     allValid |= m_EffectVarRefractionRatio->IsValid();
     allValid |= m_EffectVarRefractionRatioSq->IsValid();
+    allValid |= m_EffectVarRefractionRatioInv->IsValid();
+    allValid |= m_EffectVarRefractionRatioInvSq->IsValid();
     allValid |= m_EffectVarR0->IsValid();
     allValid |= m_EffectVarOneMinusR0->IsValid();
     if(!allValid) return E_FAIL;
@@ -276,7 +297,10 @@ void fp_RenderRaycast::OnD3D10DestroyDevice( void* UserContext ) {
     DestroyVolumeTexture();
     m_BBox.OnD3D10DestroyDevice();
     m_EnvironmentBox.OnD3D10DestroyDevice();
-    SAFE_RELEASE(m_EnvironmentMapSRV);
+    while(!m_EnvironmentMapSRV.empty()) {
+        SAFE_RELEASE(m_EnvironmentMapSRV.back());
+        m_EnvironmentMapSRV.pop_back();
+    }
     SAFE_RELEASE(m_WValsMulParticleMassTexture);
     SAFE_RELEASE(m_WValsMulParticleMassSRV);
     SAFE_RELEASE(m_SplatParticleVertexLayout);
@@ -354,6 +378,9 @@ void fp_RenderRaycast::SetVoxelSize(float VoxelSize) {
 void fp_RenderRaycast::SetRefractionRatio(float RefractionRatio) {
     m_EffectVarRefractionRatio->SetFloat(RefractionRatio);
     m_EffectVarRefractionRatioSq->SetFloat(RefractionRatio * RefractionRatio);
+    float refractionRatioInv = 1.0f / RefractionRatio;
+    m_EffectVarRefractionRatioInv->SetFloat(refractionRatioInv);
+    m_EffectVarRefractionRatioInvSq->SetFloat(refractionRatioInv * refractionRatioInv);
     float r0 = pow(1.0f - RefractionRatio, 2)
             / pow(1.0f + RefractionRatio, 2);
     m_EffectVarR0->SetFloat(r0);
@@ -507,7 +534,7 @@ void fp_RenderRaycast::RenderEnvironment(
 
     V(m_EffectVarWorld->SetMatrix((float*)world));
     V(m_EffectVarWorldViewProjection->SetMatrix((float*)worldViewProjection));
-    m_EffectVarEnvironmentMap->SetResource(m_EnvironmentMapSRV);
+    m_EffectVarEnvironmentMap->SetResource(m_EnvironmentMapSRV[m_CurrentCubeMap]);
 
     m_TechRenderRaycast->GetPassByIndex(4)->Apply(0);
     m_EnvironmentBox.OnD3D10FrameRenderSolid(D3DDevice, true);

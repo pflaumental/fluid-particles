@@ -366,14 +366,17 @@ void CALLBACK FP_OnGUIEvent(
     bool resetSim;
     float mcVoxelSize = -1.0f, mcIsoLevel = -1.0f, raycastIsoLevel = -1.0f, 
             raycastStepScale = -1.0f, raycastRefractionRatio = -1.0f;
+    int selectedCubeMap = -1;
     float oldSpriteSize = g_RenderSprites->GetSpriteSize();
     float newSpriteSize = oldSpriteSize;
     g_GUI.OnGUIEvent(Event, ControlID, Control, g_ActiveLight, g_NumActiveLights,
             raycastIsoLevel, raycastStepScale, raycastRefractionRatio, mcVoxelSize,
             mcIsoLevel, g_LightScale, newSpriteSize, resetSim, g_MoveHorizontally,
-            g_RenderType);
+            g_RenderType, selectedCubeMap);
     if(oldSpriteSize != newSpriteSize)
         g_RenderSprites->SetSpriteSize(newSpriteSize);
+    if(selectedCubeMap >= 0)
+        g_RenderRaycast->m_CurrentCubeMap = selectedCubeMap;
     if(raycastIsoLevel > 0.0f)
         g_RenderRaycast->SetIsoLevel(raycastIsoLevel);
     if(raycastStepScale > 0.0f)
@@ -444,6 +447,8 @@ HRESULT CALLBACK FP_OnD3D10CreateDevice(
             UserContext);
     g_RenderRaycast->OnD3D10CreateDevice(D3DDevice, BackBufferSurfaceDesc,
         UserContext);
+    g_GUI.SetCubeMapNames(&g_RenderRaycast->m_CubeMapNames,
+            g_RenderRaycast->m_CurrentCubeMap);
 
     // Setup the camera's view parameters
     D3DXVECTOR3 vecEye(0.0f, 0.0f, -15.0f);

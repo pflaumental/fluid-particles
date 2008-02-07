@@ -22,6 +22,8 @@ class fp_RenderRaycast {
 public:      
     fp_Fluid* m_Fluid;
     fp_FluidParticle* m_Particles;
+    std::vector<std::wstring> m_CubeMapNames;
+    int m_CurrentCubeMap;
 
     fp_RenderRaycast(
             fp_Fluid* Fluid,
@@ -84,7 +86,7 @@ private:
     ID3D10ShaderResourceView *m_WValsMulParticleMassSRV;
     int m_WValsMulParticleMassLength;
 
-    ID3D10ShaderResourceView *m_EnvironmentMapSRV;
+    std::vector<ID3D10ShaderResourceView*> m_EnvironmentMapSRV;
 
     fp_RenderTarget2D* m_ExitPoint;
 
@@ -118,6 +120,8 @@ private:
     ID3D10EffectShaderResourceVariable* m_EffectVarEnvironmentMap;
     ID3D10EffectScalarVariable* m_EffectVarRefractionRatio;
     ID3D10EffectScalarVariable* m_EffectVarRefractionRatioSq;
+    ID3D10EffectScalarVariable* m_EffectVarRefractionRatioInv;
+    ID3D10EffectScalarVariable* m_EffectVarRefractionRatioInvSq;
     ID3D10EffectScalarVariable* m_EffectVarR0;
     ID3D10EffectScalarVariable* m_EffectVarOneMinusR0;
 
