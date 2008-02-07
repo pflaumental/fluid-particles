@@ -4,8 +4,8 @@
 #include "fp_util.h"
 
 #define FP_RENDER_RAYCAST_EFFECT_FILE L"fp_render_raycast.fx"
-#define FP_RENDER_RAYCAST_CUBEMAP_DIR L"Media/CubeMaps/"
-#define FP_RENDER_RAYCAST_DEFAULT_CUBEMAP L"Park.dds"
+#define FP_RENDER_RAYCAST_CUBEMAP_DIR L"Media\\CubeMaps\\"
+#define FP_RENDER_RAYCAST_DEFAULT_CUBEMAP L"rnl_cross.dds"
 
 const D3D10_INPUT_ELEMENT_DESC fp_SplatParticleVertex::Layout[] = {
         {"POSITION_DENSITY",  0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0,
@@ -124,17 +124,19 @@ HRESULT fp_RenderRaycast::OnD3D10CreateDevice(
             &srvDesc, &m_WValsMulParticleMassSRV));
 
     // Create environment maps
-    WCHAR absolutePath[MAX_PATH], relativePath[MAX_PATH];
-    //V_RETURN(DXUTFindDXSDKMediaFileCch(str, MAX_PATH, FP_RENDER_RAYCAST_CUBEMAP_FILE));
-    //V_RETURN(D3DX10CreateShaderResourceViewFromFile(D3DDevice, str, NULL, NULL,
-    //        &m_EnvironmentMapSRV, NULL));
-    fp_Util::ListDirectory(&m_CubeMapNames, FP_RENDER_RAYCAST_CUBEMAP_DIR, L"dds");
+    WCHAR absolutePath[MAX_PATH], absoluteDir[MAX_PATH], defaultCubeMapPath[MAX_PATH];
+    StringCchPrintf(defaultCubeMapPath, MAX_PATH, L"%s%s", FP_RENDER_RAYCAST_CUBEMAP_DIR,
+            FP_RENDER_RAYCAST_DEFAULT_CUBEMAP);
+    V_RETURN(DXUTFindDXSDKMediaFileCch(absolutePath, MAX_PATH, defaultCubeMapPath));
+    std::wstring absolutePathString = absolutePath;
+    SIZE_T lastSlash = absolutePathString.find_last_of('\\');
+    StringCchCopy(absoluteDir, lastSlash + 2, absolutePath);
+    fp_Util::ListDirectory(&m_CubeMapNames, absoluteDir, L"dds");
     for(size_t i=0, size=m_CubeMapNames.size(); i < size; i++) {
         if(m_CubeMapNames[i].compare(FP_RENDER_RAYCAST_DEFAULT_CUBEMAP) == 0)
             m_CurrentCubeMap = i;
-        StringCchPrintf(relativePath, MAX_PATH, L"%s%s", FP_RENDER_RAYCAST_CUBEMAP_DIR, 
+        StringCchPrintf(absolutePath, MAX_PATH, L"%s%s", absoluteDir, 
                 m_CubeMapNames[i].c_str());
-        V_RETURN(DXUTFindDXSDKMediaFileCch(absolutePath, MAX_PATH, relativePath));
         m_EnvironmentMapSRV.push_back(NULL);
         V_RETURN(D3DX10CreateShaderResourceViewFromFile(D3DDevice, absolutePath, NULL,
                 NULL, &m_EnvironmentMapSRV.back(), NULL));        
