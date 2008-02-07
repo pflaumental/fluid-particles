@@ -11,7 +11,9 @@ extern void CALLBACK FP_OnGUIEvent(
 void fp_GUI::SetCubeMapNames(fp_StringList* CubeMapNames, int CurrentCubeMap) {
     CDXUTComboBox* comboBox = m_SampleUI.GetComboBox(IDC_RAYCAST_SELECT_CUBEMAP);
     for(int i=0, size=CubeMapNames->size(); i < size; i++) {
-        comboBox->AddItem((*CubeMapNames)[i].c_str(), (LPVOID)i);
+        WCHAR cubeMapName[MAX_PATH];
+        StringCchPrintf(cubeMapName, MAX_PATH, L"%s (C)", (*CubeMapNames)[i].c_str());
+        comboBox->AddItem(cubeMapName, (LPVOID)i);
     }
     comboBox->SetSelectedByIndex(CurrentCubeMap);
 }
@@ -40,7 +42,8 @@ fp_GUI::fp_GUI()
     int iYCommon = 10;
 
     m_HUD.SetCallback( FP_OnGUIEvent );
-    m_HUD.AddButton( IDC_TOGGLEFULLSCREEN, L"Toggle full screen", 35, iYCommon, 125, 22 );
+    m_HUD.AddButton( IDC_TOGGLEFULLSCREEN, L"Toggle full screen (F4)", 35, iYCommon, 125,
+            22, VK_F4);
     m_HUD.AddButton( IDC_TOGGLEREF, L"Toggle REF (F3)", 35, iYCommon += 24, 125, 22, VK_F3 );
     m_HUD.AddButton( IDC_CHANGEDEVICE, L"Change device (F2)", 35, iYCommon += 24, 125, 22,
             VK_F2 );
@@ -58,8 +61,8 @@ fp_GUI::fp_GUI()
     m_SampleUI.AddButton( IDC_RESET_SIM, L"Reset simulation (R)", 35, iYCommon += 24,
             125, 22, 'R' );    
 
-    m_SampleUI.AddCheckBox(IDC_MOVE_HORIZONTALLY, L"Move horizontally", 35,
-            iYCommon += 24, 125, 24);
+    m_SampleUI.AddCheckBox(IDC_MOVE_HORIZONTALLY, L"Move horizontally (H)", 35,
+            iYCommon += 24, 125, 24, false, 'H');
 
     CDXUTComboBox *comboBox;
     m_SampleUI.AddComboBox( IDC_SELECT_RENDER_TYPE, 35, iYCommon += 24, 125, 24, L'T',
