@@ -75,7 +75,8 @@ public:
             const D3DXMATRIX*  View,
             const D3DXMATRIX*  Projection,
             const D3DXMATRIX*  ViewProjection,
-            const D3DXMATRIX*  InvView);
+            const D3DXMATRIX*  InvView,
+            bool SimulationStopped);
 
 private:
     ID3D10Texture3D *m_VolumeTexture;

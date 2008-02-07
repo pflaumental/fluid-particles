@@ -285,10 +285,12 @@ void fp_RenderRaycast::OnD3D10FrameRender(
         const D3DXMATRIX*  View,
         const D3DXMATRIX*  Projection,
         const D3DXMATRIX*  ViewProjection,
-        const D3DXMATRIX*  InvView) {  
+        const D3DXMATRIX*  InvView,
+        bool SimulationStopped) {  
     //HRESULT hr;
-    RenderEnvironment(D3DDevice, View, Projection);    
-    FillVolumeTexture(D3DDevice);
+    RenderEnvironment(D3DDevice, View, Projection);
+    if(!SimulationStopped)
+        FillVolumeTexture(D3DDevice);
     RenderVolume(D3DDevice, View, ViewProjection, InvView);    
 
     // TODO: find out why things get messed up when pass does not get reseted
