@@ -3,6 +3,10 @@
 #define FP_UTIL_H
 
 #include "DXUT.h"
+#pragma warning(disable:4995)
+#include <vector>
+#include <string>
+#pragma warning(default:4995)
 
 template<class T>
 struct fp_Vec3 {
@@ -70,7 +74,9 @@ protected:
 
 	void SaveRT();
 	void RestoreRT();
-};	
+};
+
+typedef std::vector<std::wstring> fp_StringList;
 
 // Helper functions
 class fp_Util {
@@ -88,6 +94,12 @@ public:
 			ID3D10Device* D3DDevice, 
 			const LPCWSTR Filename, 
 			const D3D10_SHADER_MACRO *ShaderMacros = NULL);
+
+    static int ListDirectory(
+            fp_StringList* FilesInDirectory,
+            const LPCWSTR DirPath,
+            const LPCWSTR Extension = NULL,
+            bool IncludeHidden = false);
 };
 
 #endif

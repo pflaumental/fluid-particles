@@ -37,6 +37,8 @@ cbuffer Sometimes {
     float g_IsoLevel;
     float g_RefractionRatio;
     float g_RefractionRatioSq;
+    float g_RefractionRatioInv;
+    float g_RefractionRatioInvSq;
     float g_R0; // (1 - refractionRatio)^2 / (1 + refreactionRatio)^2
     float g_OneMinusR0;
 };
@@ -371,7 +373,7 @@ RaycastTraceIsoAndShadePSOut RaycastTraceIsoAndShadePS(
 	// Reflection of a round body minifies => use lower detail mip
     float3 reflectColor = g_Environment.SampleLevel(LinearClamp, reflectDir, 2);
     
-    // Calculate first refraction
+    // Calculate first refraction using snells law
     // sinThetaR = (ni/nr) * sinThetaI
     // => R = ((ni/nr)*(N*V) - sqrt(1 - (ni/nr)^2*(1.0f-(N*V)^2))) * N - (ni/nr) * V    
     float NV = dot(intersection1VolumeNormal, -rayDir);    
@@ -388,12 +390,18 @@ RaycastTraceIsoAndShadePSOut RaycastTraceIsoAndShadePS(
     TraceIsoSurface(dummy, intersection2VolumePos, intersection2VolumeNormal, dummy,
         PerPixelStepSize, false, refract1Start, refract1End);
         
-    // Calculate the second refraction
+    // Calculate the second refraction using snells law
     NV = dot(-intersection2VolumeNormal, -refract1Dir);    
-    cosThetaR = sqrt(1 - (1 / g_RefractionRatioSq) * (1 - NV * NV));
-    beforeNTerm = (1 / g_RefractionRatioSq) * NV - cosThetaR;
-    float3 refract2Dir = -beforeNTerm * intersection2VolumeNormal
-            + (1 / g_RefractionRatioSq) * refract1Dir;
+    cosThetaR = sqrt(1 - g_RefractionRatioInvSq * (1 - NV * NV));
+    float3 refract2Dir;
+    if(cosThetaR >= 0) {
+        beforeNTerm = g_RefractionRatioInv * NV - cosThetaR;
+        refract2Dir = -beforeNTerm * intersection2VolumeNormal
+                + g_RefractionRatioInv * refract1Dir;
+    } else // If formula could not be hold, reflect instead of refract
+        refract2Dir = reflect(refract1Dir, -intersection2VolumeNormal);
+    // Note: this is quite a hack (because when reflected there would be more
+    // inner intersections), but it provides a good optical effect
     
     // Refraction of a round body magnifies => use most detailed mip
     float3 refractColor = g_Environment.SampleLevel(LinearClamp, refract2Dir, 0);    

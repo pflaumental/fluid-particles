@@ -225,3 +225,30 @@ ID3D10Effect* fp_Util::LoadEffect(
 	}
 	return effect10;
 }
+
+//return -1 if directory not found else number of files in dir
+int fp_Util::ListDirectory(
+        fp_StringList* FilesInDirectory,
+        const LPCWSTR DirPath,
+        const LPCWSTR Extension,
+        bool IncludeHidden) {
+	WCHAR pattern[MAX_PATH];
+	WIN32_FIND_DATA fd;
+	DWORD attr = FILE_ATTRIBUTE_DIRECTORY;
+	if(!IncludeHidden) attr |= FILE_ATTRIBUTE_HIDDEN;
+    if(Extension != NULL)
+        StringCchPrintf(pattern, MAX_PATH, L"%s\\*.%s", DirPath, Extension);
+    else
+	    StringCchPrintf(pattern, MAX_PATH, L"%s\\*", DirPath);
+	HANDLE find = FindFirstFile(pattern, &fd);
+	if(find != INVALID_HANDLE_VALUE) {
+		int count = 0;
+		do {
+            if(!(fd.dwFileAttributes & attr))
+                FilesInDirectory->push_back(fd.cFileName);
+		} while(FindNextFile(find, &fd));
+		FindClose(find);
+		return count;
+	}
+	return -1;
+}
