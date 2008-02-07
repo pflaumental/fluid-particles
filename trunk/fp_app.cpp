@@ -538,7 +538,7 @@ void CALLBACK FP_OnD3D10FrameRender(
         g_RenderMarchingCubes->OnD3D10FrameRender(D3DDevice, &viewProjection);
     else if(g_RenderType == FP_GUI_RENDERTYPE_RAYCAST)
         g_RenderRaycast->OnD3D10FrameRender(D3DDevice, &view, &projection,
-                &viewProjection, &invView);
+                &viewProjection, &invView, g_StopSim);
 
     // Render GUI
     g_GUI.OnD3D10FrameRender(D3DDevice, ElapsedTime, g_Camera.GetEyePt(),
