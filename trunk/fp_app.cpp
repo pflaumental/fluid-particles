@@ -39,6 +39,7 @@ int                     g_ActiveLight;
 int                     g_RenderType;
 bool                    g_MoveHorizontally;
 bool                    g_StopSim;
+bool                    g_UpdateVis;
 
 // Direct3D10 resources
 ID3D10EffectVectorVariable* g_LightDir = NULL;
@@ -194,6 +195,7 @@ void FP_InitApp() {
     g_Sim = new fp_Fluid(&g_WorkerThreadMgr, FP_NUM_PARTICLES_X, FP_NUM_PARTICLES_Y,
             FP_NUM_PARTICLES_Z, FP_PARTICLE_SPACING_X, FP_PARTICLE_SPACING_Y,
             FP_PARTICLE_SPACING_Z, center, FP_GLASS_RADIUS, FP_GLASS_FLOOR);
+    g_UpdateVis = true;
     g_RenderSprites = new fp_RenderSprites(FP_NUM_PARTICLES, g_Sim->m_Particles);
     g_CPUIsoVolume = new fp_CPUIsoVolume(g_Sim);
     g_RenderMarchingCubes = new fp_RenderMarchingCubes(g_CPUIsoVolume, 3);
@@ -311,11 +313,13 @@ void CALLBACK FP_OnFrameMove( double Time, float ElapsedTime, void* UserContext 
         else
             g_Sim->m_CurrentGlassPosition.y -= 100.0f * mouseDragY;
     }
-    if(!g_StopSim)
+    if(!g_StopSim) {
         for (int i = 0; i < FP_SIMULATION_STEPS_PER_FRAME; i++) {
             g_Sim->Update(ElapsedTime * FP_TIME_FACTOR / FP_SIMULATION_STEPS_PER_FRAME);
         }
-    if(g_RenderType == FP_GUI_RENDERTYPE_MARCHING_CUBES) {
+        g_UpdateVis = true;
+    }
+    if(g_RenderType == FP_GUI_RENDERTYPE_MARCHING_CUBES && g_UpdateVis) {
         g_CPUIsoVolume->ConstructFromFluid();
         g_RenderMarchingCubes->ConstructMesh();
     } else if (g_RenderType == FP_GUI_RENDERTYPE_RAYCAST && glassMoved) {
@@ -371,10 +375,13 @@ void CALLBACK FP_OnGUIEvent(
     int selectedCubeMap = -1;
     float oldSpriteSize = g_RenderSprites->GetSpriteSize();
     float newSpriteSize = oldSpriteSize;
+    int oldRenderType = g_RenderType;
     g_GUI.OnGUIEvent(Event, ControlID, Control, g_ActiveLight, g_NumActiveLights,
             raycastIsoLevel, raycastStepScale, raycastRefractionRatio, mcVoxelSize,
             mcIsoLevel, g_LightScale, newSpriteSize, resetSim, g_StopSim,
             g_MoveHorizontally, g_RenderType, selectedCubeMap);
+    if(oldRenderType != g_RenderType)
+        g_UpdateVis = true;
     if(oldSpriteSize != newSpriteSize)
         g_RenderSprites->SetSpriteSize(newSpriteSize);
     if(selectedCubeMap >= 0)
@@ -391,6 +398,7 @@ void CALLBACK FP_OnGUIEvent(
         g_CPUIsoVolume->SetVoxelSize(mcVoxelSize);
     g_RenderMarchingCubes->m_NumActiveLights = g_NumActiveLights;
     if(resetSim) {
+        g_UpdateVis = true;
 		mcVoxelSize = g_CPUIsoVolume->m_VoxelSize;
         delete g_Sim;
         delete g_CPUIsoVolume;
@@ -538,7 +546,9 @@ void CALLBACK FP_OnD3D10FrameRender(
         g_RenderMarchingCubes->OnD3D10FrameRender(D3DDevice, &viewProjection);
     else if(g_RenderType == FP_GUI_RENDERTYPE_RAYCAST)
         g_RenderRaycast->OnD3D10FrameRender(D3DDevice, &view, &projection,
-                &viewProjection, &invView, g_StopSim);
+                &viewProjection, &invView, g_UpdateVis);
+
+    g_UpdateVis = false;
 
     // Render GUI
     g_GUI.OnD3D10FrameRender(D3DDevice, ElapsedTime, g_Camera.GetEyePt(),

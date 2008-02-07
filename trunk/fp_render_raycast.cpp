@@ -286,10 +286,10 @@ void fp_RenderRaycast::OnD3D10FrameRender(
         const D3DXMATRIX*  Projection,
         const D3DXMATRIX*  ViewProjection,
         const D3DXMATRIX*  InvView,
-        bool SimulationStopped) {  
+        bool UpdateVis) {  
     //HRESULT hr;
     RenderEnvironment(D3DDevice, View, Projection);
-    if(!SimulationStopped)
+    if(UpdateVis)
         FillVolumeTexture(D3DDevice);
     RenderVolume(D3DDevice, View, ViewProjection, InvView);    
 
