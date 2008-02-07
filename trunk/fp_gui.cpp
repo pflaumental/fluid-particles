@@ -52,18 +52,24 @@ fp_GUI::fp_GUI()
     WCHAR sz[100];
     iYCommon += 24;
 
-    m_SampleUI.AddCheckBox(IDC_MOVE_HORIZONTALLY, L"Move horizontally", 35, iYCommon += 24, 125, 24);
+    m_SampleUI.AddCheckBox(IDC_STOP_SIM, L"Stop simulation (S)", 35, iYCommon += 24, 125,
+            24, false, 'S');
 
     m_SampleUI.AddButton( IDC_RESET_SIM, L"Reset simulation (R)", 35, iYCommon += 24,
-        125, 22, 'R' );    
+            125, 22, 'R' );    
+
+    m_SampleUI.AddCheckBox(IDC_MOVE_HORIZONTALLY, L"Move horizontally", 35,
+            iYCommon += 24, 125, 24);
 
     CDXUTComboBox *comboBox;
-    m_SampleUI.AddComboBox( IDC_SELECT_RENDER_TYPE, 35, iYCommon += 24, 125, 24, L'S', false, &comboBox );
+    m_SampleUI.AddComboBox( IDC_SELECT_RENDER_TYPE, 35, iYCommon += 24, 125, 24, L'T',
+            false, &comboBox );
     if( comboBox ) {
         comboBox->SetDropHeight( 100 );
-        comboBox->AddItem( L"Raycast (S)", (LPVOID)FP_GUI_RENDERTYPE_RAYCAST );
-        comboBox->AddItem( L"Marching cubes (S)", (LPVOID)FP_GUI_RENDERTYPE_MARCHING_CUBES );
-        comboBox->AddItem( L"Point sprites (S)", (LPVOID)FP_GUI_RENDERTYPE_SPRITE );        
+        comboBox->AddItem( L"Raycast (T)", (LPVOID)FP_GUI_RENDERTYPE_RAYCAST );
+        comboBox->AddItem( L"Marching cubes (T)",
+                (LPVOID)FP_GUI_RENDERTYPE_MARCHING_CUBES );
+        comboBox->AddItem( L"Point sprites (T)", (LPVOID)FP_GUI_RENDERTYPE_SPRITE );        
     }
 
     int iYRaycast, iYMC, iYSprite;
@@ -236,6 +242,7 @@ void fp_GUI::OnGUIEvent(
         float& LightScale,        
         float& ParticleScale,
         bool& ResetSim,
+        bool& StopSim,
         bool& MoveHorizontally,
         int& RenderType,
         int& SelectedCubeMap) {   
@@ -259,6 +266,10 @@ void fp_GUI::OnGUIEvent(
                 #pragma warning( default : 4311)
             break;
         }
+
+        case IDC_STOP_SIM: 
+            StopSim = m_SampleUI.GetCheckBox(IDC_STOP_SIM)->GetChecked();
+            break;   
 
         case IDC_MOVE_HORIZONTALLY: 
             MoveHorizontally = m_SampleUI.GetCheckBox(IDC_MOVE_HORIZONTALLY)->GetChecked();
