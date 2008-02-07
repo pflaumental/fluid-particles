@@ -42,6 +42,7 @@
 #define IDC_RAYCAST_REFRACTION_RATIO           24
 #define IDC_RAYCAST_REFRACTION_RATIO_STATIC    25
 #define IDC_RAYCAST_SELECT_CUBEMAP             26
+#define IDC_STOP_SIM                           27
 
 #define FP_GUI_HEIGHT              550
 
@@ -89,6 +90,7 @@ public:
             float& LightScale,
             float& ParticeScale,
             bool& ResetSim,
+            bool& StopSim,
             bool& MoveHorizontally,
             int& RenderType,
             int& SelectedCubeMap);

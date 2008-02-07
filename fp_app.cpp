@@ -38,6 +38,7 @@ int                     g_NumActiveLights;
 int                     g_ActiveLight;
 int                     g_RenderType;
 bool                    g_MoveHorizontally;
+bool                    g_StopSim;
 
 // Direct3D10 resources
 ID3D10EffectVectorVariable* g_LightDir = NULL;
@@ -310,9 +311,10 @@ void CALLBACK FP_OnFrameMove( double Time, float ElapsedTime, void* UserContext 
         else
             g_Sim->m_CurrentGlassPosition.y -= 100.0f * mouseDragY;
     }
-    for (int i = 0; i < FP_SIMULATION_STEPS_PER_FRAME; i++) {
-        g_Sim->Update(ElapsedTime * FP_TIME_FACTOR / FP_SIMULATION_STEPS_PER_FRAME);
-    }
+    if(!g_StopSim)
+        for (int i = 0; i < FP_SIMULATION_STEPS_PER_FRAME; i++) {
+            g_Sim->Update(ElapsedTime * FP_TIME_FACTOR / FP_SIMULATION_STEPS_PER_FRAME);
+        }
     if(g_RenderType == FP_GUI_RENDERTYPE_MARCHING_CUBES) {
         g_CPUIsoVolume->ConstructFromFluid();
         g_RenderMarchingCubes->ConstructMesh();
@@ -371,8 +373,8 @@ void CALLBACK FP_OnGUIEvent(
     float newSpriteSize = oldSpriteSize;
     g_GUI.OnGUIEvent(Event, ControlID, Control, g_ActiveLight, g_NumActiveLights,
             raycastIsoLevel, raycastStepScale, raycastRefractionRatio, mcVoxelSize,
-            mcIsoLevel, g_LightScale, newSpriteSize, resetSim, g_MoveHorizontally,
-            g_RenderType, selectedCubeMap);
+            mcIsoLevel, g_LightScale, newSpriteSize, resetSim, g_StopSim,
+            g_MoveHorizontally, g_RenderType, selectedCubeMap);
     if(oldSpriteSize != newSpriteSize)
         g_RenderSprites->SetSpriteSize(newSpriteSize);
     if(selectedCubeMap >= 0)
