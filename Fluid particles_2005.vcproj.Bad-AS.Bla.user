@@ -10,8 +10,8 @@
 			>
 			<DebugSettings
 				Command="$(TargetPath)"
-				WorkingDirectory=""
-				CommandArguments="-width:1024 -height:768 -forcevsync:0 -startx:0, -starty:0, "
+				WorkingDirectory="Release"
+				CommandArguments=""
 				Attach="false"
 				DebuggerType="3"
 				Remote="1"
@@ -39,7 +39,7 @@
 			<DebugSettings
 				Command="$(TargetPath)"
 				WorkingDirectory=""
-				CommandArguments="-forcevsync:0 -width:1024 -height:768"
+				CommandArguments=""
 				Attach="false"
 				DebuggerType="3"
 				Remote="1"
@@ -66,8 +66,8 @@
 			>
 			<DebugSettings
 				Command="$(TargetPath)"
-				WorkingDirectory=""
-				CommandArguments="-width:1024 -height:768 -forcevsync:0 -startx:0, -starty:0, "
+				WorkingDirectory="Release"
+				CommandArguments=""
 				Attach="false"
 				DebuggerType="3"
 				Remote="1"
@@ -95,7 +95,7 @@
 			<DebugSettings
 				Command="$(TargetPath)"
 				WorkingDirectory=""
-				CommandArguments="-forcevsync:0 -width:1024 -height:768"
+				CommandArguments=""
 				Attach="false"
 				DebuggerType="3"
 				Remote="1"
@@ -122,8 +122,8 @@
 			>
 			<DebugSettings
 				Command="$(TargetPath)"
-				WorkingDirectory=""
-				CommandArguments="-width:1024 -height:768 -forcevsync:0 -startx:0, -starty:0, "
+				WorkingDirectory="Release"
+				CommandArguments=""
 				Attach="false"
 				DebuggerType="3"
 				Remote="1"
@@ -151,7 +151,7 @@
 			<DebugSettings
 				Command="$(TargetPath)"
 				WorkingDirectory=""
-				CommandArguments="-forcevsync:0 -width:1024 -height:768"
+				CommandArguments=""
 				Attach="false"
 				DebuggerType="3"
 				Remote="1"
