@@ -79,9 +79,9 @@ fp_GUI::fp_GUI()
     iYRaycast = iYMC = iYSprite = iYCommon;
 
     // Raycast controls
-    comboBox = NULL;
+    m_RaycastSpecificControls.push_back(NULL);
     m_SampleUI.AddComboBox( IDC_RAYCAST_SELECT_CUBEMAP, 35, iYRaycast += 24, 125, 24,
-            L'C', false, &comboBox );
+            L'C', false, (CDXUTComboBox**) &m_RaycastSpecificControls.back() );
 
     iYRaycast += 24;
     StringCchPrintf( sz, 100, L"Iso level: %0.3f", FP_RAYCAST_DEFAULT_ISO_LEVEL ); 
