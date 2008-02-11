@@ -219,8 +219,7 @@ SplatParticlePSOut SplatParticlePS(SplatParticlePSIn Input) {
 RaycastTransformVSOut RaycastTransformVS(in float3 Position : POSITION) {
     RaycastTransformVSOut result;
 	// scale to [0,1]
-    result.VolumePosClipDepth.xyz = Position / g_BBoxSize;    
-    //*Position *= g_Aspect;
+    result.VolumePosClipDepth.xyz = Position / g_BBoxSize;
     result.Pos = mul(float4(Position, 1), g_WorldViewProjection);
     result.VolumePosClipDepth.w = result.Pos.z;    
     return result;
