@@ -43,6 +43,8 @@
 #define IDC_RAYCAST_REFRACTION_RATIO_STATIC    25
 #define IDC_RAYCAST_SELECT_CUBEMAP             26
 #define IDC_STOP_SIM                           27
+#define IDC_TIME_FACTOR                        28
+#define IDC_TIME_FACTOR_STATIC                 29
 
 #define FP_GUI_HEIGHT              550
 
@@ -93,7 +95,8 @@ public:
             bool& StopSim,
             bool& MoveHorizontally,
             int& RenderType,
-            int& SelectedCubeMap);
+            int& SelectedCubeMap,
+            float& TimeFactor);
 
     // DX9 specific
     HRESULT OnD3D9CreateDevice(

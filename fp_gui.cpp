@@ -58,6 +58,11 @@ fp_GUI::fp_GUI()
     m_SampleUI.AddCheckBox(IDC_STOP_SIM, L"Stop simulation (S)", 35, iYCommon += 24, 125,
             24, false, 'S');
 
+    StringCchPrintf( sz, 100, L"Time factor: %0.1f", FP_DEFAULT_TIME_FACTOR);
+    m_SampleUI.AddStatic( IDC_TIME_FACTOR_STATIC, sz, 35, iYCommon += 24, 125, 22);
+    m_SampleUI.AddSlider( IDC_TIME_FACTOR, 50, iYCommon += 24, 100, 22, 1, 100,
+        (int) (FP_DEFAULT_TIME_FACTOR * 10.0f));
+
     m_SampleUI.AddButton( IDC_RESET_SIM, L"Reset simulation (R)", 35, iYCommon += 24,
             125, 22, 'R' );    
 
@@ -89,7 +94,7 @@ fp_GUI::fp_GUI()
     m_SampleUI.AddStatic( IDC_RAYCAST_ISO_LEVEL_STATIC, sz, 35, iYRaycast += 24, 125, 22,
             false, (CDXUTStatic**)&m_RaycastSpecificControls.back());
     m_RaycastSpecificControls.push_back(NULL);
-    m_SampleUI.AddSlider( IDC_RAYCAST_ISO_LEVEL, 50, iYRaycast += 24, 100, 22, 1, 100,
+    m_SampleUI.AddSlider( IDC_RAYCAST_ISO_LEVEL, 50, iYRaycast += 24, 100, 22, 1, 200,
             (int) (FP_RAYCAST_DEFAULT_ISO_LEVEL * 500.0f), false, (CDXUTSlider**)
             &m_RaycastSpecificControls.back() );
 
@@ -248,7 +253,8 @@ void fp_GUI::OnGUIEvent(
         bool& StopSim,
         bool& MoveHorizontally,
         int& RenderType,
-        int& SelectedCubeMap) {   
+        int& SelectedCubeMap,
+        float& TimeFactor) {   
     WCHAR sz[100];
     ResetSim = false;
     switch( ControlID ) {
@@ -269,6 +275,14 @@ void fp_GUI::OnGUIEvent(
                 #pragma warning( default : 4311)
             break;
         }
+
+        case IDC_TIME_FACTOR: 
+            TimeFactor = (float) (m_SampleUI.GetSlider(
+                IDC_TIME_FACTOR )->GetValue() * 0.1f);
+
+            StringCchPrintf( sz, 100, L"Time factor: %0.1f", TimeFactor); 
+            m_SampleUI.GetStatic( IDC_TIME_FACTOR_STATIC )->SetText( sz );
+            break;
 
         case IDC_STOP_SIM: 
             StopSim = m_SampleUI.GetCheckBox(IDC_STOP_SIM)->GetChecked();
