@@ -114,7 +114,7 @@ HRESULT fp_RenderRaycast::OnD3D10CreateDevice(
     texDesc.Width = m_WValsMulParticleMassLength = 32;
     V_RETURN(D3DDevice->CreateTexture1D(&texDesc, NULL, &m_WValsMulParticleMassTexture));
 
-    // Create CreateWValsMulParticleMass shader sesource view
+    // Create CreateWValsMulParticleMass shader resource view
     D3D10_SHADER_RESOURCE_VIEW_DESC srvDesc;
     ZeroMemory( &srvDesc, sizeof(srvDesc) );
     srvDesc.ViewDimension = D3D10_SRV_DIMENSION_TEXTURE1D;
@@ -134,7 +134,7 @@ HRESULT fp_RenderRaycast::OnD3D10CreateDevice(
     fp_Util::ListDirectory(&m_CubeMapNames, absoluteDir, L"dds");
     for(size_t i=0, size=m_CubeMapNames.size(); i < size; i++) {
         if(m_CubeMapNames[i].compare(FP_RENDER_RAYCAST_DEFAULT_CUBEMAP) == 0)
-            m_CurrentCubeMap = i;
+            m_CurrentCubeMap = (int)i;
         StringCchPrintf(absolutePath, MAX_PATH, L"%s%s", absoluteDir, 
                 m_CubeMapNames[i].c_str());
         m_EnvironmentMapSRV.push_back(NULL);
@@ -316,6 +316,7 @@ void fp_RenderRaycast::OnD3D10ReleasingSwapChain( void* UserContext ) {
     SAFE_DELETE(m_ExitPoint);
 }
 
+// Updates members and effect vars that depend on fluid parameters
 void fp_RenderRaycast::SetFluid(fp_Fluid* Fluid) {
     m_Fluid = Fluid;
     m_Particles = Fluid->m_Particles;
@@ -330,6 +331,7 @@ void fp_RenderRaycast::SetIsoLevel(float IsoLevel) {
         V(m_EffectVarIsoLevel->SetFloat(IsoLevel));
 }
 
+// Raycast StepSize = MaxVolumeDimension / StepScale
 void fp_RenderRaycast::SetStepScale(float StepScale) {
     HRESULT hr;
     m_StepScale = StepScale;
@@ -338,6 +340,7 @@ void fp_RenderRaycast::SetStepScale(float StepScale) {
         V(m_EffectVarStepSize->SetFloat(m_StepScale / maxDim));
 }
 
+// Controls the size of the iso-volume in worldspace
 void fp_RenderRaycast::SetVoxelSize(float VoxelSize) {
     HRESULT hr;
     m_VoxelSize = VoxelSize;
@@ -379,6 +382,9 @@ void fp_RenderRaycast::SetVoxelSize(float VoxelSize) {
     }
 }
 
+// RefractionRatio = inverse ratio of the indizes of refraction of the to particpating
+// medias (i. e. water and air); controls refraction direction and affects ratio between
+// reflection and refraction
 void fp_RenderRaycast::SetRefractionRatio(float RefractionRatio) {
     m_EffectVarRefractionRatio->SetFloat(RefractionRatio);
     m_EffectVarRefractionRatioSq->SetFloat(RefractionRatio * RefractionRatio);
@@ -399,6 +405,7 @@ fp_VolumeIndex fp_RenderRaycast::GetVolumeTextureSize() {
     return m_VolumeDimensions;
 }
 
+// Defines the volume corner with the lowest coordinate on each axis
 void fp_RenderRaycast::SetVolumeStartPos(D3DXVECTOR3* VolumeStartPos) {
     HRESULT hr;
 

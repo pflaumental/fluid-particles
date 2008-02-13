@@ -43,6 +43,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
+				AdditionalOptions="/EHsc"
 				Optimization="0"
 				AdditionalIncludeDirectories="DXUT\Core;DXUT\Optional"
 				PreprocessorDefinitions="WIN32;_DEBUG;DEBUG;PROFILE;_WINDOWS"
@@ -216,6 +217,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
+				AdditionalOptions="/EHsc"
 				Optimization="2"
 				InlineFunctionExpansion="1"
 				OmitFramePointers="true"
@@ -399,6 +401,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
+				AdditionalOptions="/EHsc"
 				Optimization="2"
 				InlineFunctionExpansion="1"
 				OmitFramePointers="true"

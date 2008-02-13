@@ -16,8 +16,15 @@ typedef struct {
     int m_Index;
 } fp_FluidParticle;
 
+typedef struct {
+    fp_FluidParticle* m_Particle1;
+    fp_FluidParticle* m_Particle2;
+    float m_DistanceSq;
+} fp_FluidParticlePair;
+
 typedef std::vector<fp_FluidParticle> fp_GridCell;
 typedef fp_GridCell::size_type fp_GridCellSize;
+typedef std::vector<fp_FluidParticlePair> fp_FluidParticlePairCache;
 
 class fp_Grid {
 public:
@@ -36,9 +43,7 @@ public:
     float m_MinZ;
     float m_MaxZ;
 
-    fp_Grid(
-            int InitialCapacity,
-            float CellWidth);
+    fp_Grid(float CellWidth);
     // Copy constructor
     fp_Grid(const fp_Grid& Other);
     ~fp_Grid();
@@ -59,8 +64,10 @@ typedef struct {
 } fp_FluidMTHelperData;
 
 class fp_Fluid {
-    friend void fp_FluidCalculateFluidStateMTWrapper(void*);
-    friend void fp_FluidCalculateGlassFluidStateChangeMTWrapper(void*);    
+    friend void fp_FluidUpdateDensitiesCachePairsMTWrapper(void*);
+    friend void fp_FluidUpdateForcesMTWrapper(void*);    
+    friend void fp_FluidGlassUpdateDensitiesMTWrapper(void*);
+    friend void fp_FluidGlassUpdateForcesMTWrapper(void*);
     friend void fp_FluidMoveParticlesMTWrapper(void*);
     friend void fp_FluidDummyFunc(void*);
 
@@ -75,7 +82,7 @@ public:
     float m_SmoothingLengthSq;
     float m_SmoothingLengthSqInv;
     float m_SmoothingLengthPow3Inv;
-    float m_InitialDensity;
+    float m_VacuumDensity;
     float m_RestDensity;
     float m_RestDensityCoefficient;
     float m_DampingCoefficient;
@@ -150,23 +157,42 @@ private:
     fp_WorkerThreadManager* m_WorkerThreadMgr;
     fp_FluidMTHelperData* m_MTData;
     float m_CurrentElapsedTime;
+    
+    fp_FluidParticlePairCache* m_PairCaches;
 
     fp_Grid* m_Grid;
-    float* m_OldDensities;
-    volatile float* m_NewDensities;
-    volatile D3DXVECTOR3* m_PressureAndViscosityForces;
-    volatile D3DXVECTOR3* m_GradientColorField;
-    volatile float* m_LaplacianColorField;
-    
-    inline void EnforceGlass(fp_FluidParticle* Particle);
-    inline void ProcessParticlePair(
-            fp_FluidParticle* Particle1, 
-            fp_FluidParticle* Particle2,
-            float DistanceSq);
-    
-    void CalculateFluidStateMT(int ThreadIdx);
-    void CalculateGlassFluidStateChangeMT(int ThreadIdx);
+
+    volatile float* m_DensitiesWrite;
+    volatile D3DXVECTOR3* m_PressureAndViscosityForcesWrite;
+    volatile D3DXVECTOR3* m_GradientColorFieldWrite;
+    volatile float* m_LaplacianColorFieldWrite;
+
+    float* m_Densities;
+    D3DXVECTOR3* m_PressureAndViscosityForces;
+    D3DXVECTOR3* m_GradientColorField;
+    float* m_LaplacianColorField;
+
+    void UpdateDensitiesCachePairsMT(int ThreadIdx);
+    inline void UpdateDensitiesOnPair(fp_FluidParticlePair* Pair);
+    void GlassCommonUpdateMT(
+            int ThreadIdx,
+            void (fp_Fluid::*Func)(int, float, D3DXVECTOR3*, D3DXVECTOR3*));
+    void GlassUpdateDensitiesMT(int ThreadIdx);
+    void GlassUpdateDensityOnParticle(
+            int ParticleIndex,
+            float LenR,
+            D3DXVECTOR3* R,
+            D3DXVECTOR3* Velocity);
+    void UpdateForcesMT(int ThreadIdx);
+    inline void UpdateForcesOnPair(fp_FluidParticlePair* Pair);
+    void GlassUpdateForcesMT(int ThreadIdx);
+    void GlassUpdateForcesOnParticle(
+            int ParticleIndex,
+            float LenR,
+            D3DXVECTOR3* R,
+            D3DXVECTOR3* Velocity);
     void MoveParticlesMT(int ThreadIdx);
+    inline void EnforceGlass(fp_FluidParticle* Particle);
 };
 
 // Inline definitions

@@ -3,17 +3,30 @@
 #include "fp_util.h"
 #include <float.h>
 
-void fp_FluidCalculateFluidStateMTWrapper(void* Data) {
+void fp_FluidUpdateDensitiesCachePairsMTWrapper(void* Data) {
     fp_FluidMTHelperData* mtData
             = (fp_FluidMTHelperData*) Data;
-    mtData->m_Fluid->CalculateFluidStateMT(mtData->m_ThreadIdx);
+    mtData->m_Fluid->UpdateDensitiesCachePairsMT(mtData->m_ThreadIdx);
 }
 
-void fp_FluidCalculateGlassFluidStateChangeMTWrapper(void* Data) {
+void fp_FluidUpdateForcesMTWrapper(void* Data) {
+    fp_FluidMTHelperData* mtData
+            = (fp_FluidMTHelperData*) Data;
+    mtData->m_Fluid->UpdateForcesMT(mtData->m_ThreadIdx);
+}
+
+void fp_FluidGlassUpdateDensitiesMTWrapper(void* Data) {
     fp_FluidMTHelperData* mtData
         = (fp_FluidMTHelperData*) Data;
-    mtData->m_Fluid->CalculateGlassFluidStateChangeMT(mtData->m_ThreadIdx);
+    mtData->m_Fluid->GlassUpdateDensitiesMT(mtData->m_ThreadIdx);
 }
+
+void fp_FluidGlassUpdateForcesMTWrapper(void* Data) {
+    fp_FluidMTHelperData* mtData
+        = (fp_FluidMTHelperData*) Data;
+    mtData->m_Fluid->GlassUpdateForcesMT(mtData->m_ThreadIdx);
+}
+
 
 void fp_FluidMoveParticlesMTWrapper(void* Data) {
     fp_FluidMTHelperData* mtData
@@ -25,7 +38,7 @@ void fp_FluidDummyFunc(void* Data) {
     ;
 }
 
-fp_Grid::fp_Grid(int InitialCapacity, float CellWidth)
+fp_Grid::fp_Grid(float CellWidth)
         :
         m_Cells(),
         m_NumParticles(0),
@@ -40,7 +53,7 @@ fp_Grid::fp_Grid(int InitialCapacity, float CellWidth)
         m_MaxX(FLT_MIN),
         m_MaxY(FLT_MIN),
         m_MaxZ(FLT_MIN) {
-    m_Cells.reserve(FP_MC_INITIAL_GRID_CAPACITY);
+    m_Cells.reserve(FP_FLUID_INITIAL_GRID_CAPACITY);
 }
 
 fp_Grid::fp_Grid(const fp_Grid& Other)
@@ -185,9 +198,11 @@ fp_Fluid::fp_Fluid(
     m_WorkerThreadMgr = WorkerThreadMgr;
     int numWorkerThreads = m_WorkerThreadMgr->m_NumWorkerThreads;
     m_MTData = new fp_FluidMTHelperData[numWorkerThreads];
+    m_PairCaches = new fp_FluidParticlePairCache[numWorkerThreads];
     for(int iWorker=0; iWorker < numWorkerThreads; iWorker++) {
         m_MTData[iWorker].m_Fluid = this;
         m_MTData[iWorker].m_ThreadIdx = iWorker;
+        m_PairCaches[iWorker].reserve(FP_FLUID_INITIAL_PAIR_CACHE_CAPACITY);
     }
 
     SetGlassEnforceDistance(GlassEnforceDistance);
@@ -195,12 +210,15 @@ fp_Fluid::fp_Fluid(
     m_Grid = NULL;
     SetSmoothingLength(SmoothingLenght);
     SetParticleMass(ParticleMass);
-    m_Grid = new fp_Grid(FP_MC_INITIAL_GRID_CAPACITY, SmoothingLenght);
-    m_PressureAndViscosityForces = new D3DXVECTOR3[m_NumParticles];
-    m_GradientColorField = new D3DXVECTOR3[m_NumParticles];
-    m_LaplacianColorField = new float[m_NumParticles];
-    m_OldDensities = new float[m_NumParticles];
-    m_NewDensities = new float[m_NumParticles];
+    m_Grid = new fp_Grid(SmoothingLenght);
+    m_PressureAndViscosityForces = new D3DXVECTOR3[m_NumParticles];    
+    m_GradientColorField = new D3DXVECTOR3[m_NumParticles];    
+    m_LaplacianColorField = new float[m_NumParticles];    
+    m_Densities = new float[m_NumParticles];
+    m_PressureAndViscosityForcesWrite = m_PressureAndViscosityForces;
+    m_GradientColorFieldWrite = m_GradientColorField;
+    m_LaplacianColorFieldWrite = m_LaplacianColorField;
+    m_DensitiesWrite = m_Densities;
     float startX = Center.x - 0.5f * (NumParticlesX - 1) * SpacingX;
     float startY = Center.y - 0.5f * (NumParticlesY - 1) * SpacingY;
     float startZ = Center.z - 0.5f * (NumParticlesZ - 1) * SpacingZ;     
@@ -217,8 +235,7 @@ fp_Fluid::fp_Fluid(
                         = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
                 ((D3DXVECTOR3*)m_GradientColorField)[i] = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
                 m_LaplacianColorField[i] = 0.0f;
-                m_OldDensities[i] = m_InitialDensity;
-                m_NewDensities[i] = m_InitialDensity;
+                m_Densities[i] = m_VacuumDensity;
                 i++;
             }
         }
@@ -226,12 +243,6 @@ fp_Fluid::fp_Fluid(
     m_Grid->FillAndPrepare(m_Particles, m_NumParticles);
     // Calculate initial densities
     Update(0.0f);
-    volatile float* tmpDensities = m_OldDensities;
-    m_OldDensities = (float*)m_NewDensities;
-    for(int i=0; i<m_NumParticles; i++) {
-        tmpDensities[i] = m_InitialDensity;
-    }
-    m_NewDensities = tmpDensities;
 }
 
 fp_Fluid::~fp_Fluid() {
@@ -239,6 +250,7 @@ fp_Fluid::~fp_Fluid() {
     m_WorkerThreadMgr->WaitTillJobFinishedOnAllThreads();
     delete[] m_Particles;
     delete[] m_MTData;
+    delete[] m_PairCaches;
     delete m_Grid;
 }
 
@@ -261,8 +273,8 @@ void fp_Fluid::SetSmoothingLength(float SmoothingLength) {
     m_LaplacianWPoly6Coefficient = 945.0f / (8.0f * D3DX_PI * pow(SmoothingLength,9));
     m_GradientWSpikyCoefficient = -45.0f / (D3DX_PI * pow(SmoothingLength, 6));
     m_LaplacianWViscosityCoefficient = 45.0f / (D3DX_PI * pow(SmoothingLength, 5));
-    m_InitialDensity = m_ParticleMass * WPoly6(m_SmoothingLengthSq);
-    m_RestDensity = m_RestDensityCoefficient * m_InitialDensity;
+    m_VacuumDensity = m_ParticleMass * WPoly6(m_SmoothingLengthSq);
+    m_RestDensity = m_RestDensityCoefficient * m_VacuumDensity;
     if(m_Grid != NULL) {
         m_Grid->m_CellWidth = SmoothingLength;
     }
@@ -270,12 +282,12 @@ void fp_Fluid::SetSmoothingLength(float SmoothingLength) {
 
 void fp_Fluid::SetParticleMass(float ParticleMass) {
     m_ParticleMass = ParticleMass;
-    m_InitialDensity = ParticleMass * WPoly6(m_SmoothingLengthSq);
-    m_RestDensity = m_RestDensityCoefficient * m_InitialDensity;
+    m_VacuumDensity = ParticleMass * WPoly6(m_SmoothingLengthSq);
+    m_RestDensity = m_RestDensityCoefficient * m_VacuumDensity;
 }
 
 float* fp_Fluid::GetDensities() {
-    return m_OldDensities;
+    return m_Densities;
 }
 
 void fp_Fluid::GetParticleMinsAndMaxs(
@@ -296,41 +308,47 @@ void fp_Fluid::GetParticleMinsAndMaxs(
 void fp_Fluid::Update(float ElapsedTime) {
     m_CurrentElapsedTime = ElapsedTime;
 
-    // Calculate new densities, pressure forces and viscosity forces
-    m_WorkerThreadMgr->DoJobOnAllThreads(fp_FluidCalculateFluidStateMTWrapper, m_MTData,
-            sizeof(fp_FluidMTHelperData));
-    m_WorkerThreadMgr->WaitTillJobFinishedOnAllThreads();
-
     // For glass collision:
-    D3DXVECTOR3 glassVelocity = (m_CurrentGlassPosition - m_LastGlassPosition) / ElapsedTime;
+    D3DXVECTOR3 glassVelocity = (m_CurrentGlassPosition - m_LastGlassPosition)
+            / ElapsedTime;
     m_GlassVelocityChange = glassVelocity - m_LastGlassVelocity;
     m_LastGlassVelocity = glassVelocity;
     m_LastGlassPosition = m_CurrentGlassPosition;
-    
-    // Calculate densities changes, pressure forces and viscosity forces produced by
-    // glass
     m_CurrentGlassFloorY = m_GlassFloor + m_CurrentGlassPosition.y;
-    m_WorkerThreadMgr->DoJobOnAllThreads(
-            fp_FluidCalculateGlassFluidStateChangeMTWrapper, m_MTData,
-            sizeof(fp_FluidMTHelperData));
+
+    // Update densities (particle-particle)
+    m_WorkerThreadMgr->DoJobOnAllThreads(fp_FluidUpdateDensitiesCachePairsMTWrapper,
+            m_MTData, sizeof(fp_FluidMTHelperData));
     m_WorkerThreadMgr->WaitTillJobFinishedOnAllThreads();
 
+    // Update densities (particle-glass)
+    //m_WorkerThreadMgr->DoJobOnAllThreads(
+    //        fp_FluidGlassUpdateDensitiesMTWrapper, m_MTData,
+    //        sizeof(fp_FluidMTHelperData));
+    //m_WorkerThreadMgr->WaitTillJobFinishedOnAllThreads();
+
+    // Update pressure and viscosity forces, etc. (particle-particle)
+    m_WorkerThreadMgr->DoJobOnAllThreads(fp_FluidUpdateForcesMTWrapper, m_MTData,
+            sizeof(fp_FluidMTHelperData));
+    m_WorkerThreadMgr->WaitTillJobFinishedOnAllThreads();    
+
+    // Update pressure and viscosity forces, etc. (particle-glass)
+    //m_WorkerThreadMgr->DoJobOnAllThreads(fp_FluidGlassUpdateForcesMTWrapper, m_MTData,
+    //        sizeof(fp_FluidMTHelperData));
+    //m_WorkerThreadMgr->WaitTillJobFinishedOnAllThreads();
+
     // Move particles and clear fields    
-    m_CurrentGlassEnforceMinY = m_GlassFloorMinusEnforceDistance + m_CurrentGlassPosition.y;
+    m_CurrentGlassEnforceMinY = m_GlassFloorMinusEnforceDistance
+            + m_CurrentGlassPosition.y;
     m_WorkerThreadMgr->DoJobOnAllThreads(fp_FluidMoveParticlesMTWrapper, m_MTData,
         sizeof(fp_FluidMTHelperData));
     m_WorkerThreadMgr->WaitTillJobFinishedOnAllThreads();
 
     // Update Grid
     m_Grid->FillAndPrepare(m_Particles, m_NumParticles);
-
-    // Prepare densities
-    float* tmpDensities = m_OldDensities;
-    m_OldDensities = (float*)m_NewDensities;
-    m_NewDensities = tmpDensities;
 }
 
-void fp_Fluid::CalculateFluidStateMT(int ThreadIdx) {
+void fp_Fluid::UpdateDensitiesCachePairsMT(int ThreadIdx) {
     int NumCellsX = m_Grid->m_NumCellsX, NumCellsY = m_Grid->m_NumCellsY, NumCellsZ
             = m_Grid->m_NumCellsZ, NumCellsYZ = NumCellsY * NumCellsZ;
 
@@ -392,9 +410,13 @@ void fp_Fluid::CalculateFluidStateMT(int ThreadIdx) {
                                             - particle->m_Position;
                                         float distSq = D3DXVec3LengthSq(&toNeighbour);
                                         assert(distSq > 0.0f);
-                                        if(distSq < m_SmoothingLengthSq) {                                        
-                                            ProcessParticlePair(particle, neighborParticle,
-                                                distSq);
+                                        if(distSq < m_SmoothingLengthSq) {                                                                                    
+                                            fp_FluidParticlePair pair;
+                                            pair.m_Particle1 = particle;
+                                            pair.m_Particle2 = neighborParticle;
+                                            pair.m_DistanceSq = distSq;
+                                            UpdateDensitiesOnPair(&pair);
+                                            m_PairCaches[ThreadIdx].push_back(pair);
                                         }
                                     }
                                 }
@@ -406,8 +428,18 @@ void fp_Fluid::CalculateFluidStateMT(int ThreadIdx) {
     }
 }
 
-// Simulates the glass-fluid interaction similarly to particle-particle interaction
-void fp_Fluid::CalculateGlassFluidStateChangeMT(int ThreadIdx) {
+inline void fp_Fluid::UpdateDensitiesOnPair(fp_FluidParticlePair* Pair){
+    int particle1Index = Pair->m_Particle1->m_Index;
+    int particle2Index = Pair->m_Particle2->m_Index;
+    float AdditionalDensity = m_ParticleMass * WPoly6(m_SmoothingLengthSq
+            - Pair->m_DistanceSq);
+    m_DensitiesWrite[particle1Index] += AdditionalDensity;
+    m_DensitiesWrite[particle2Index] += AdditionalDensity;
+}
+
+void fp_Fluid::GlassCommonUpdateMT(
+        int ThreadIdx,
+        void (fp_Fluid::*Func)(int, float, D3DXVECTOR3*, D3DXVECTOR3*)) {
     int numParticlesPerThread = (int)ceil((double)m_NumParticles
         / m_WorkerThreadMgr->m_NumWorkerThreads);
     int startIndex = ThreadIdx * numParticlesPerThread;
@@ -423,32 +455,8 @@ void fp_Fluid::CalculateGlassFluidStateChangeMT(int ThreadIdx) {
         if(lenR < FP_FLUID_DEFAULT_GLASS_PUSHBACK_DISTANCE)
             lenR = FP_FLUID_DEFAULT_GLASS_PUSHBACK_DISTANCE;
         if(lenR < m_SmoothingLength) {
-            float lenRSq = lenR * lenR;
             D3DXVECTOR3 r = D3DXVECTOR3(0.0f, lenR, 0.0f);
-
-            // Density
-            float hSq_lenRSq = m_SmoothingLengthSq - lenRSq;
-            float particleDensity = m_OldDensities[particleIndex];
-            float wPoly6Value = WPoly6(hSq_lenRSq);
-            float AdditionalDensity = m_ParticleMass * wPoly6Value;
-            m_NewDensities[particleIndex] += AdditionalDensity * m_GlassDensity;
-
-            // Pressure force
-            float pressure = m_GasConstantK * (particleDensity - m_RestDensity);
-            D3DXVECTOR3 gradWSpikyValue = GradientWSpiky(&r, lenR);
-            D3DXVECTOR3 pressureTerm = - m_ParticleMass * pressure * gradWSpikyValue;
-            D3DXVECTOR3 pressureForce = pressureTerm / particleDensity * m_GlassDensity;
-
-            // Viscosity force
-            D3DXVECTOR3 velocityDifference = m_LastGlassVelocity - Particle->m_Velocity;
-            float laplacianWViskosityValue = LaplacianWViscosity(lenR);
-            D3DXVECTOR3 viscosityTerm = m_ParticleMass * m_Viscosity
-                    * velocityDifference * laplacianWViskosityValue;
-            D3DXVECTOR3 viscosityForce = viscosityTerm / particleDensity
-                    * m_GlassViscosity;
-
-            ((D3DXVECTOR3*)m_PressureAndViscosityForces)[particleIndex] += (pressureForce
-                + viscosityForce);
+            (this->*Func)(particleIndex, lenR, &r, &Particle->m_Velocity);
         }
 
         // Handle collision with side
@@ -463,36 +471,134 @@ void fp_Fluid::CalculateGlassFluidStateChangeMT(int ThreadIdx) {
             particleToCenter *= particleToCenterLenInv * particleToCenterLen;
             particleToCenterLenInv = 1.0f / particleToCenterLen;
         }
-        if(lenR < m_SmoothingLength) {        
-            float lenRSq = lenR * lenR;
+        if(lenR < m_SmoothingLength) {
             D3DXVECTOR3 r = particleToCenter * particleToCenterLenInv * lenR;
-
-            // Density
-            float hSq_lenRSq = m_SmoothingLengthSq - lenRSq;
-            float particleDensity = m_OldDensities[particleIndex];
-            float wPoly6Value = WPoly6(hSq_lenRSq);
-            float AdditionalDensity = m_ParticleMass * wPoly6Value;
-            m_NewDensities[particleIndex] += AdditionalDensity * m_GlassDensity;
-
-            // Pressure force
-            float pressure = m_GasConstantK * (particleDensity - m_RestDensity);
-            D3DXVECTOR3 gradWSpikyValue = GradientWSpiky(&r, lenRSq);
-            D3DXVECTOR3 pressureTerm = - m_ParticleMass * pressure * gradWSpikyValue;
-            D3DXVECTOR3 pressureForce = pressureTerm / particleDensity 
-                    * m_GlassDensity;        
-
-            // Viscosity force
-            D3DXVECTOR3 velocityDifference = m_LastGlassVelocity - Particle->m_Velocity;
-            float laplacianWViskosityValue = LaplacianWViscosity(lenR);
-            D3DXVECTOR3 viscosityTerm = m_ParticleMass * m_Viscosity 
-                    * velocityDifference * laplacianWViskosityValue;
-            D3DXVECTOR3 viscosityForce = viscosityTerm / particleDensity
-                    * m_GlassViscosity;
-
-            ((D3DXVECTOR3*)m_PressureAndViscosityForces)[particleIndex] += pressureForce
-                + viscosityForce;
+            (this->*Func)(particleIndex, lenR, &r,&Particle->m_Velocity);
         }
     }
+}
+
+void fp_Fluid::GlassUpdateDensitiesMT(int ThreadIdx) {
+    GlassCommonUpdateMT(ThreadIdx, &fp_Fluid::GlassUpdateDensityOnParticle);
+}
+
+void fp_Fluid::GlassUpdateDensityOnParticle(
+        int ParticleIndex,
+        float LenR,
+        D3DXVECTOR3* R,
+        D3DXVECTOR3* Velocity) {
+    float lenRSq = LenR * LenR;
+    float hSq_lenRSq = m_SmoothingLengthSq - lenRSq;
+    float wPoly6Value = WPoly6(hSq_lenRSq);
+    float additionalDensity = m_ParticleMass * wPoly6Value;
+    m_DensitiesWrite[ParticleIndex] += additionalDensity * m_GlassDensity;
+}
+
+void fp_Fluid::UpdateForcesMT(int ThreadIdx) {
+    fp_FluidParticlePairCache::iterator it = m_PairCaches[ThreadIdx].begin();
+    fp_FluidParticlePairCache::iterator end = m_PairCaches[ThreadIdx].end();
+    for(; it != end; it++) {
+        UpdateForcesOnPair(&(*it));
+    }
+    m_PairCaches[ThreadIdx].clear();
+}
+
+inline void fp_Fluid::UpdateForcesOnPair(fp_FluidParticlePair* Pair){
+    float dist = sqrt(Pair->m_DistanceSq);
+    float hSq_lenRSq = m_SmoothingLengthSq - Pair->m_DistanceSq;
+    D3DXVECTOR3 r1 = Pair->m_Particle1->m_Position - Pair->m_Particle2->m_Position;
+    int particle1Index = Pair->m_Particle1->m_Index;
+    int particle2Index = Pair->m_Particle2->m_Index;
+    float particle1Density = m_Densities[particle1Index];
+    float particle2Density = m_Densities[particle2Index];
+
+    // Pressure forces
+    float pressureAt1 = m_GasConstantK * (particle1Density - m_RestDensity);
+    float pressureAt2 = m_GasConstantK * (particle2Density - m_RestDensity);
+    float pressureSum = pressureAt1 + pressureAt2;
+    D3DXVECTOR3 gradWSpikyValue1 = GradientWSpiky(&r1, dist);
+    D3DXVECTOR3 commonPressureTerm1 = - m_ParticleMass * pressureSum / 2.0f
+            * gradWSpikyValue1;
+    D3DXVECTOR3 pressureForce1 = commonPressureTerm1 / particle2Density;
+    D3DXVECTOR3 pressureForce2 = - commonPressureTerm1 / particle1Density;
+    
+    #if defined(DEBUG) || defined(_DEBUG)
+
+    float pressureForce1LenSq = D3DXVec3LengthSq(&pressureForce1);
+    D3DXVECTOR3 pressureForce1Normalized, r1Normalized;
+    D3DXVec3Normalize(&pressureForce1Normalized, &pressureForce1);
+    D3DXVec3Normalize(&r1Normalized, &r1);
+    //float testDot = D3DXVec3Dot(&pressureForce1Normalized, &r1Normalized);
+    //assert(pressureForce1LenSq < 0.1f || pressureForce1LenSq > -0.1f
+    //        || testDot > 0.99f);
+    assert(m_Densities[particle1Index] >= m_VacuumDensity);
+    assert(pressureForce1LenSq < FP_DEBUG_MAX_FORCE_SQ);
+
+    #endif
+
+    // Viscosity forces
+    D3DXVECTOR3 velocityDifference1 = Pair->m_Particle2->m_Velocity
+            - Pair->m_Particle1->m_Velocity;
+    float laplacianWViskosityValue1 = LaplacianWViscosity(dist);
+    D3DXVECTOR3 commonViscosityTerm1 = m_ParticleMass * m_Viscosity * velocityDifference1
+            * laplacianWViskosityValue1;
+    D3DXVECTOR3 viscosityForce1 = commonViscosityTerm1 / particle2Density;
+    D3DXVECTOR3 viscosityForce2 = -commonViscosityTerm1 / particle1Density;
+
+    #if defined(DEBUG) || defined(_DEBUG)
+    float viscosityForce1LenSq = D3DXVec3LengthSq(&viscosityForce1);
+    assert(viscosityForce1LenSq < FP_DEBUG_MAX_FORCE_SQ);
+    #endif
+
+    // Surface tension
+    D3DXVECTOR3 gradWPoly6Value1 = GradientWPoly6(&r1, hSq_lenRSq);
+    D3DXVECTOR3 commonGradientColorFieldTerm1 = m_ParticleMass * gradWPoly6Value1;
+    ((D3DXVECTOR3*)m_GradientColorField)[particle1Index]
+            += commonGradientColorFieldTerm1 / particle2Density;
+    ((D3DXVECTOR3*)m_GradientColorField)[particle2Index]
+            -= commonGradientColorFieldTerm1 / particle1Density;
+    float laplacianWPoly6Value1 = LaplacianWPoly6(Pair->m_DistanceSq, hSq_lenRSq);
+    float commonLaplacianColorFieldTerm1 = m_ParticleMass * laplacianWPoly6Value1;
+    m_LaplacianColorFieldWrite[particle1Index] += commonLaplacianColorFieldTerm1
+            / particle2Density;
+    m_LaplacianColorFieldWrite[particle2Index] += commonLaplacianColorFieldTerm1
+            / particle1Density;
+
+    // Total forces
+    ((D3DXVECTOR3*)m_PressureAndViscosityForcesWrite)[particle1Index]
+            += pressureForce1 /*+ viscosityForce1*/;
+    ((D3DXVECTOR3*)m_PressureAndViscosityForcesWrite)[particle2Index]
+            += pressureForce2 /*+ viscosityForce2*/;
+}
+
+void fp_Fluid::GlassUpdateForcesMT(int ThreadIdx) {
+    GlassCommonUpdateMT(ThreadIdx, &fp_Fluid::GlassUpdateForcesOnParticle);
+}
+
+void fp_Fluid::GlassUpdateForcesOnParticle(
+        int ParticleIndex,
+        float LenR,
+        D3DXVECTOR3* R,
+        D3DXVECTOR3* Velocity) {
+    float lenRSq = LenR * LenR;
+    float particleDensity = m_Densities[ParticleIndex];
+    
+    // Pressure force
+    float pressure = m_GasConstantK * (particleDensity - m_RestDensity);
+    D3DXVECTOR3 gradWSpikyValue = GradientWSpiky(R, LenR);
+    D3DXVECTOR3 pressureTerm = - m_ParticleMass * pressure * gradWSpikyValue;
+    D3DXVECTOR3 pressureForce = pressureTerm / particleDensity * m_GlassDensity;
+
+    // Viscosity force
+    D3DXVECTOR3 velocityDifference = m_LastGlassVelocity - *Velocity;
+    float laplacianWViskosityValue = LaplacianWViscosity(LenR);
+    D3DXVECTOR3 viscosityTerm = m_ParticleMass * m_Viscosity
+            * velocityDifference * laplacianWViskosityValue;
+    D3DXVECTOR3 viscosityForce = viscosityTerm / particleDensity
+            * m_GlassViscosity;
+
+    ((D3DXVECTOR3*)m_PressureAndViscosityForcesWrite)[ParticleIndex] += (pressureForce
+        + viscosityForce);
 }
 
 void fp_Fluid::MoveParticlesMT(int ThreadIdx) {
@@ -512,10 +618,10 @@ void fp_Fluid::MoveParticlesMT(int ThreadIdx) {
         if(gradColorFieldLenSq >= m_GradientColorFieldThresholdSq) {
             D3DXVECTOR3 surfaceTensionForce = (-m_SurfaceTension *
                 m_LaplacianColorField[i]/sqrt(gradColorFieldLenSq)) * gradColorField;
-            totalForce += surfaceTensionForce;
+            //totalForce += surfaceTensionForce;
         }
         D3DXVECTOR3 newVelocity = oldVelocityContribution 
-            + (totalForce / m_OldDensities[i] + m_Gravity) * m_CurrentElapsedTime;        
+            + (totalForce / m_Densities[i] + m_Gravity) * m_CurrentElapsedTime;        
         m_Particles[i].m_Velocity = newVelocity;
         m_Particles[i].m_Position += 0.5f * m_CurrentElapsedTime
             * (oldVelocityContribution + newVelocity);        
@@ -525,7 +631,7 @@ void fp_Fluid::MoveParticlesMT(int ThreadIdx) {
         ((D3DXVECTOR3*)m_PressureAndViscosityForces)[i] = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
         ((D3DXVECTOR3*)m_GradientColorField)[i] = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
         m_LaplacianColorField[i] = 0.0f;
-        m_OldDensities[i] = m_RestDensity;
+        m_Densities[i] = m_VacuumDensity;
     }
 }
 
@@ -562,79 +668,3 @@ inline void fp_Fluid::EnforceGlass(fp_FluidParticle* Particle) {
         Particle->m_Velocity.z += m_GlassVelocityChange.z * abs(normal.z);
     }
 }
-
-inline void fp_Fluid::ProcessParticlePair(
-        fp_FluidParticle* Particle1, 
-        fp_FluidParticle* Particle2,
-        float DistanceSq){
-    float dist = sqrt(DistanceSq);
-    float hSq_lenRSq = m_SmoothingLengthSq - DistanceSq;
-    D3DXVECTOR3 r1 = Particle1->m_Position - Particle2->m_Position;
-    int particle1Index = Particle1->m_Index;
-    int particle2Index = Particle2->m_Index;
-
-    // Density
-    float particle1Density = m_OldDensities[particle1Index];
-    float particle2Density = m_OldDensities[particle2Index];
-    float wPoly6Value = WPoly6(hSq_lenRSq);
-    float AdditionalDensity = m_ParticleMass * wPoly6Value;
-    m_NewDensities[particle1Index] += AdditionalDensity;
-    m_NewDensities[particle2Index] += AdditionalDensity;
-
-    // Pressure forces
-    float PressureAt1 = m_GasConstantK * (particle1Density - m_RestDensity);
-    float PressureAt2 = m_GasConstantK * (particle2Density - m_RestDensity);
-    float PressureSum = PressureAt1 + PressureAt2;
-    D3DXVECTOR3 gradWSpikyValue1 = GradientWSpiky(&r1, dist);
-    D3DXVECTOR3 commonPressureTerm1 = - m_ParticleMass * PressureSum / 2.0f
-            * gradWSpikyValue1;
-    D3DXVECTOR3 pressureForce1 = commonPressureTerm1 / particle2Density;
-    D3DXVECTOR3 pressureForce2 = - commonPressureTerm1 / particle1Density;
-    
-    #if defined(DEBUG) || defined(_DEBUG)
-
-    float pressureForce1LenSq = D3DXVec3LengthSq(&pressureForce1);
-    D3DXVECTOR3 pressureForce1Normalized, r1Normalized;
-    D3DXVec3Normalize(&pressureForce1Normalized, &pressureForce1);
-    D3DXVec3Normalize(&r1Normalized, &r1);
-    //float testDot = D3DXVec3Dot(&pressureForce1Normalized, &r1Normalized);
-    //assert(pressureForce1LenSq < 0.1f || pressureForce1LenSq > -0.1f
-    //        || testDot > 0.99f);
-    assert(m_OldDensities[particle1Index] >= m_InitialDensity);
-    assert(pressureForce1LenSq < FP_DEBUG_MAX_FORCE_SQ);
-
-    #endif
-
-    // Viscosity forces
-    D3DXVECTOR3 velocityDifference1 = Particle2->m_Velocity - Particle1->m_Velocity;
-    float laplacianWViskosityValue1 = LaplacianWViscosity(dist);
-    D3DXVECTOR3 commonViscosityTerm1 = m_ParticleMass * m_Viscosity * velocityDifference1
-            * laplacianWViskosityValue1;
-    D3DXVECTOR3 viscosityForce1 = commonViscosityTerm1 / particle2Density;
-    D3DXVECTOR3 viscosityForce2 = -commonViscosityTerm1 / particle1Density;
-
-    #if defined(DEBUG) || defined(_DEBUG)
-    float viscosityForce1LenSq = D3DXVec3LengthSq(&viscosityForce1);
-    assert(viscosityForce1LenSq < FP_DEBUG_MAX_FORCE_SQ);
-    #endif
-
-    // Surface tension
-    D3DXVECTOR3 gradWPoly6Value1 = GradientWPoly6(&r1, hSq_lenRSq);
-    D3DXVECTOR3 commonGradientColorFieldTerm1 = m_ParticleMass * gradWPoly6Value1;
-    ((D3DXVECTOR3*)m_GradientColorField)[particle1Index]
-            += commonGradientColorFieldTerm1 / particle2Density;
-    ((D3DXVECTOR3*)m_GradientColorField)[particle2Index]
-            -= commonGradientColorFieldTerm1 / particle1Density;
-    float laplacianWPoly6Value1 = LaplacianWPoly6(DistanceSq, hSq_lenRSq);
-    float commonLaplacianColorFieldTerm1 = m_ParticleMass * laplacianWPoly6Value1;
-    m_LaplacianColorField[particle1Index] += commonLaplacianColorFieldTerm1
-            / particle2Density;
-    m_LaplacianColorField[particle2Index] += commonLaplacianColorFieldTerm1
-            / particle1Density;
-
-    // Total forces
-    ((D3DXVECTOR3*)m_PressureAndViscosityForces)[particle1Index] += pressureForce1 + viscosityForce1;
-    ((D3DXVECTOR3*)m_PressureAndViscosityForces)[particle2Index] += pressureForce2 + viscosityForce2;
-
-}
-
