@@ -40,6 +40,7 @@ int                     g_RenderType;
 bool                    g_MoveHorizontally;
 bool                    g_StopSim;
 bool                    g_UpdateVis;
+float                   g_TimeFactor;
 
 // Direct3D10 resources
 ID3D10EffectVectorVariable* g_LightDir = NULL;
@@ -191,6 +192,7 @@ void FP_InitApp() {
     g_ActiveLight = 0;
     g_NumActiveLights = 1;
     g_LightScale = FP_DEFAULT_LIGHT_SCALE;
+    g_TimeFactor = FP_DEFAULT_TIME_FACTOR;
     D3DXVECTOR3 center(0.0f, 0.0f, 0.0f);
     g_Sim = new fp_Fluid(&g_WorkerThreadMgr, FP_NUM_PARTICLES_X, FP_NUM_PARTICLES_Y,
             FP_NUM_PARTICLES_Z, FP_PARTICLE_SPACING_X, FP_PARTICLE_SPACING_Y,
@@ -315,7 +317,7 @@ void CALLBACK FP_OnFrameMove( double Time, float ElapsedTime, void* UserContext 
     }
     if(!g_StopSim) {
         for (int i = 0; i < FP_SIMULATION_STEPS_PER_FRAME; i++) {
-            g_Sim->Update(ElapsedTime * FP_TIME_FACTOR / FP_SIMULATION_STEPS_PER_FRAME);
+            g_Sim->Update(ElapsedTime * g_TimeFactor / FP_SIMULATION_STEPS_PER_FRAME);
         }
         g_UpdateVis = true;
     }
@@ -371,7 +373,7 @@ void CALLBACK FP_OnGUIEvent(
         void* UserContext ) {   
     bool resetSim;
     float mcVoxelSize = -1.0f, mcIsoLevel = -1.0f, raycastIsoLevel = -1.0f, 
-            raycastStepScale = -1.0f, raycastRefractionRatio = -1.0f;
+            raycastStepScale = -1.0f, raycastRefractionRatio = -1.0f, timeFactor = -1.0f;
     int selectedCubeMap = -1;
     float oldSpriteSize = g_RenderSprites->GetSpriteSize();
     float newSpriteSize = oldSpriteSize;
@@ -379,7 +381,7 @@ void CALLBACK FP_OnGUIEvent(
     g_GUI.OnGUIEvent(Event, ControlID, Control, g_ActiveLight, g_NumActiveLights,
             raycastIsoLevel, raycastStepScale, raycastRefractionRatio, mcVoxelSize,
             mcIsoLevel, g_LightScale, newSpriteSize, resetSim, g_StopSim,
-            g_MoveHorizontally, g_RenderType, selectedCubeMap);
+            g_MoveHorizontally, g_RenderType, selectedCubeMap, timeFactor);
     if(oldRenderType != g_RenderType)
         g_UpdateVis = true;
     if(oldSpriteSize != newSpriteSize)
@@ -396,6 +398,8 @@ void CALLBACK FP_OnGUIEvent(
         g_RenderMarchingCubes->m_IsoLevel = mcIsoLevel;
     if(mcVoxelSize > 0.0f && mcVoxelSize != g_CPUIsoVolume->m_VoxelSize)
         g_CPUIsoVolume->SetVoxelSize(mcVoxelSize);
+    if(timeFactor > 0.0f)
+        g_TimeFactor = timeFactor;
     g_RenderMarchingCubes->m_NumActiveLights = g_NumActiveLights;
     if(resetSim) {
         g_UpdateVis = true;

@@ -162,10 +162,10 @@ private:
 
     fp_Grid* m_Grid;
 
-    volatile float* m_DensitiesWrite;
-    volatile D3DXVECTOR3* m_PressureAndViscosityForcesWrite;
-    volatile D3DXVECTOR3* m_GradientColorFieldWrite;
-    volatile float* m_LaplacianColorFieldWrite;
+    volatile float* m_DensitiesConcurrent;
+    volatile D3DXVECTOR3* m_PressureAndViscosityForcesConcurrent;
+    volatile D3DXVECTOR3* m_GradientColorFieldConcurrent;
+    volatile float* m_LaplacianColorFieldConcurrent;
 
     float* m_Densities;
     D3DXVECTOR3* m_PressureAndViscosityForces;

@@ -215,10 +215,10 @@ fp_Fluid::fp_Fluid(
     m_GradientColorField = new D3DXVECTOR3[m_NumParticles];    
     m_LaplacianColorField = new float[m_NumParticles];    
     m_Densities = new float[m_NumParticles];
-    m_PressureAndViscosityForcesWrite = m_PressureAndViscosityForces;
-    m_GradientColorFieldWrite = m_GradientColorField;
-    m_LaplacianColorFieldWrite = m_LaplacianColorField;
-    m_DensitiesWrite = m_Densities;
+    m_PressureAndViscosityForcesConcurrent = m_PressureAndViscosityForces;
+    m_GradientColorFieldConcurrent = m_GradientColorField;
+    m_LaplacianColorFieldConcurrent = m_LaplacianColorField;
+    m_DensitiesConcurrent = m_Densities;
     float startX = Center.x - 0.5f * (NumParticlesX - 1) * SpacingX;
     float startY = Center.y - 0.5f * (NumParticlesY - 1) * SpacingY;
     float startZ = Center.z - 0.5f * (NumParticlesZ - 1) * SpacingZ;     
@@ -235,14 +235,12 @@ fp_Fluid::fp_Fluid(
                         = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
                 ((D3DXVECTOR3*)m_GradientColorField)[i] = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
                 m_LaplacianColorField[i] = 0.0f;
-                m_Densities[i] = m_VacuumDensity;
+                m_Densities[i] = m_RestDensity;
                 i++;
             }
         }
     }  
     m_Grid->FillAndPrepare(m_Particles, m_NumParticles);
-    // Calculate initial densities
-    Update(0.0f);
 }
 
 fp_Fluid::~fp_Fluid() {
@@ -322,10 +320,10 @@ void fp_Fluid::Update(float ElapsedTime) {
     m_WorkerThreadMgr->WaitTillJobFinishedOnAllThreads();
 
     // Update densities (particle-glass)
-    //m_WorkerThreadMgr->DoJobOnAllThreads(
-    //        fp_FluidGlassUpdateDensitiesMTWrapper, m_MTData,
-    //        sizeof(fp_FluidMTHelperData));
-    //m_WorkerThreadMgr->WaitTillJobFinishedOnAllThreads();
+    m_WorkerThreadMgr->DoJobOnAllThreads(
+            fp_FluidGlassUpdateDensitiesMTWrapper, m_MTData,
+            sizeof(fp_FluidMTHelperData));
+    m_WorkerThreadMgr->WaitTillJobFinishedOnAllThreads();
 
     // Update pressure and viscosity forces, etc. (particle-particle)
     m_WorkerThreadMgr->DoJobOnAllThreads(fp_FluidUpdateForcesMTWrapper, m_MTData,
@@ -333,9 +331,9 @@ void fp_Fluid::Update(float ElapsedTime) {
     m_WorkerThreadMgr->WaitTillJobFinishedOnAllThreads();    
 
     // Update pressure and viscosity forces, etc. (particle-glass)
-    //m_WorkerThreadMgr->DoJobOnAllThreads(fp_FluidGlassUpdateForcesMTWrapper, m_MTData,
-    //        sizeof(fp_FluidMTHelperData));
-    //m_WorkerThreadMgr->WaitTillJobFinishedOnAllThreads();
+    m_WorkerThreadMgr->DoJobOnAllThreads(fp_FluidGlassUpdateForcesMTWrapper, m_MTData,
+            sizeof(fp_FluidMTHelperData));
+    m_WorkerThreadMgr->WaitTillJobFinishedOnAllThreads();
 
     // Move particles and clear fields    
     m_CurrentGlassEnforceMinY = m_GlassFloorMinusEnforceDistance
@@ -433,8 +431,8 @@ inline void fp_Fluid::UpdateDensitiesOnPair(fp_FluidParticlePair* Pair){
     int particle2Index = Pair->m_Particle2->m_Index;
     float AdditionalDensity = m_ParticleMass * WPoly6(m_SmoothingLengthSq
             - Pair->m_DistanceSq);
-    m_DensitiesWrite[particle1Index] += AdditionalDensity;
-    m_DensitiesWrite[particle2Index] += AdditionalDensity;
+    m_DensitiesConcurrent[particle1Index] += AdditionalDensity;
+    m_DensitiesConcurrent[particle2Index] += AdditionalDensity;
 }
 
 void fp_Fluid::GlassCommonUpdateMT(
@@ -491,7 +489,7 @@ void fp_Fluid::GlassUpdateDensityOnParticle(
     float hSq_lenRSq = m_SmoothingLengthSq - lenRSq;
     float wPoly6Value = WPoly6(hSq_lenRSq);
     float additionalDensity = m_ParticleMass * wPoly6Value;
-    m_DensitiesWrite[ParticleIndex] += additionalDensity * m_GlassDensity;
+    m_DensitiesConcurrent[ParticleIndex] += additionalDensity * m_GlassDensity;
 }
 
 void fp_Fluid::UpdateForcesMT(int ThreadIdx) {
@@ -559,16 +557,16 @@ inline void fp_Fluid::UpdateForcesOnPair(fp_FluidParticlePair* Pair){
             -= commonGradientColorFieldTerm1 / particle1Density;
     float laplacianWPoly6Value1 = LaplacianWPoly6(Pair->m_DistanceSq, hSq_lenRSq);
     float commonLaplacianColorFieldTerm1 = m_ParticleMass * laplacianWPoly6Value1;
-    m_LaplacianColorFieldWrite[particle1Index] += commonLaplacianColorFieldTerm1
+    m_LaplacianColorFieldConcurrent[particle1Index] += commonLaplacianColorFieldTerm1
             / particle2Density;
-    m_LaplacianColorFieldWrite[particle2Index] += commonLaplacianColorFieldTerm1
+    m_LaplacianColorFieldConcurrent[particle2Index] += commonLaplacianColorFieldTerm1
             / particle1Density;
 
     // Total forces
-    ((D3DXVECTOR3*)m_PressureAndViscosityForcesWrite)[particle1Index]
-            += pressureForce1 /*+ viscosityForce1*/;
-    ((D3DXVECTOR3*)m_PressureAndViscosityForcesWrite)[particle2Index]
-            += pressureForce2 /*+ viscosityForce2*/;
+    ((D3DXVECTOR3*)m_PressureAndViscosityForcesConcurrent)[particle1Index]
+            += pressureForce1 + viscosityForce1;
+    ((D3DXVECTOR3*)m_PressureAndViscosityForcesConcurrent)[particle2Index]
+            += pressureForce2 + viscosityForce2;
 }
 
 void fp_Fluid::GlassUpdateForcesMT(int ThreadIdx) {
@@ -597,7 +595,7 @@ void fp_Fluid::GlassUpdateForcesOnParticle(
     D3DXVECTOR3 viscosityForce = viscosityTerm / particleDensity
             * m_GlassViscosity;
 
-    ((D3DXVECTOR3*)m_PressureAndViscosityForcesWrite)[ParticleIndex] += (pressureForce
+    ((D3DXVECTOR3*)m_PressureAndViscosityForcesConcurrent)[ParticleIndex] += (pressureForce
         + viscosityForce);
 }
 
@@ -618,7 +616,7 @@ void fp_Fluid::MoveParticlesMT(int ThreadIdx) {
         if(gradColorFieldLenSq >= m_GradientColorFieldThresholdSq) {
             D3DXVECTOR3 surfaceTensionForce = (-m_SurfaceTension *
                 m_LaplacianColorField[i]/sqrt(gradColorFieldLenSq)) * gradColorField;
-            //totalForce += surfaceTensionForce;
+            totalForce += surfaceTensionForce;
         }
         D3DXVECTOR3 newVelocity = oldVelocityContribution 
             + (totalForce / m_Densities[i] + m_Gravity) * m_CurrentElapsedTime;        
@@ -631,7 +629,7 @@ void fp_Fluid::MoveParticlesMT(int ThreadIdx) {
         ((D3DXVECTOR3*)m_PressureAndViscosityForces)[i] = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
         ((D3DXVECTOR3*)m_GradientColorField)[i] = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
         m_LaplacianColorField[i] = 0.0f;
-        m_Densities[i] = m_VacuumDensity;
+        m_Densities[i] = m_RestDensity;
     }
 }
 
