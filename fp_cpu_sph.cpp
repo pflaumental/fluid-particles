@@ -171,6 +171,7 @@ fp_Fluid::fp_Fluid(
         float SurfaceTension,
         float GradientColorFieldThreshold,
         float ParticleMass,
+        float InitialDensityCoefficient,
         float RestDensityCoefficient,
         float DampingCoefficient,
         float GlassDensity,
@@ -189,6 +190,7 @@ fp_Fluid::fp_Fluid(
         m_GasConstantK(GasConstantK),
         m_Viscosity(Viscosity),
         m_SurfaceTension(SurfaceTension),
+        m_InitialDensityCoefficient(InitialDensityCoefficient),
         m_RestDensityCoefficient(RestDensityCoefficient),
         m_GradientColorFieldThresholdSq(GradientColorFieldThreshold
                 * GradientColorFieldThreshold),
@@ -235,7 +237,7 @@ fp_Fluid::fp_Fluid(
                         = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
                 ((D3DXVECTOR3*)m_GradientColorField)[i] = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
                 m_LaplacianColorField[i] = 0.0f;
-                m_Densities[i] = m_RestDensity;
+                m_Densities[i] = m_InitialDensity;
                 i++;
             }
         }
@@ -272,6 +274,7 @@ void fp_Fluid::SetSmoothingLength(float SmoothingLength) {
     m_GradientWSpikyCoefficient = -45.0f / (D3DX_PI * pow(SmoothingLength, 6));
     m_LaplacianWViscosityCoefficient = 45.0f / (D3DX_PI * pow(SmoothingLength, 5));
     m_VacuumDensity = m_ParticleMass * WPoly6(m_SmoothingLengthSq);
+    m_InitialDensity = m_InitialDensityCoefficient * m_VacuumDensity;
     m_RestDensity = m_RestDensityCoefficient * m_VacuumDensity;
     if(m_Grid != NULL) {
         m_Grid->m_CellWidth = SmoothingLength;
@@ -450,8 +453,8 @@ void fp_Fluid::GlassCommonUpdateMT(
 
         // Handle Collision with floor 
         float lenR = particlePosition.y - m_CurrentGlassFloorY;
-        if(lenR < FP_FLUID_DEFAULT_GLASS_PUSHBACK_DISTANCE)
-            lenR = FP_FLUID_DEFAULT_GLASS_PUSHBACK_DISTANCE;
+        if(lenR < FP_FLUID_GLASS_PUSHBACK_DISTANCE)
+            lenR = FP_FLUID_GLASS_PUSHBACK_DISTANCE;
         if(lenR < m_SmoothingLength) {
             D3DXVECTOR3 r = D3DXVECTOR3(0.0f, lenR, 0.0f);
             (this->*Func)(particleIndex, lenR, &r, &Particle->m_Velocity);
@@ -463,9 +466,9 @@ void fp_Fluid::GlassCommonUpdateMT(
         float particleToCenterLen = D3DXVec3Length(&particleToCenter);
         float particleToCenterLenInv = 1.0f / particleToCenterLen;
         lenR = m_GlassRadius - particleToCenterLen;  
-        if(lenR < FP_FLUID_DEFAULT_GLASS_PUSHBACK_DISTANCE) {
-            lenR = FP_FLUID_DEFAULT_GLASS_PUSHBACK_DISTANCE;
-            particleToCenterLen = m_GlassRadius - FP_FLUID_DEFAULT_GLASS_PUSHBACK_DISTANCE;
+        if(lenR < FP_FLUID_GLASS_PUSHBACK_DISTANCE) {
+            lenR = FP_FLUID_GLASS_PUSHBACK_DISTANCE;
+            particleToCenterLen = m_GlassRadius - FP_FLUID_GLASS_PUSHBACK_DISTANCE;
             particleToCenter *= particleToCenterLenInv * particleToCenterLen;
             particleToCenterLenInv = 1.0f / particleToCenterLen;
         }
@@ -583,6 +586,10 @@ void fp_Fluid::GlassUpdateForcesOnParticle(
     
     // Pressure force
     float pressure = m_GasConstantK * (particleDensity - m_RestDensity);
+    // glass should always push the particles away, so exclude negative-pressure
+    // conditions
+    if(pressure < FP_FLUID_GLASS_MIN_PRESSURE)
+        pressure = FP_FLUID_GLASS_MIN_PRESSURE;
     D3DXVECTOR3 gradWSpikyValue = GradientWSpiky(R, LenR);
     D3DXVECTOR3 pressureTerm = - m_ParticleMass * pressure * gradWSpikyValue;
     D3DXVECTOR3 pressureForce = pressureTerm / particleDensity * m_GlassDensity;
@@ -629,7 +636,7 @@ void fp_Fluid::MoveParticlesMT(int ThreadIdx) {
         ((D3DXVECTOR3*)m_PressureAndViscosityForces)[i] = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
         ((D3DXVECTOR3*)m_GradientColorField)[i] = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
         m_LaplacianColorField[i] = 0.0f;
-        m_Densities[i] = m_RestDensity;
+        m_Densities[i] = m_InitialDensity;
     }
 }
 

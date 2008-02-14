@@ -296,7 +296,7 @@ void CALLBACK FP_OnFrameMoveInitial(
         void* UserContext ) {
     // Update the camera's position based on user input 
     g_Camera.FrameMove( ElapsedTime );
-    if(Time > 0.1)
+    if(Time > 0.2)
         DXUTSetCallbackFrameMove( FP_OnFrameMove );
 }
 

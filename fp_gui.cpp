@@ -89,13 +89,13 @@ fp_GUI::fp_GUI()
             L'C', false, (CDXUTComboBox**) &m_RaycastSpecificControls.back() );
 
     iYRaycast += 24;
-    StringCchPrintf( sz, 100, L"Iso level: %0.3f", FP_RAYCAST_DEFAULT_ISO_LEVEL ); 
+    StringCchPrintf( sz, 100, L"Iso level: %0.2f", FP_RAYCAST_DEFAULT_ISO_LEVEL ); 
     m_RaycastSpecificControls.push_back(NULL);
     m_SampleUI.AddStatic( IDC_RAYCAST_ISO_LEVEL_STATIC, sz, 35, iYRaycast += 24, 125, 22,
             false, (CDXUTStatic**)&m_RaycastSpecificControls.back());
     m_RaycastSpecificControls.push_back(NULL);
     m_SampleUI.AddSlider( IDC_RAYCAST_ISO_LEVEL, 50, iYRaycast += 24, 100, 22, 1, 200,
-            (int) (FP_RAYCAST_DEFAULT_ISO_LEVEL * 500.0f), false, (CDXUTSlider**)
+            (int) (FP_RAYCAST_DEFAULT_ISO_LEVEL * 250.0f), false, (CDXUTSlider**)
             &m_RaycastSpecificControls.back() );
 
     iYRaycast += 24;
@@ -303,7 +303,7 @@ void fp_GUI::OnGUIEvent(
 
         case IDC_RAYCAST_ISO_LEVEL: 
             RaycastIsoLevel = (float) (m_SampleUI.GetSlider(
-                IDC_RAYCAST_ISO_LEVEL )->GetValue() * 0.002f);
+                IDC_RAYCAST_ISO_LEVEL )->GetValue() * 0.004f);
 
             StringCchPrintf( sz, 100, L"Iso level: %0.3f", RaycastIsoLevel ); 
             m_SampleUI.GetStatic( IDC_RAYCAST_ISO_LEVEL_STATIC )->SetText( sz );

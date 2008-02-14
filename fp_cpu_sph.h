@@ -83,7 +83,9 @@ public:
     float m_SmoothingLengthSqInv;
     float m_SmoothingLengthPow3Inv;
     float m_VacuumDensity;
+    float m_InitialDensity;
     float m_RestDensity;
+    float m_InitialDensityCoefficient;
     float m_RestDensityCoefficient;
     float m_DampingCoefficient;
     float m_SearchRadius;
@@ -128,7 +130,8 @@ public:
         float SurfaceTension = FP_FLUID_DEFAULT_SURFACE_TENSION,
         float GradientColorFieldThreshold = FP_FLUID_DEFAULT_GRADIENT_COLORFIELD_THRESHOLD,
         float ParticleMass = FP_FLUID_DEFAULT_PARTICLE_MASS,
-        float RestDensityCoefficient = FP_FLUID_DEFAULT_REST_DENSITY_COEFFICIENT, 
+        float InitialDensityCoefficient = FP_FLUID_DEFAULT_INITIAL_DENSITY_COEFFICIENT,
+        float RestDensityCoefficient = FP_FLUID_DEFAULT_REST_DENSITY_COEFFICIENT,
         float DampingCoefficient = FP_FLUID_DEFAULT_DAMPING_COEFFICIENT,
         float GlassDensity = FP_FLUID_DEFAULT_GLASS_DENSITY,
         float GlassViscosity = FP_FLUID_DEFAULT_GLASS_VISCOSITY,
