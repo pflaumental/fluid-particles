@@ -177,6 +177,8 @@ void fp_DepthPeeler::OnD3D10ReleasingSwapChain( void* UserContext ) {
 }
 
 void fp_DepthPeeler::OnD3D10DestroyDevice( void* UserContext ) {
+    SAFE_RELEASE(m_VertexBuffer);
+    SAFE_RELEASE(m_VertexLayout);
     SAFE_RELEASE(m_OcclusionQuery);
     SAFE_RELEASE(m_Effect);
 }
@@ -206,6 +208,10 @@ void fp_DepthPeeler::OnD3D10FrameRender(
 
     m_EffectVarViewProjection->SetMatrix((float*) ViewProjection);
 
+    ID3D10RenderTargetView *oldRTV;
+    ID3D10DepthStencilView *oldDSV;
+    D3DDevice->OMGetRenderTargets(1, &oldRTV, &oldDSV);
+
     while(m_FragmentsLeft && m_DepthComplexity < m_MaxDepthComplexity) {
         D3DDevice->ClearDepthStencilView(m_PeelDepthDSV[m_DepthComplexity % 2],
                 D3D10_CLEAR_DEPTH, 1.0f, 0);
@@ -232,6 +238,10 @@ void fp_DepthPeeler::OnD3D10FrameRender(
 
         if(m_FragmentsLeft) m_DepthComplexity++;
     }
+
+    D3DDevice->OMSetRenderTargets(1, &oldRTV, oldDSV);
+    SAFE_RELEASE(oldDSV);
+    SAFE_RELEASE(oldRTV);
 }
 
 int fp_DepthPeeler::MaxDepthComplexity() {
