@@ -9,20 +9,19 @@
 const D3D10_INPUT_ELEMENT_DESC fp_SpriteVertex::Layout[] = { { "POSITION",  0,
         DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D10_INPUT_PER_VERTEX_DATA, 0 } };
 
-fp_RenderSprites::fp_RenderSprites(int NumParticles, fp_FluidParticle* Particles)
-        :
-        m_NumParticles(NumParticles),
-        m_Particles(Particles),
-        m_SpriteSize(FP_RENDER_DEFAULT_SPRITE_SIZE),
-		m_Texture9(NULL),
-        m_VertexBuffer10(NULL),
-		m_Texture10SRV(NULL),
-        m_Effect10(NULL),
-        m_TechRenderSprites(NULL),
-        m_EffectTexture(NULL),
-        m_EffectVarViewProjection(NULL),
-        m_EffectVarSpriteCornersWorldS(NULL),
-        m_VertexLayout(NULL){
+fp_RenderSprites::fp_RenderSprites(int NumParticles, fp_FluidParticle* Particles) :
+    m_NumParticles(NumParticles),
+    m_Particles(Particles),
+    m_SpriteSize(FP_RENDER_DEFAULT_SPRITE_SIZE),
+    m_Texture9(NULL),
+    m_VertexBuffer10(NULL),
+    m_Texture10SRV(NULL),
+    m_Effect10(NULL),
+    m_TechRenderSprites(NULL),
+    m_EffectTexture(NULL),
+    m_EffectVarViewProjection(NULL),
+    m_EffectVarSpriteCornersWorldS(NULL),
+    m_VertexLayout(NULL){
 }
 
 fp_RenderSprites::~fp_RenderSprites() {
@@ -175,42 +174,42 @@ void fp_RenderSprites::OnD3D10FrameRender(
         const D3DXMATRIX*  ViewProjection,
 		const D3DXMATRIX*  InvView) {
     HRESULT hr;
-     fp_SpriteVertex *spriteVertices;
-     m_VertexBuffer10->Map(D3D10_MAP_WRITE_DISCARD, 0, (void**)&spriteVertices);
-     for( int i = 0; i < m_NumParticles; i++ ) {
-         spriteVertices->m_Position = m_Particles[i].m_Position;
-         spriteVertices++;
-     }
-     m_VertexBuffer10->Unmap();
+    fp_SpriteVertex *spriteVertices;
+    m_VertexBuffer10->Map(D3D10_MAP_WRITE_DISCARD, 0, (void**)&spriteVertices);
+    for( int i = 0; i < m_NumParticles; i++ ) {
+        spriteVertices->m_Position = m_Particles[i].m_Position;
+        spriteVertices++;
+    }
+    m_VertexBuffer10->Unmap();
 
-	 D3DDevice->IASetInputLayout(m_VertexLayout);
-	 UINT stride = sizeof(fp_SpriteVertex);
-	 UINT offset = 0;
-	 D3DDevice->IASetVertexBuffers(0, 1, &m_VertexBuffer10, &stride, &offset);
-	 D3DDevice->IASetPrimitiveTopology( D3D10_PRIMITIVE_TOPOLOGY_POINTLIST );
+    D3DDevice->IASetInputLayout(m_VertexLayout);
+    UINT stride = sizeof(fp_SpriteVertex);
+    UINT offset = 0;
+    D3DDevice->IASetVertexBuffers(0, 1, &m_VertexBuffer10, &stride, &offset);
+    D3DDevice->IASetPrimitiveTopology( D3D10_PRIMITIVE_TOPOLOGY_POINTLIST );
 
-	 V(m_EffectTexture->SetResource(m_Texture10SRV));
-     V(m_EffectVarViewProjection->SetMatrix((float*) ViewProjection));
-     D3DXVECTOR4 spriteCornersWorldS[4] = {
-         D3DXVECTOR4(-1,1,0,0),
-         D3DXVECTOR4(1,1,0,0),
-         D3DXVECTOR4(-1,-1,0,0),
-         D3DXVECTOR4(1,-1,0,0)
-     };
-     for(int i=0; i<4; i++) {
-         spriteCornersWorldS[i] *= m_SpriteSize;
-     }
-     D3DXVec3TransformNormalArray((D3DXVECTOR3*)spriteCornersWorldS, sizeof(D3DXVECTOR4),
+    V(m_EffectTexture->SetResource(m_Texture10SRV));
+    V(m_EffectVarViewProjection->SetMatrix((float*) ViewProjection));
+    D3DXVECTOR4 spriteCornersWorldS[4] = {
+        D3DXVECTOR4(-1,1,0,0),
+        D3DXVECTOR4(1,1,0,0),
+        D3DXVECTOR4(-1,-1,0,0),
+        D3DXVECTOR4(1,-1,0,0)
+    };
+    for(int i=0; i<4; i++) {
+        spriteCornersWorldS[i] *= m_SpriteSize;
+    }
+    D3DXVec3TransformNormalArray((D3DXVECTOR3*)spriteCornersWorldS, sizeof(D3DXVECTOR4),
             (D3DXVECTOR3*)spriteCornersWorldS, sizeof(D3DXVECTOR4), InvView, 4);
-     V(m_EffectVarSpriteCornersWorldS->SetRawValue(spriteCornersWorldS, 0,
+    V(m_EffectVarSpriteCornersWorldS->SetRawValue(spriteCornersWorldS, 0,
             sizeof(D3DXVECTOR4)*4));
 
-	 D3D10_TECHNIQUE_DESC techDesc;
-	 m_TechRenderSprites->GetDesc( &techDesc );
-	 for( UINT iPass = 0; iPass < techDesc.Passes; ++iPass ) {
-		 m_TechRenderSprites->GetPassByIndex( iPass )->Apply(0);
-		 D3DDevice->Draw(m_NumParticles, 0);
-	 }
+    D3D10_TECHNIQUE_DESC techDesc;
+    m_TechRenderSprites->GetDesc( &techDesc );
+    for( UINT iPass = 0; iPass < techDesc.Passes; ++iPass ) {
+        m_TechRenderSprites->GetPassByIndex( iPass )->Apply(0);
+        D3DDevice->Draw(m_NumParticles, 0);
+    }
 }
 
 void fp_RenderSprites::OnD3D10DestroyDevice( void* UserContext ) {
