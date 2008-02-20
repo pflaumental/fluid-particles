@@ -39,8 +39,8 @@ public:
             unsigned int Width, 
             unsigned int Height, 
             DXGI_FORMAT Format, 
-            unsigned int TargetCount=1, 
-            bool CreateDS=false, 
+            unsigned int TargetCount = 1, 
+            bool CreateDS = false, 
             const D3D10_SUBRESOURCE_DATA *InitialData = NULL);
 	virtual ~fp_RenderTarget2D();
 
