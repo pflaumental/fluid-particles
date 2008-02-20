@@ -103,7 +103,7 @@ DepthStencilState DisableDepthTest {
 };
 
 //--------------------------------------------------------------------------------------
-// Geometry shader for particles
+// Geometry shader for render sprites
 // Input:  world space particle position
 // Output: 2 clip space triangles, texture coordinates
 //--------------------------------------------------------------------------------------
@@ -122,7 +122,7 @@ void RenderSpritesGS(
 }	
 
 //--------------------------------------------------------------------------------------
-// Pixel shader for particles
+// Pixel shader for render sprites
 // Input:  screen space position (not used), texture coordinates (both p. c. interpolated)
 // Output: diffuse color
 // Lookups the diffuse color in particle texture
@@ -135,7 +135,7 @@ RenderSpritesPSOut RenderSpritesPS(RenderSpritesPSIn Input)  {
 
 
 //--------------------------------------------------------------------------------------
-// Renders scene to render target using D3D10 Techniques
+// Techniques
 //--------------------------------------------------------------------------------------
 technique10 RenderSprites {
     pass P0 {

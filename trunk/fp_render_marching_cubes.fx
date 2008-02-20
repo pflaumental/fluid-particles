@@ -110,7 +110,7 @@ RenderIsoVolumePSOut RenderIsoVolumePS(RenderIsoVolumePSIn Input)  {
 
 
 //--------------------------------------------------------------------------------------
-// Renders scene to render target using D3D10 Techniques
+// Techniques
 //--------------------------------------------------------------------------------------
 technique10 RenderIsoVolume1Light {
     pass P0 {

@@ -66,8 +66,8 @@ private:
 
 	ID3D10Texture2D* m_AllPeels; // Texture Array
     ID3D10ShaderResourceView* m_AllPeelsSRV; // Array SRV
-    ID3D10ShaderResourceView* m_PeelSRV; // Array of single SRVs
-    ID3D10RenderTargetView* m_PeelRTV; // Array of single RTVs
+    ID3D10ShaderResourceView** m_PeelSRV; // Array of single SRVs
+    ID3D10RenderTargetView** m_PeelRTV; // Array of single RTVs
 };
 
 #endif

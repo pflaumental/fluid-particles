@@ -7,12 +7,13 @@ const D3D10_INPUT_ELEMENT_DESC fp_DepthPeelerVertex::Layout[] = {
         {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D10_INPUT_PER_VERTEX_DATA,0},
         {"INDEX", 0, DXGI_FORMAT_R32_UINT, 0, 12, D3D10_INPUT_PER_VERTEX_DATA, 0} };
 
-D3D10_QUERY_DESC fp_DepthPeeler::::m_QueryDesc = {D3D10_QUERY_OCCLUSION_PREDICATE, 0};
+D3D10_QUERY_DESC fp_DepthPeeler::s_QueryDesc = {D3D10_QUERY_OCCLUSION_PREDICATE, 0};
 
 fp_DepthPeeler::fp_DepthPeeler(
         int MaxDepthComplexity,
         int NumParticles,
         fp_FluidParticle* Particles) :
+    m_MaxDepthComplexity(MaxDepthComplexity),
     m_NumParticles(NumParticles),
     m_Particles(Particles),
     m_AllPeels(NULL),
@@ -22,8 +23,6 @@ fp_DepthPeeler::fp_DepthPeeler(
     m_EffectVarViewProjection(NULL),
     m_FragmentsLeft(false),
     m_PeelDepth(NULL),
-    m_PeelDepthDSV(NULL),
-    m_PeelDepthSRV(NULL),
     m_OcclusionQuery(NULL),
     m_TechPeeling(NULL) {
 
@@ -55,10 +54,10 @@ HRESULT fp_DepthPeeler::OnD3D10CreateDevice(
     m_EffectVarViewProjection = m_Effect->GetVariableByName("g_ViewProjection")
             ->AsMatrix();
 
-    bool allValid = m_Effect->IsValid();
-    allValid |= m_TechPeeling->IsValid();
-    allValid |= m_EffectVarLastPeelDepth->IsValid();
-    allValid |= m_EffectVarViewProjection->IsValid();
+    bool allValid = m_Effect->IsValid() != 0 != 0;
+    allValid |= m_TechPeeling->IsValid() != 0;
+    allValid |= m_EffectVarLastPeelDepth->IsValid() != 0;
+    allValid |= m_EffectVarViewProjection->IsValid() != 0;
     if(!allValid)
         return E_FAIL;
 
@@ -68,7 +67,7 @@ HRESULT fp_DepthPeeler::OnD3D10CreateDevice(
     // Create vertex buffer
     D3D10_PASS_DESC passDesc;
     V_RETURN(m_TechPeeling->GetPassByIndex(0)->GetDesc(&passDesc));
-    V_RETURN(D3DDevice->CreateInputLayout(fp_DepthPeelerVertex::Layout, 1,
+    V_RETURN(D3DDevice->CreateInputLayout(fp_DepthPeelerVertex::Layout, 2,
             passDesc.pIAInputSignature, passDesc.IAInputSignatureSize, &m_VertexLayout));
     
     D3D10_BUFFER_DESC bufferDesc;
@@ -86,15 +85,21 @@ HRESULT fp_DepthPeeler::OnD3D10ResizedSwapChain(
         ID3D10Device* D3DDevice,
         IDXGISwapChain *SwapChain,
         const DXGI_SURFACE_DESC* BackBufferSurfaceDesc,
-        void* UserContext ) {    
+        void* UserContext ) {
+    HRESULT hr;
+
 	D3D10_TEXTURE2D_DESC texDesc;
     texDesc.Width = BackBufferSurfaceDesc->Width;
     texDesc.Height = BackBufferSurfaceDesc->Height;
     texDesc.MipLevels = 1;
     texDesc.ArraySize = 2;
     texDesc.Format = DXGI_FORMAT_R32_TYPELESS; 
+    texDesc.SampleDesc.Count = 1;
+    texDesc.SampleDesc.Quality = 0;
     texDesc.Usage = D3D10_USAGE_DEFAULT; 
     texDesc.BindFlags = D3D10_BIND_DEPTH_STENCIL | D3D10_BIND_SHADER_RESOURCE;
+    texDesc.CPUAccessFlags = 0;
+    texDesc.MiscFlags = 0;    
 
     D3D10_SHADER_RESOURCE_VIEW_DESC srvDesc;
 	srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
@@ -112,7 +117,7 @@ HRESULT fp_DepthPeeler::OnD3D10ResizedSwapChain(
     dsvDesc.Texture2DArray.MipSlice = 0;
 
     // PeelDepth
-    V_RETURN(D3DDevice->CreateTexture2D(texDesc, NULL, *m_PeelDepth));
+    V_RETURN(D3DDevice->CreateTexture2D(&texDesc, NULL, &m_PeelDepth));
     V_RETURN(D3DDevice->CreateShaderResourceView(m_PeelDepth, &srvDesc,
             &m_PeelDepthSRV[0]));
     V_RETURN(D3DDevice->CreateDepthStencilView(m_PeelDepth, &dsvDesc,
@@ -130,9 +135,10 @@ HRESULT fp_DepthPeeler::OnD3D10ResizedSwapChain(
 
     srvDesc.Format = DXGI_FORMAT_R32_UINT;
     srvDesc.Texture2DArray.ArraySize = m_MaxDepthComplexity;
+    srvDesc.Texture2DArray.FirstArraySlice = 0;
 
     // all peels
-    V_RETURN(D3DDevice->CreateTexture2D(texDesc, NULL, *m_AllPeels));
+    V_RETURN(D3DDevice->CreateTexture2D(&texDesc, NULL, &m_AllPeels));
     V_RETURN(D3DDevice->CreateShaderResourceView(m_AllPeels, &srvDesc,
             &m_AllPeelsSRV));
 
@@ -158,15 +164,15 @@ HRESULT fp_DepthPeeler::OnD3D10ResizedSwapChain(
 
 void fp_DepthPeeler::OnD3D10ReleasingSwapChain( void* UserContext ) {
     for(int i=0; i < m_MaxDepthComplexity; i++) {
-        SAFE_RELEASE(&m_PeelSRV[i]);
-        SAFE_RELEASE(&m_PeelRTV[i]);
+        SAFE_RELEASE(m_PeelSRV[i]);
+        SAFE_RELEASE(m_PeelRTV[i]);
     }
     SAFE_RELEASE(m_AllPeelsSRV);
     SAFE_RELEASE(m_AllPeels);
-    SAFE_RELEASE(&m_PeelDepthDSV[0]);
-    SAFE_RELEASE(&m_PeelDepthDSV[1]);
-    SAFE_RELEASE(&m_PeelDepthSRV[0]);
-    SAFE_RELEASE(&m_PeelDepthSRV[1]);
+    SAFE_RELEASE(m_PeelDepthDSV[0]);
+    SAFE_RELEASE(m_PeelDepthDSV[1]);
+    SAFE_RELEASE(m_PeelDepthSRV[0]);
+    SAFE_RELEASE(m_PeelDepthSRV[1]);
     SAFE_RELEASE(m_PeelDepth);
 }
 
@@ -201,21 +207,26 @@ void fp_DepthPeeler::OnD3D10FrameRender(
     m_EffectVarViewProjection->SetMatrix((float*) ViewProjection);
 
     while(m_FragmentsLeft && m_DepthComplexity < m_MaxDepthComplexity) {
-        D3DDevice->ClearDepthStencilView(&m_PeelDepthDSV[m_DepthComplexity % 2],
+        D3DDevice->ClearDepthStencilView(m_PeelDepthDSV[m_DepthComplexity % 2],
                 D3D10_CLEAR_DEPTH, 1.0f, 0);
         unsigned int clearVal = 0;
-        D3DDevice->ClearRenderTargetView(&m_PeelRTV[m_DepthComplexity],
-                reinterpret_cast<float[]>(&clearVal));
+        D3DDevice->ClearRenderTargetView(m_PeelRTV[m_DepthComplexity],
+                reinterpret_cast<float*>(&clearVal));
+
+        D3DDevice->OMSetRenderTargets(1, &m_PeelRTV[m_DepthComplexity],
+                m_PeelDepthDSV[m_DepthComplexity % 2]);
         
         if(m_DepthComplexity > 0)
             m_EffectVarLastPeelDepth->SetResource(
-                    &m_PeelDepthSRV[(m_DepthComplexity-1) % 2]);
-
-        m_OcclusionQuery->Begin();
+                    m_PeelDepthSRV[(m_DepthComplexity-1) % 2]);        
 
         m_TechPeeling->GetPassByIndex(m_DepthComplexity == 0 ? 0 : 1)->Apply(0);
 
+        m_OcclusionQuery->Begin();
+
         D3DDevice->Draw(m_NumParticles, 0);
+
+        m_OcclusionQuery->End();
 
         while(S_OK != m_OcclusionQuery->GetData(&m_FragmentsLeft, sizeof(BOOL), 0));
 
