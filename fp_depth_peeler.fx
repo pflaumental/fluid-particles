@@ -1,22 +1,25 @@
 //--------------------------------------------------------------------------------------
-// File: fp_render_sprites.fx
+// File: fp_depth_peeler.fx
 //--------------------------------------------------------------------------------------
 
 //--------------------------------------------------------------------------------------
 // Structs
 //--------------------------------------------------------------------------------------
 
-struct RenderSpritesGSIn {
-    float3 Pos            : POSITION;
+struct DepthPeelerVSIn {
+    float3 ParticlePosition       : POSITION;
+    uint ParticleIndex            : INDEX;    
 };
 
-struct RenderSpritesPSIn {
-    float4 Pos  	      : SV_POSITION;
-    float2 Tex			  : TEXCOORD0;
+struct DepthPeelerPSIn {
+    float4 ParticlePosition       : SV_POSITION;
+    uint ParticleIndex            : INDEX;
+    float2 ClipDepth              : CLIP_DEPTH;
 };
 
-struct RenderSpritesPSOut {
-    float4 Color		  : SV_TARGET;
+struct DepthPeelerPSOut {
+    uint ParticleIndex		      : SV_TARGET;
+    float Depth                   : SV_DEPTH;
 };
 
 //--------------------------------------------------------------------------------------
@@ -24,53 +27,18 @@ struct RenderSpritesPSOut {
 //--------------------------------------------------------------------------------------
 
 cbuffer cbPerObject {
-    float4x4 g_ViewProj;
-};
-
-cbuffer cbUser {
-    float3 g_SpriteCornersWorldS[4];
-};
-
-cbuffer cbImmutable {
-    float2 g_SpriteTexCoords[4] = { 
-        float2(0,0), 
-        float2(1,0),
-        float2(0,1),
-        float2(1,1),
-    };
+    float4x4 g_ViewProjection;
 };
 
 //--------------------------------------------------------------------------------------
 // Textures
 //--------------------------------------------------------------------------------------
 
-Texture2D g_ParticleDiffuse;
-
-//--------------------------------------------------------------------------------------
-// Texture samplers
-//--------------------------------------------------------------------------------------
-
-SamplerState g_LinearClamp {
-    Filter = MIN_MAG_MIP_LINEAR;
-    AddressU = Clamp;
-    AddressV = Clamp;
-};
+Texture2DArray g_LastPeelDepth;
 
 //--------------------------------------------------------------------------------------
 // BlendStates
 //--------------------------------------------------------------------------------------
-
-BlendState AlphaBlending {
-    AlphaToCoverageEnable = FALSE;
-    BlendEnable[0] = TRUE;
-    SrcBlend = SRC_ALPHA;
-    DestBlend = INV_SRC_ALPHA;
-    BlendOp = ADD;
-    SrcBlendAlpha = ZERO;
-    DestBlendAlpha = ZERO;
-    BlendOpAlpha = ADD;
-    RenderTargetWriteMask[0] = 0x0F;
-};
 
 BlendState NoBlending {
     AlphaToCoverageEnable = FALSE;
@@ -86,63 +54,69 @@ DepthStencilState EnableDepth {
     DepthWriteMask = ALL;
 };
 
-DepthStencilState DisableDepth {
-    DepthEnable = FALSE;
-    DepthWriteMask = ZERO;
-};
-
-DepthStencilState DisableDepthWrite {
-    DepthEnable = TRUE;
-    DepthWriteMask = ZERO;
-};
-
-DepthStencilState DisableDepthTest {
-    DepthEnable = TRUE;
-    DepthWriteMask = ALL;
-    DepthFunc = ALWAYS;
-};
-
 //--------------------------------------------------------------------------------------
-// Geometry shader for particles
-// Input:  world space particle position
-// Output: 2 clip space triangles, texture coordinates
+// Vertex shader for transformation
+// Input:  world space particle position, particle index
+// Output: clip space particle position, particle index, clipspace depth (z & w)
 //--------------------------------------------------------------------------------------
-[maxvertexcount(4)]
-void RenderSpritesGS(
-		point RenderSpritesGSIn Input[1], 
-		inout TriangleStream<RenderSpritesPSIn> SpriteStream) {				
-	RenderSpritesPSIn output;
-	[unroll] for(int i=0; i<4; i++) {					
-		float3 spriteCornerWorldS = Input[0].Pos + g_SpriteCornersWorldS[i];	
-		output.Pos = mul(float4(spriteCornerWorldS,1), g_ViewProj);		
-		output.Tex = g_SpriteTexCoords[i];
-		SpriteStream.Append(output);
-	}	
-	SpriteStream.RestartStrip();
-}	
-
-//--------------------------------------------------------------------------------------
-// Pixel shader for particles
-// Input:  screen space position (not used), texture coordinates (both p. c. interpolated)
-// Output: diffuse color
-// Lookups the diffuse color in particle texture
-//--------------------------------------------------------------------------------------
-RenderSpritesPSOut RenderSpritesPS(RenderSpritesPSIn Input)  { 
-    RenderSpritesPSOut output;
-	output.Color = g_ParticleDiffuse.Sample(g_LinearClamp, Input.Tex);
+DepthPeelerPSIn TransformVS(in DepthPeelerVSIn Input) {
+    DepthPeelerPSIn output;
+    output.ParticlePosition = mul(float4(Input.ParticlePosition, 1), g_ViewProjection);
+    output.ParticleIndex = Input.ParticleIndex;
+    output.ClipDepth = output.ParticlePosition.zw;
     return output;
 }
 
+//--------------------------------------------------------------------------------------
+// Pixel shader for depth peeling first pass
+// Input:  screen space position, particle index, clipspace depth (z & w)
+// Output: particle index, depth
+// Passtrough particle index, calculate depth from clipspace depth
+//--------------------------------------------------------------------------------------
+DepthPeelerPSOut DepthPeelerFirstPS(DepthPeelerPSIn Input)  { 
+    DepthPeelerPSOut output;
+	output.ParticleIndex = Input.ParticleIndex;
+	output.Depth = Input.ClipDepth.x / Input.ClipDepth.y;
+    return output;
+}
 
 //--------------------------------------------------------------------------------------
-// Renders scene to render target using D3D10 Techniques
+// Pixel shader for depth peeling next passes
+// Input:  screen space position, particle index, clipspace depth (z & w)
+// Output: particle index, depth
+// Passtrough particle index, but discard fragments with depth lower or equal then depth
+// from last pass
 //--------------------------------------------------------------------------------------
-technique10 RenderSprites {
+DepthPeelerPSOut DepthPeelerNextPS(DepthPeelerPSIn Input)  {
+    DepthPeelerPSOut output;
+    
+    float currentDepth = Input.ClipDepth.x / Input.ClipDepth.y;
+    float lastDepth = g_LastPeelDepth.Load(int4(Input.ParticlePosition.xy, 0, 0)).x;
+    
+    if(currentDepth <= lastDepth) discard;
+        
+	output.ParticleIndex = Input.ParticleIndex;
+	output.Depth = currentDepth;
+    return output;
+}
+
+//--------------------------------------------------------------------------------------
+// Techniques
+//--------------------------------------------------------------------------------------
+technique10 DepthPeeling {
     pass P0 {
-        SetGeometryShader(CompileShader(gs_4_0, RenderSpritesGS()));
-        SetPixelShader(CompileShader(ps_4_0, RenderSpritesPS()));
+        SetVertexShader(CompileShader(vs_4_0, TransformVS()));
+        SetPixelShader(CompileShader(ps_4_0, DepthPeelerFirstPS()));
 
-        SetBlendState(AlphaBlending, float4( 0.0f, 0.0f, 0.0f, 0.0f ), 0xFFFFFFFF );
-        SetDepthStencilState( DisableDepthWrite, 0 );
+        SetBlendState(NoBlending, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
+        SetDepthStencilState(EnableDepth, 0);
     }
+    
+    pass P1 {
+        SetVertexShader(CompileShader(vs_4_0, TransformVS()));
+        SetPixelShader(CompileShader(ps_4_0, DepthPeelerNextPS()));
+
+        SetBlendState(NoBlending, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
+        SetDepthStencilState(EnableDepth, 0);
+    }    
 }

@@ -12,6 +12,7 @@
 #include "fp_render_sprites.h"
 #include "fp_render_marching_cubes.h"
 #include "fp_render_raycast.h"
+#include "fp_depth_peeler.h"
 
 //#define DEBUG_VS   // Uncomment this line to debug D3D9 vertex shaders 
 //#define DEBUG_PS   // Uncomment this line to debug D3D9 pixel shaders 
@@ -26,6 +27,7 @@ extern fp_GUI                  g_GUI;
 extern fp_RenderSprites*       g_RenderSprites;
 extern fp_RenderMarchingCubes* g_RenderMarchingCubes;
 extern fp_RenderRaycast*       g_RenderRaycast;
+extern fp_DepthPeeler*         g_DepthPeeler;
 
 extern float                   g_LightScale;
 extern int                     g_NumActiveLights;

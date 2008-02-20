@@ -819,6 +819,18 @@
 			>
 		</File>
 		<File
+			RelativePath=".\fp_depth_peeler.cpp"
+			>
+		</File>
+		<File
+			RelativePath=".\fp_depth_peeler.fx"
+			>
+		</File>
+		<File
+			RelativePath=".\fp_depth_peeler.h"
+			>
+		</File>
+		<File
 			RelativePath=".\fp_global.h"
 			>
 		</File>

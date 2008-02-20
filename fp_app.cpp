@@ -13,6 +13,7 @@
 #include "fp_render_sprites.h"
 #include "fp_render_marching_cubes.h"
 #include "fp_render_raycast.h"
+#include "fp_depth_peeler.h"
 #include "fp_thread.h"
 
 //#define DEBUG_VS   // Uncomment this line to debug D3D9 vertex shaders 
@@ -32,6 +33,7 @@ fp_RenderSprites*       g_RenderSprites = NULL;
 fp_CPUIsoVolume*        g_CPUIsoVolume = NULL;
 fp_RenderMarchingCubes* g_RenderMarchingCubes = NULL;
 fp_RenderRaycast*       g_RenderRaycast = NULL;
+fp_DepthPeeler*         g_DepthPeeler = NULL;
 
 float                   g_LightScale;
 int                     g_NumActiveLights;
@@ -202,6 +204,8 @@ void FP_InitApp() {
     g_CPUIsoVolume = new fp_CPUIsoVolume(g_Sim);
     g_RenderMarchingCubes = new fp_RenderMarchingCubes(g_CPUIsoVolume, 3);
     g_RenderRaycast = new fp_RenderRaycast(g_Sim, FP_RAYCAST_DEFAULT_VOXEL_SIZE); 
+    g_DepthPeeler = new fp_DepthPeeler(FP_DEPTH_PEELER_MAX_DEPTH_COMPLEXITY,
+            FP_NUM_PARTICLES, g_Sim->m_Particles);
     D3DXVECTOR3 volumeStartPos = CalcRaycastVolumeStartPos(g_Sim, g_RenderRaycast);
     g_RenderRaycast->SetVolumeStartPos(&volumeStartPos);
     g_RenderMarchingCubes->m_NumActiveLights = g_NumActiveLights;
@@ -461,6 +465,7 @@ HRESULT CALLBACK FP_OnD3D10CreateDevice(
             UserContext);
     g_RenderRaycast->OnD3D10CreateDevice(D3DDevice, BackBufferSurfaceDesc,
         UserContext);
+    g_DepthPeeler->OnD3D10CreateDevice(D3DDevice, BackBufferSurfaceDesc, UserContext);
     g_GUI.SetCubeMapNames(&g_RenderRaycast->m_CubeMapNames,
             g_RenderRaycast->m_CurrentCubeMap);
 
@@ -468,7 +473,8 @@ HRESULT CALLBACK FP_OnD3D10CreateDevice(
     D3DXVECTOR3 vecEye(0.0f, 0.0f, -15.0f);
     D3DXVECTOR3 vecAt (0.0f, 0.0f, -0.0f);
     g_Camera.SetViewParams( &vecEye, &vecAt );
-    g_Camera.SetRadius( FP_OBJECT_RADIUS*3.0f, FP_OBJECT_RADIUS*0.5f, FP_OBJECT_RADIUS*100.0f );
+    g_Camera.SetRadius(FP_OBJECT_RADIUS*3.0f, FP_OBJECT_RADIUS*0.5f,
+            FP_OBJECT_RADIUS*100.0f );
 
     return S_OK;
 }
@@ -489,6 +495,8 @@ HRESULT CALLBACK FP_OnD3D10ResizedSwapChain(
     g_RenderMarchingCubes->OnD3D10ResizedSwapChain(D3DDevice, SwapChain, BackBufferSurfaceDesc,
             UserContext);
     g_RenderRaycast->OnD3D10ResizedSwapChain(D3DDevice, SwapChain, BackBufferSurfaceDesc,
+        UserContext);
+    g_DepthPeeler->OnD3D10ResizedSwapChain(D3DDevice, SwapChain, BackBufferSurfaceDesc,
         UserContext);
 
     // Setup the camera's projection parameters
@@ -549,8 +557,9 @@ void CALLBACK FP_OnD3D10FrameRender(
     else if(g_RenderType == FP_GUI_RENDERTYPE_MARCHING_CUBES)
         g_RenderMarchingCubes->OnD3D10FrameRender(D3DDevice, &viewProjection);
     else if(g_RenderType == FP_GUI_RENDERTYPE_RAYCAST)
-        g_RenderRaycast->OnD3D10FrameRender(D3DDevice, &view, &projection,
-                &viewProjection, &invView, g_UpdateVis);
+        g_DepthPeeler->OnD3D10FrameRender(D3DDevice, &viewProjection);
+        //g_RenderRaycast->OnD3D10FrameRender(D3DDevice, &view, &projection,
+        //        &viewProjection, &invView, g_UpdateVis);
 
     g_UpdateVis = false;
 
@@ -570,6 +579,7 @@ void CALLBACK FP_OnD3D10ReleasingSwapChain( void* UserContext ) {
     if(g_RenderMarchingCubes) g_RenderMarchingCubes->OnD3D10ReleasingSwapChain(
             UserContext);
     if(g_RenderRaycast) g_RenderRaycast->OnD3D10ReleasingSwapChain(UserContext);    
+    if(g_DepthPeeler) g_DepthPeeler->OnD3D10ReleasingSwapChain(UserContext); 
 }
 
 
@@ -581,6 +591,7 @@ void CALLBACK FP_OnD3D10DestroyDevice( void* UserContext ) {
     if(g_RenderSprites) g_RenderSprites->OnD3D10DestroyDevice(UserContext);
     if(g_RenderMarchingCubes) g_RenderMarchingCubes->OnD3D10DestroyDevice(UserContext);
     if(g_RenderRaycast) g_RenderRaycast->OnD3D10DestroyDevice(UserContext);
+    if(g_DepthPeeler) g_DepthPeeler->OnD3D10DestroyDevice(UserContext);
     DXUTGetGlobalResourceCache().OnDestroyDevice();
 }
 
