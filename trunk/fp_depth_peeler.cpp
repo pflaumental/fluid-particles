@@ -61,9 +61,6 @@ HRESULT fp_DepthPeeler::OnD3D10CreateDevice(
     if(!allValid)
         return E_FAIL;
 
-    // Create occlution query
-    D3DDevice->CreateQuery(&s_QueryDesc, &m_OcclusionQuery);
-
     // Create vertex buffer
     D3D10_PASS_DESC passDesc;
     V_RETURN(m_TechPeeling->GetPassByIndex(0)->GetDesc(&passDesc));
@@ -77,6 +74,9 @@ HRESULT fp_DepthPeeler::OnD3D10CreateDevice(
     bufferDesc.CPUAccessFlags = D3D10_CPU_ACCESS_WRITE;
     bufferDesc.MiscFlags = 0;
     V_RETURN(D3DDevice->CreateBuffer(&bufferDesc, NULL, &m_VertexBuffer));
+
+    // Create occlution query
+    D3DDevice->CreateQuery(&s_QueryDesc, &m_OcclusionQuery);
 
 	return S_OK;
 }
@@ -177,9 +177,9 @@ void fp_DepthPeeler::OnD3D10ReleasingSwapChain( void* UserContext ) {
 }
 
 void fp_DepthPeeler::OnD3D10DestroyDevice( void* UserContext ) {
+    SAFE_RELEASE(m_OcclusionQuery);
     SAFE_RELEASE(m_VertexBuffer);
     SAFE_RELEASE(m_VertexLayout);
-    SAFE_RELEASE(m_OcclusionQuery);
     SAFE_RELEASE(m_Effect);
 }
 
@@ -236,10 +236,12 @@ void fp_DepthPeeler::OnD3D10FrameRender(
 
         while(S_OK != m_OcclusionQuery->GetData(&m_FragmentsLeft, sizeof(BOOL), 0));
 
-        if(m_FragmentsLeft) m_DepthComplexity++;
+        if(m_FragmentsLeft) 
+            m_DepthComplexity++;
     }
 
     D3DDevice->OMSetRenderTargets(1, &oldRTV, oldDSV);
+
     SAFE_RELEASE(oldDSV);
     SAFE_RELEASE(oldRTV);
 }

@@ -2,6 +2,9 @@
 #ifndef FP_GLOBAL_H
 #define FP_GLOBAL_H
 
+// This file holds nearly all constants used by the program for convenience an clarity.
+// For faster build-times on constant change place them in the belonging header files.
+
 #define FP_CLEAR_COLOR 0.0f, 0.05f, 0.15f, 0.55f
 #define FP_MAX_LIGHTS 3
 #define FP_OBJECT_RADIUS 20.0f
@@ -57,6 +60,7 @@
 #define FP_FLUID_DEFAULT_GLASS_DENSITY 2.0f
 #define FP_FLUID_DEFAULT_GLASS_VISCOSITY 1.2f
 
+#define FP_FLUID_GRID_INITIAL_CELL_CAPACITY 10
 
 // For simulation debug:
 #define FP_DEBUG_MAX_FORCE 0.5f
@@ -69,8 +73,6 @@
 #define FP_RENDER_DEFAULT_SPRITE_SIZE 1.0f
 
 // Marching cubes
-#define FP_MC_DEFAULT_INITIAL_CELL_CAPACITY 10
-#define FP_MC_INITIAL_GRID_SIDELENGTHFLUID_MAX_POS 150.0f
 #define FP_MC_DEFAULT_ISOVOLUME_VOXELSIZE 0.9f
 #define FP_MC_DEFAULT_ISO_VOLUME_BORDER 5.0f
 #define FP_MC_DEFAULT_ISO_LEVEL 0.024f

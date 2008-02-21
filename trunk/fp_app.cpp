@@ -550,16 +550,18 @@ void CALLBACK FP_OnD3D10FrameRender(
         D3DCOLORVALUE diffuse = { g_GUI.m_LightDiffuseColor->r,
             g_GUI.m_LightDiffuseColor->g, g_GUI.m_LightDiffuseColor->b, 1.0f };
         g_RenderMarchingCubes->m_Lights9[i].Diffuse = diffuse;
-    }
+    }    
+
+    // For depth peeling use this:
+    //g_DepthPeeler->OnD3D10FrameRender(D3DDevice, &viewProjection);
 
     if(g_RenderType == FP_GUI_RENDERTYPE_SPRITE)
         g_RenderSprites->OnD3D10FrameRender(D3DDevice, &viewProjection, &invView);
     else if(g_RenderType == FP_GUI_RENDERTYPE_MARCHING_CUBES)
         g_RenderMarchingCubes->OnD3D10FrameRender(D3DDevice, &viewProjection);
-    else if(g_RenderType == FP_GUI_RENDERTYPE_RAYCAST)
-        g_DepthPeeler->OnD3D10FrameRender(D3DDevice, &viewProjection);
-        //g_RenderRaycast->OnD3D10FrameRender(D3DDevice, &view, &projection,
-        //        &viewProjection, &invView, g_UpdateVis);
+    else if(g_RenderType == FP_GUI_RENDERTYPE_RAYCAST)        
+        g_RenderRaycast->OnD3D10FrameRender(D3DDevice, &view, &projection,
+                &viewProjection, &invView, g_UpdateVis);           
 
     g_UpdateVis = false;
 
