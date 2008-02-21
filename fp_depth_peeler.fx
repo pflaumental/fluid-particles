@@ -18,7 +18,8 @@ struct DepthPeelerPSIn {
 };
 
 struct DepthPeelerPSOut {
-    uint ParticleIndex		      : SV_TARGET;
+    float ParticleIndex           : SV_TARGET;
+    //uint ParticleIndex		      : SV_TARGET;
     float Depth                   : SV_DEPTH;
 };
 
@@ -35,24 +36,6 @@ cbuffer cbPerObject {
 //--------------------------------------------------------------------------------------
 
 Texture2DArray g_LastPeelDepth;
-
-//--------------------------------------------------------------------------------------
-// BlendStates
-//--------------------------------------------------------------------------------------
-
-BlendState NoBlending {
-    AlphaToCoverageEnable = FALSE;
-    BlendEnable[0] = FALSE;
-};
-
-//--------------------------------------------------------------------------------------
-// DepthStencilStates
-//--------------------------------------------------------------------------------------
-
-DepthStencilState EnableDepth {
-    DepthEnable = TRUE;
-    DepthWriteMask = ALL;
-};
 
 //--------------------------------------------------------------------------------------
 // Vertex shader for transformation
@@ -75,7 +58,7 @@ DepthPeelerPSIn TransformVS(in DepthPeelerVSIn Input) {
 //--------------------------------------------------------------------------------------
 DepthPeelerPSOut DepthPeelerFirstPS(DepthPeelerPSIn Input)  { 
     DepthPeelerPSOut output;
-	output.ParticleIndex = Input.ParticleIndex;
+	output.ParticleIndex = float(Input.ParticleIndex) / 1728.0;//Input.ParticleIndex;
 	output.Depth = Input.ClipDepth.x / Input.ClipDepth.y;
     return output;
 }
@@ -95,10 +78,29 @@ DepthPeelerPSOut DepthPeelerNextPS(DepthPeelerPSIn Input)  {
     
     if(currentDepth <= lastDepth) discard;
         
-	output.ParticleIndex = Input.ParticleIndex;
+	output.ParticleIndex = float(Input.ParticleIndex) / 1728.0;//Input.ParticleIndex;
 	output.Depth = currentDepth;
     return output;
 }
+
+//--------------------------------------------------------------------------------------
+// States
+//--------------------------------------------------------------------------------------
+
+RasterizerState CullNone {
+    CullMode = None;
+};
+
+BlendState NoBlending {
+    AlphaToCoverageEnable = FALSE;
+    BlendEnable[0] = FALSE;
+};
+
+DepthStencilState EnableDepth {
+    DepthEnable = TRUE;
+    DepthWriteMask = ALL;
+    DepthFunc = LESS_EQUAL;
+};
 
 //--------------------------------------------------------------------------------------
 // Techniques
@@ -106,17 +108,21 @@ DepthPeelerPSOut DepthPeelerNextPS(DepthPeelerPSIn Input)  {
 technique10 DepthPeeling {
     pass P0 {
         SetVertexShader(CompileShader(vs_4_0, TransformVS()));
+        SetGeometryShader(NULL);
         SetPixelShader(CompileShader(ps_4_0, DepthPeelerFirstPS()));
 
         SetBlendState(NoBlending, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
         SetDepthStencilState(EnableDepth, 0);
+        SetRasterizerState(CullNone);
     }
     
     pass P1 {
         SetVertexShader(CompileShader(vs_4_0, TransformVS()));
+        SetGeometryShader(NULL);
         SetPixelShader(CompileShader(ps_4_0, DepthPeelerNextPS()));
 
         SetBlendState(NoBlending, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
         SetDepthStencilState(EnableDepth, 0);
+        SetRasterizerState(CullNone);
     }    
 }

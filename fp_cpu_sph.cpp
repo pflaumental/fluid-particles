@@ -107,20 +107,17 @@ void fp_Grid::FillAndPrepare(fp_FluidParticle *Particles, int NumParticles) {
     for (int i = 0; i < NumParticles; i++) {
         D3DXVECTOR3 pos = Particles[i].m_Position;
         int cellIndexX = (int)((pos.x - m_MinX) / m_CellWidth);
-        if(cellIndexX < 0 || cellIndexX >= m_NumCellsX)
-            continue;
+        assert(cellIndexX >= 0 && cellIndexX < m_NumCellsX);
         int cellIndexY = (int)((pos.y - m_MinY) / m_CellWidth);
-        if(cellIndexY < 0 || cellIndexY >= m_NumCellsY)
-            continue;
+        assert(cellIndexY >= 0 && cellIndexY < m_NumCellsY);
         int cellIndexZ = (int)((pos.z - m_MinZ) / m_CellWidth);
-        if(cellIndexZ < 0 || cellIndexZ >= m_NumCellsZ)
-            continue;
+        assert(cellIndexZ >= 0 && cellIndexZ < m_NumCellsZ);
         int cellIndex = cellIndexX * m_NumCellsYZ + cellIndexY * m_NumCellsZ
                 + cellIndexZ;
         fp_GridCell* cell = m_Cells[cellIndex];
         if(cell == NULL) {
             m_Cells[cellIndex] = cell = new fp_GridCell();
-            cell->reserve(FP_MC_DEFAULT_INITIAL_CELL_CAPACITY);
+            cell->reserve(FP_FLUID_GRID_INITIAL_CELL_CAPACITY);
         }
         cell->push_back(Particles[i]);
     }
@@ -132,12 +129,6 @@ inline void fp_Grid::SetBounds(fp_FluidParticle *Particles, int NumParticles){
     for (int i = 0; i < NumParticles; i++)
     {
         D3DXVECTOR3 pos = Particles[i].m_Position;
-        if(pos.x < -FP_MC_INITIAL_GRID_SIDELENGTHFLUID_MAX_POS) continue;
-        if(pos.x > FP_MC_INITIAL_GRID_SIDELENGTHFLUID_MAX_POS) continue;
-        if(pos.y < -FP_MC_INITIAL_GRID_SIDELENGTHFLUID_MAX_POS) continue;
-        if(pos.y > FP_MC_INITIAL_GRID_SIDELENGTHFLUID_MAX_POS) continue;
-        if(pos.z < -FP_MC_INITIAL_GRID_SIDELENGTHFLUID_MAX_POS) continue;
-        if(pos.z > FP_MC_INITIAL_GRID_SIDELENGTHFLUID_MAX_POS) continue;
         if(pos.x < m_MinX)
             m_MinX = pos.x;
         if(pos.y < m_MinY)
