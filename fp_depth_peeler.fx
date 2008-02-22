@@ -18,8 +18,7 @@ struct DepthPeelerPSIn {
 };
 
 struct DepthPeelerPSOut {
-    float ParticleIndex           : SV_TARGET;
-    //uint ParticleIndex		      : SV_TARGET;
+    uint ParticleIndex		      : SV_TARGET;
     float Depth                   : SV_DEPTH;
 };
 
@@ -58,7 +57,7 @@ DepthPeelerPSIn TransformVS(in DepthPeelerVSIn Input) {
 //--------------------------------------------------------------------------------------
 DepthPeelerPSOut DepthPeelerFirstPS(DepthPeelerPSIn Input)  { 
     DepthPeelerPSOut output;
-	output.ParticleIndex = float(Input.ParticleIndex) / 1728.0;//Input.ParticleIndex;
+	output.ParticleIndex = Input.ParticleIndex;
 	output.Depth = Input.ClipDepth.x / Input.ClipDepth.y;
     return output;
 }
@@ -78,7 +77,7 @@ DepthPeelerPSOut DepthPeelerNextPS(DepthPeelerPSIn Input)  {
     
     if(currentDepth <= lastDepth) discard;
         
-	output.ParticleIndex = float(Input.ParticleIndex) / 1728.0;//Input.ParticleIndex;
+	output.ParticleIndex = Input.ParticleIndex;
 	output.Depth = currentDepth;
     return output;
 }
