@@ -64,7 +64,7 @@ BlendState AlphaBlending {
     AlphaToCoverageEnable = FALSE;
     BlendEnable[0] = TRUE;
     SrcBlend = SRC_ALPHA;
-    DestBlend = INV_SRC_ALPHA;
+    DestBlend = ONE;
     BlendOp = ADD;
     SrcBlendAlpha = ZERO;
     DestBlendAlpha = ZERO;
