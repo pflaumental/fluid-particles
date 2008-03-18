@@ -367,13 +367,15 @@ void fp_Fluid::UpdateDensitiesCachePairsMT(int ThreadIdx) {
                             int neighborCellIndexX = cellIndexX + xN;
                             if(neighborCellIndexX >= NumCellsX)
                                 continue;
-                            for (int yN = 0; yN <= 1; yN++) {
+                            for (int yN = xN == 0 ? 0 : -1; yN <= 1; yN++) {
                                 int neighborCellIndexY = cellIndexY + yN;
-                                if(neighborCellIndexY >= NumCellsY)
+                                if(neighborCellIndexY < 0 
+                                        || neighborCellIndexY >= NumCellsY)
                                     continue;
-                                for (int zN = 0; zN <= 1; zN++) {
+                                for (int zN = xN == 0 ? (yN == 0 ? 0 : -1) : -1; zN <= 1; zN++) {
                                     int neighborCellIndexZ = cellIndexZ + zN;
-                                    if(neighborCellIndexZ >= NumCellsZ)
+                                    if(neighborCellIndexZ < 0
+                                            || neighborCellIndexZ >= NumCellsZ)
                                         continue;
                                     int neighborCellIndex = neighborCellIndexX * NumCellsYZ
                                         + neighborCellIndexY * NumCellsZ
