@@ -350,6 +350,7 @@ void fp_Fluid::UpdateDensitiesCachePairsMT(int ThreadIdx) {
             for (int cellIndexZ = 0; cellIndexZ < NumCellsZ; cellIndexZ++) {                    
                 int cellIndex = cellIndexX * NumCellsYZ + cellIndexY * NumCellsZ
                     + cellIndexZ;
+
                 // For MT:
                 if(cellIndex % m_WorkerThreadMgr->m_NumWorkerThreads != ThreadIdx)
                     continue;
@@ -358,77 +359,124 @@ void fp_Fluid::UpdateDensitiesCachePairsMT(int ThreadIdx) {
                 if(cell == NULL)
                     continue;
                 fp_GridCellSize cellSize = cell->size();
-                // For each particle in cell
+
+                // All pairs in current cell
+                
+                // For each particle in current cell
                 for (fp_GridCellSize iCellParticle = 0; iCellParticle < cellSize;
-                    iCellParticle++) {
+                        iCellParticle++) {
+                    fp_FluidParticle* particle = &(*cell)[iCellParticle];
+
+                    // For each following cell neighbor
+                    for(fp_GridCellSize iCellNeighbor = iCellParticle + 1;
+                            iCellNeighbor < cellSize; iCellNeighbor++) {
+                        fp_FluidParticle* neighborParticle = &(*cell)[iCellNeighbor];
+                        UpdateDensitiesCachePair(particle, neighborParticle, ThreadIdx);
+                    }
+                }
+
+                // All pairs with neighbor cells
+
+                // For half of the neighbor cells
+                int xN = 0, yN = 0, zN = 0;
+                int neighborCellIndexX = cellIndexX,
+                        neighborCellIndexY = cellIndexY,
+                        neighborCellIndexZ = cellIndexZ;
+                bool xOutside = false, yOutside = false, zOutside = false;
+                while (true) {                    
+                    if(zN < 1) {
+                        zN++;
+                        if(++neighborCellIndexZ >= NumCellsZ)
+                            zOutside = true;
+                        else
+                            zOutside = false;
+                    } else {
+                        zN = -1;
+                        if((neighborCellIndexZ = cellIndexZ - 1) < 0)
+                            zOutside = true;
+                        else
+                            zOutside = false;
+                        if(yN < 1) {
+                            yN++;
+                            if(++neighborCellIndexY >= NumCellsY)
+                                yOutside = true;
+                            else
+                                yOutside = false;
+                        } else {
+                            yN = -1;
+                            if((neighborCellIndexY = cellIndexY - 1) < 0)
+                                yOutside = true;
+                            else
+                                yOutside = false;
+                            if(xN < 1) {
+                                xN++;
+                                if(++neighborCellIndexX >= NumCellsX)
+                                    xOutside = true;
+                                else
+                                    xOutside = false;
+                            } else
+                                break;
+                        }
+                    }
+
+                    if(xOutside || yOutside || zOutside)
+                        continue;
+
+                    int neighborCellIndex = neighborCellIndexX * NumCellsYZ
+                            + neighborCellIndexY * NumCellsZ
+                            + neighborCellIndexZ;
+                    fp_GridCell* neighborCell
+                        = m_Grid->m_Cells[neighborCellIndex];
+                    if(neighborCell == NULL)
+                        continue;
+                    fp_GridCellSize neighborCellSize = neighborCell->size();
+
+                    // Pairwise process all particles from current cell with all
+                    // particles from neighbor cell
+
+                    // For each particle in current cell
+                    for (fp_GridCellSize iCellParticle = 0; iCellParticle < cellSize;
+                            iCellParticle++) {
                         fp_FluidParticle* particle = &(*cell)[iCellParticle];
-                        // For each following neighbor-cell
-                        for (int xN = 0; xN <= 1; xN++) {
-                            int neighborCellIndexX = cellIndexX + xN;
-                            if(neighborCellIndexX >= NumCellsX)
-                                continue;
-                            for (int yN = xN == 0 ? 0 : -1; yN <= 1; yN++) {
-                                int neighborCellIndexY = cellIndexY + yN;
-                                if(neighborCellIndexY < 0 
-                                        || neighborCellIndexY >= NumCellsY)
-                                    continue;
-                                for (int zN = xN == 0 ? (yN == 0 ? 0 : -1) : -1; zN <= 1; zN++) {
-                                    int neighborCellIndexZ = cellIndexZ + zN;
-                                    if(neighborCellIndexZ < 0
-                                            || neighborCellIndexZ >= NumCellsZ)
-                                        continue;
-                                    int neighborCellIndex = neighborCellIndexX * NumCellsYZ
-                                        + neighborCellIndexY * NumCellsZ
-                                        + neighborCellIndexZ;
-                                    fp_GridCell* neighborCell
-                                        = m_Grid->m_Cells[neighborCellIndex];
-                                    if(neighborCell == NULL)
-                                        continue;
-                                    fp_GridCellSize neighborCellSize = neighborCell->size();
 
-                                    // Pairwise process all particles from cell with all particles
-                                    // from neighbor cell
-
-                                    // For each particle in neighbor-cell
-                                    for (fp_GridCellSize iNeighbourCellParticle = 0;
-                                            iNeighbourCellParticle < neighborCellSize;
-                                            iNeighbourCellParticle++) {
-                                        // Process only "following" particles, otherwise particles
-                                        // would get evaluated twice
-                                        if(cellIndex == neighborCellIndex
-                                                && iCellParticle <= iNeighbourCellParticle)
-                                            continue;
-                                        fp_FluidParticle* neighborParticle =
-                                        &(*neighborCell)[iNeighbourCellParticle];
-                                        D3DXVECTOR3 toNeighbour = neighborParticle->m_Position
-                                            - particle->m_Position;
-                                        float distSq = D3DXVec3LengthSq(&toNeighbour);
-                                        assert(distSq > 0.0f);
-                                        if(distSq < m_SmoothingLengthSq) {                                                                                    
-                                            fp_FluidParticlePair pair;
-                                            pair.m_Particle1 = particle;
-                                            pair.m_Particle2 = neighborParticle;
-                                            pair.m_DistanceSq = distSq;
-                                            UpdateDensitiesOnPair(&pair);
-                                            m_PairCaches[ThreadIdx].push_back(pair);
-                                        }
-                                    }
-                                }
-                            }                            
-                        }                        
+                        // For each particle in neighbor cell
+                        for (fp_GridCellSize iNeighbourCellParticle = 0;
+                                iNeighbourCellParticle < neighborCellSize;
+                                iNeighbourCellParticle++) {
+                            fp_FluidParticle* neighborParticle =
+                                    &(*neighborCell)[iNeighbourCellParticle];
+                            UpdateDensitiesCachePair(particle, neighborParticle,
+                                    ThreadIdx);
+                        }                                                        
+                    }                     
                 }
             }
         }        
     }
 }
 
-inline void fp_Fluid::UpdateDensitiesOnPair(fp_FluidParticlePair* Pair){
-    int particle1Index = Pair->m_Particle1->m_Index;
-    int particle2Index = Pair->m_Particle2->m_Index;
-    float AdditionalDensity = m_ParticleMass * WPoly6(m_SmoothingLengthSq
-            - Pair->m_DistanceSq);
-    m_DensitiesConcurrent[particle1Index] += AdditionalDensity;
-    m_DensitiesConcurrent[particle2Index] += AdditionalDensity;
+inline void fp_Fluid::UpdateDensitiesCachePair(
+        fp_FluidParticle* particle1,
+        fp_FluidParticle* particle2,
+        int threadIdx){
+    D3DXVECTOR3 r = particle2->m_Position
+            - particle1->m_Position;
+    float distanceSq = D3DXVec3LengthSq(&r);
+    assert(distanceSq > 0.0f);
+    if(distanceSq < m_SmoothingLengthSq) {                                                                                    
+        fp_FluidParticlePair pair;
+        pair.m_Particle1 = particle1;
+        pair.m_Particle2 = particle2;
+        pair.m_DistanceSq = distanceSq;
+        m_PairCaches[threadIdx].push_back(pair);
+
+        int particle1Index = particle1->m_Index;
+        int particle2Index = particle2->m_Index;
+        float additionalDensity = m_ParticleMass * WPoly6(m_SmoothingLengthSq
+                - distanceSq);
+        m_DensitiesConcurrent[particle1Index] += additionalDensity;
+        m_DensitiesConcurrent[particle2Index] += additionalDensity;
+    }
 }
 
 void fp_Fluid::GlassCommonUpdateMT(

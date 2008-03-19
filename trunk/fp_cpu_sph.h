@@ -176,7 +176,10 @@ private:
     float* m_LaplacianColorField;
 
     void UpdateDensitiesCachePairsMT(int ThreadIdx);
-    inline void UpdateDensitiesOnPair(fp_FluidParticlePair* Pair);
+    inline void UpdateDensitiesCachePair(
+            fp_FluidParticle* p1,
+            fp_FluidParticle* p2,
+            int threadIdx);
     void GlassCommonUpdateMT(
             int ThreadIdx,
             void (fp_Fluid::*Func)(int, float, D3DXVECTOR3*, D3DXVECTOR3*));
