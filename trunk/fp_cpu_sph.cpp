@@ -533,7 +533,7 @@ void fp_Fluid::GlassUpdateDensityOnParticle(
     float hSq_lenRSq = m_SmoothingLengthSq - lenRSq;
     float wPoly6Value = WPoly6(hSq_lenRSq);
     float additionalDensity = m_ParticleMass * wPoly6Value;
-    m_DensitiesConcurrent[ParticleIndex] += additionalDensity * m_GlassDensity;
+    m_Densities[ParticleIndex] += additionalDensity * m_GlassDensity;
 }
 
 void fp_Fluid::UpdateForcesMT(int ThreadIdx) {
@@ -643,7 +643,7 @@ void fp_Fluid::GlassUpdateForcesOnParticle(
     D3DXVECTOR3 viscosityForce = viscosityTerm / particleDensity
             * m_GlassViscosity;
 
-    ((D3DXVECTOR3*)m_PressureAndViscosityForcesConcurrent)[ParticleIndex] += (pressureForce
+    ((D3DXVECTOR3*)m_PressureAndViscosityForces)[ParticleIndex] += (pressureForce
         + viscosityForce);
 }
 
