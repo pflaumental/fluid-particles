@@ -3,7 +3,7 @@
 #include "fp_render_marching_cubes.h"
 #include "fp_util.h"
 
-#define FP_RENDER_ISO_VOLUME_EFFECT_FILE L"fp_render_marching_cubes.fx" 
+#define FP_RENDER_MARCHING_CUBES_EFFECT_FILE L"fp_render_marching_cubes.fx" 
 
 const D3D10_INPUT_ELEMENT_DESC fp_MCVertex::Layout[] = {
     { "POSITION",  0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0,
@@ -11,7 +11,7 @@ const D3D10_INPUT_ELEMENT_DESC fp_MCVertex::Layout[] = {
     { "NORMAL",    0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12,
             D3D10_INPUT_PER_VERTEX_DATA, 0 }, };
 
-fp_CPUIsoVolume::fp_CPUIsoVolume(fp_Fluid* Fluid, float VoxelSize, float IsoVolumeBorder) 
+fp_CPUDensityGrid::fp_CPUDensityGrid(fp_Fluid* Fluid, float VoxelSize, float DensityGridBorder) 
         :
         m_Fluid(Fluid),
         m_LastMinX(0.0f),
@@ -32,15 +32,15 @@ fp_CPUIsoVolume::fp_CPUIsoVolume(fp_Fluid* Fluid, float VoxelSize, float IsoVolu
         m_StampRowValueStarts(NULL),
         m_StampValues(NULL),
         m_GradientStampValues(NULL),
-        m_IsoVolumeBorder(IsoVolumeBorder) {
+        m_DensityGridBorder(DensityGridBorder) {
     m_VoxelSize = -1.0f; // Needed in SetSmoothingLength()
     UpdateSmoothingLength();
     SetVoxelSize(VoxelSize);
-    m_IsoValues.reserve(FP_MC_INITIAL_ISOVOLUME_CAPACITY);
-    m_GradientIsoValues.reserve(FP_MC_INITIAL_ISOVOLUME_CAPACITY);
+    m_IsoValues.reserve(FP_MC_INITIAL_DENSITY_GRID_CAPACITY);
+    m_GradientIsoValues.reserve(FP_MC_INITIAL_DENSITY_GRID_CAPACITY);
 }
 
-void fp_CPUIsoVolume::UpdateSmoothingLength() {
+void fp_CPUDensityGrid::UpdateSmoothingLength() {
     if(m_VoxelSize > 0.0f) {
         if(m_StampValues != NULL)
             DestroyStamp();
@@ -48,7 +48,7 @@ void fp_CPUIsoVolume::UpdateSmoothingLength() {
     }
 }
 
-void fp_CPUIsoVolume::SetVoxelSize(float VoxelSize) {
+void fp_CPUDensityGrid::SetVoxelSize(float VoxelSize) {
     m_VoxelSize = VoxelSize;
     m_HalfVoxelSize = VoxelSize / 2.0f;
     if(m_StampValues != NULL)
@@ -56,55 +56,55 @@ void fp_CPUIsoVolume::SetVoxelSize(float VoxelSize) {
     CreateStamp();
 }
 
-void fp_CPUIsoVolume::ConstructFromFluid() {
+void fp_CPUDensityGrid::ConstructFromFluid() {
     float minX = m_LastMinX, minY = m_LastMinY, minZ = m_LastMinZ;
     float maxX = m_LastMaxX, maxY = m_LastMaxY, maxZ = m_LastMaxZ;
 
     float partMinX, partMaxX, partMinY, partMaxY, partMinZ, partMaxZ;
     m_Fluid->GetParticleMinsAndMaxs(partMinX, partMaxX, partMinY, partMaxY, partMinZ,
             partMaxZ);
-    partMinX -= m_IsoVolumeBorder;
-    partMinY -= m_IsoVolumeBorder;
-    partMinZ -= m_IsoVolumeBorder;
-    partMaxX += m_IsoVolumeBorder;
-    partMaxY += m_IsoVolumeBorder;
-    partMaxZ += m_IsoVolumeBorder;    
+    partMinX -= m_DensityGridBorder;
+    partMinY -= m_DensityGridBorder;
+    partMinZ -= m_DensityGridBorder;
+    partMaxX += m_DensityGridBorder;
+    partMaxY += m_DensityGridBorder;
+    partMaxZ += m_DensityGridBorder;    
     
     if(partMinX < m_LastMinX) // Grow?
-        minX = partMinX - (partMaxX - partMinX) * FP_MC_ISO_VOLUME_GROW_FACTOR;
+        minX = partMinX - (partMaxX - partMinX) * FP_MC_DENSITY_GRID_GROW_FACTOR;
     else if (partMinX > m_LastMinX + 0.5 * (m_LastMaxX - m_LastMinX)
-            * FP_MC_ISO_VOLUME_SHRINK_BORDER) // Shrink?
-        minX = partMinX - (partMaxX - partMinX) * FP_MC_ISO_VOLUME_GROW_FACTOR;
+            * FP_MC_DENSITY_GRID_SHRINK_BORDER) // Shrink?
+        minX = partMinX - (partMaxX - partMinX) * FP_MC_DENSITY_GRID_GROW_FACTOR;
 
     if(partMinY < m_LastMinY) // Grow?
-        minY = partMinY - (partMaxY - partMinY) * FP_MC_ISO_VOLUME_GROW_FACTOR;
+        minY = partMinY - (partMaxY - partMinY) * FP_MC_DENSITY_GRID_GROW_FACTOR;
     else if (partMinY > m_LastMinY + 0.5 * (m_LastMaxY - m_LastMinY)
-            * FP_MC_ISO_VOLUME_SHRINK_BORDER) // Shrink?
-        minY = partMinY - (partMaxY - partMinY) * FP_MC_ISO_VOLUME_GROW_FACTOR;
+            * FP_MC_DENSITY_GRID_SHRINK_BORDER) // Shrink?
+        minY = partMinY - (partMaxY - partMinY) * FP_MC_DENSITY_GRID_GROW_FACTOR;
 
     if(partMinZ < m_LastMinZ) // Grow?
-        minZ = partMinZ - (partMaxZ - partMinZ) * FP_MC_ISO_VOLUME_GROW_FACTOR;
+        minZ = partMinZ - (partMaxZ - partMinZ) * FP_MC_DENSITY_GRID_GROW_FACTOR;
     else if (partMinZ > m_LastMinZ + 0.5 * (m_LastMaxZ - m_LastMinZ)
-            * FP_MC_ISO_VOLUME_SHRINK_BORDER) // Shrink?
-        minZ = partMinZ - (partMaxZ - partMinZ) * FP_MC_ISO_VOLUME_GROW_FACTOR;
+            * FP_MC_DENSITY_GRID_SHRINK_BORDER) // Shrink?
+        minZ = partMinZ - (partMaxZ - partMinZ) * FP_MC_DENSITY_GRID_GROW_FACTOR;
 
     if(partMaxX > m_LastMaxX) // Grow?
-        maxX = partMaxX + (partMaxX - partMinX) * FP_MC_ISO_VOLUME_GROW_FACTOR;
+        maxX = partMaxX + (partMaxX - partMinX) * FP_MC_DENSITY_GRID_GROW_FACTOR;
     else if (partMaxX < m_LastMaxX - 0.5 * (m_LastMaxX - m_LastMinX)
-            * FP_MC_ISO_VOLUME_SHRINK_BORDER) // Shrink?
-        maxX = partMaxX + (partMaxX - partMinX) * FP_MC_ISO_VOLUME_GROW_FACTOR;
+            * FP_MC_DENSITY_GRID_SHRINK_BORDER) // Shrink?
+        maxX = partMaxX + (partMaxX - partMinX) * FP_MC_DENSITY_GRID_GROW_FACTOR;
 
     if(partMaxY > m_LastMaxY) // Grow?
-        maxY = partMaxY + (partMaxY - partMinY) * FP_MC_ISO_VOLUME_GROW_FACTOR;
+        maxY = partMaxY + (partMaxY - partMinY) * FP_MC_DENSITY_GRID_GROW_FACTOR;
     else if (partMaxY < m_LastMaxY - 0.5 * (m_LastMaxY - m_LastMinY)
-            * FP_MC_ISO_VOLUME_SHRINK_BORDER) // Shrink?
-        maxY = partMaxY + (partMaxY - partMinY) * FP_MC_ISO_VOLUME_GROW_FACTOR;
+            * FP_MC_DENSITY_GRID_SHRINK_BORDER) // Shrink?
+        maxY = partMaxY + (partMaxY - partMinY) * FP_MC_DENSITY_GRID_GROW_FACTOR;
 
     if(partMaxZ > m_LastMaxZ) // Grow?
-        maxZ = partMaxZ + (partMaxZ - partMinZ) * FP_MC_ISO_VOLUME_GROW_FACTOR;
+        maxZ = partMaxZ + (partMaxZ - partMinZ) * FP_MC_DENSITY_GRID_GROW_FACTOR;
     else if (partMaxZ < m_LastMaxZ - 0.5 * (m_LastMaxZ - m_LastMinZ)
-            * FP_MC_ISO_VOLUME_SHRINK_BORDER) // Shrink?
-        maxZ = partMaxZ + (partMaxZ - partMinZ) * FP_MC_ISO_VOLUME_GROW_FACTOR;
+            * FP_MC_DENSITY_GRID_SHRINK_BORDER) // Shrink?
+        maxZ = partMaxZ + (partMaxZ - partMinZ) * FP_MC_DENSITY_GRID_GROW_FACTOR;
 
     m_LastMinX = minX;
     m_LastMinY = minY;
@@ -136,7 +136,7 @@ void fp_CPUIsoVolume::ConstructFromFluid() {
     }
 }
 
-inline void fp_CPUIsoVolume::DistributeParticle(
+inline void fp_CPUDensityGrid::DistributeParticle(
         D3DXVECTOR3 ParticlePosition,
         float ParticleMassDensityQuotient,
         float MinX,
@@ -162,8 +162,8 @@ inline void fp_CPUIsoVolume::DistributeParticle(
     if (destinationEnd.z >= m_NumValuesZ) destinationEnd.z = m_NumValuesZ - 1;
 
     D3DXVECTOR3 startPos(MinX + m_HalfVoxelSize + destinationStart.x * m_VoxelSize,
-        MinY + m_HalfVoxelSize + destinationStart.y * m_VoxelSize,
-        MinZ + m_HalfVoxelSize + destinationStart.z * m_VoxelSize);   
+            MinY + m_HalfVoxelSize + destinationStart.y * m_VoxelSize,
+            MinZ + m_HalfVoxelSize + destinationStart.z * m_VoxelSize);   
 
     int destinationIndexXY;
     fp_VolumeIndex destination;
@@ -201,7 +201,7 @@ inline void fp_CPUIsoVolume::DistributeParticle(
     }
 }
 
-inline void fp_CPUIsoVolume::DistributeParticleWithStamp(
+inline void fp_CPUDensityGrid::DistributeParticleWithStamp(
         D3DXVECTOR3 ParticlePosition,
         float ParticleMassDensityQuotient,
         float MinX,
@@ -240,7 +240,7 @@ inline void fp_CPUIsoVolume::DistributeParticleWithStamp(
     }
 }
 
-void fp_CPUIsoVolume::CreateStamp() {
+void fp_CPUDensityGrid::CreateStamp() {
     int stampRadius = (int)ceil((m_Fluid->m_SmoothingLength - m_HalfVoxelSize) 
             / m_VoxelSize);
     int stampSideLength = 1 + 2 * stampRadius;
@@ -326,7 +326,7 @@ void fp_CPUIsoVolume::CreateStamp() {
     }
 }
 
-void fp_CPUIsoVolume::DestroyStamp() {
+void fp_CPUDensityGrid::DestroyStamp() {
     delete[] m_StampRowLengths;
     delete[] m_StampRowStartOffsets;
     delete[] m_StampRowValueStarts;
@@ -335,11 +335,11 @@ void fp_CPUIsoVolume::DestroyStamp() {
 }
 
 fp_RenderMarchingCubes::fp_RenderMarchingCubes(
-        fp_CPUIsoVolume* IsoVolume, 
+        fp_CPUDensityGrid* DensityGrid, 
         int NumLights, 
         float IsoLevel)
         :
-        m_IsoVolume(IsoVolume),
+        m_DensityGrid(DensityGrid),
         m_IsoLevel(IsoLevel),
         m_NumLights(NumLights),
         m_NumTriangles(0),
@@ -349,9 +349,9 @@ fp_RenderMarchingCubes::fp_RenderMarchingCubes(
         m_VertexBuffer10(NULL),
         m_IndexBuffer10(NULL),
         m_Effect10(NULL),
-        m_TechRenderIsoVolume1Light(NULL),
-        m_TechRenderIsoVolume2Lights(NULL),
-        m_TechRenderIsoVolume3Lights(NULL),
+        m_TechRenderMarchingCubes1Light(NULL),
+        m_TechRenderMarchingCubes2Lights(NULL),
+        m_TechRenderMarchingCubes3Lights(NULL),
         m_EffectVarLightDir(NULL),
         m_EffectVarLightDiffuse(NULL),
         m_EffectVarViewProjection(NULL),
@@ -392,18 +392,18 @@ void fp_RenderMarchingCubes::ConstructMesh() {
     m_NumTriangles = 0;
 
     // Build cube
-    int NumValuesX = m_IsoVolume->m_NumValuesX;
-    int NumValuesY = m_IsoVolume->m_NumValuesY;
-    int NumValuesZ = m_IsoVolume->m_NumValuesZ;
-    int NumValuesYZ = m_IsoVolume->m_NumValuesYZ;
+    int NumValuesX = m_DensityGrid->m_NumValuesX;
+    int NumValuesY = m_DensityGrid->m_NumValuesY;
+    int NumValuesZ = m_DensityGrid->m_NumValuesZ;
+    int NumValuesYZ = m_DensityGrid->m_NumValuesYZ;
     int xEnd = NumValuesX - 1;
     int yEnd = NumValuesY - 1;
     int zEnd = NumValuesZ - 1;
-    D3DXVECTOR3 volumeStart = m_IsoVolume->m_VolumeStart;
-    float voxelSize = m_IsoVolume->m_VoxelSize;
+    D3DXVECTOR3 volumeStart = m_DensityGrid->m_VolumeStart;
+    float voxelSize = m_DensityGrid->m_VoxelSize;
     D3DXVECTOR3 volumeOffset = D3DXVECTOR3(voxelSize, voxelSize, voxelSize);
-    std::vector<float>* isoValues = &m_IsoVolume->m_IsoValues;
-    std::vector<D3DXVECTOR3>* gradientIsoValues = &m_IsoVolume->m_GradientIsoValues;
+    std::vector<float>* isoValues = &m_DensityGrid->m_IsoValues;
+    std::vector<D3DXVECTOR3>* gradientIsoValues = &m_DensityGrid->m_GradientIsoValues;
 
     fp_MCVertex *mcVertices;
     unsigned int* mcIndizes;
@@ -419,21 +419,21 @@ void fp_RenderMarchingCubes::ConstructMesh() {
 
     for(int cubeX=0; cubeX < xEnd; cubeX++) {
         for(int cubeY=0; cubeY < yEnd; cubeY++) {
-            int isoVolumeIndex4 = cubeX * NumValuesYZ + cubeY * NumValuesZ; // x,y,z
-            int isoVolumeIndex5 = isoVolumeIndex4 + NumValuesYZ; // x+1,y,z
-            int isoVolumeIndex6 = isoVolumeIndex5 + NumValuesZ; // x+1,y+1,z
-            int isoVolumeIndex7 = isoVolumeIndex4 + NumValuesZ; // x,y+1,z
+            int densityGridIndex4 = cubeX * NumValuesYZ + cubeY * NumValuesZ; // x,y,z
+            int densityGridIndex5 = densityGridIndex4 + NumValuesYZ; // x+1,y,z
+            int densityGridIndex6 = densityGridIndex5 + NumValuesZ; // x+1,y+1,z
+            int densityGridIndex7 = densityGridIndex4 + NumValuesZ; // x,y+1,z
             float isoValue0, isoValue1, isoValue2, isoValue3;
-            float isoValue4 = (*isoValues)[isoVolumeIndex4];            
-            float isoValue5 = (*isoValues)[isoVolumeIndex5];
-            float isoValue6 = (*isoValues)[isoVolumeIndex6];
-            float isoValue7 = (*isoValues)[isoVolumeIndex7];
+            float isoValue4 = (*isoValues)[densityGridIndex4];            
+            float isoValue5 = (*isoValues)[densityGridIndex5];
+            float isoValue6 = (*isoValues)[densityGridIndex6];
+            float isoValue7 = (*isoValues)[densityGridIndex7];
             D3DXVECTOR3 *gradientIsoValue0, *gradientIsoValue1, 
                 *gradientIsoValue2, *gradientIsoValue3;
-            D3DXVECTOR3* gradientIsoValue4 = &(*gradientIsoValues)[isoVolumeIndex4++];
-            D3DXVECTOR3* gradientIsoValue5 = &(*gradientIsoValues)[isoVolumeIndex5++];
-            D3DXVECTOR3* gradientIsoValue6 = &(*gradientIsoValues)[isoVolumeIndex6++];
-            D3DXVECTOR3* gradientIsoValue7 = &(*gradientIsoValues)[isoVolumeIndex7++];
+            D3DXVECTOR3* gradientIsoValue4 = &(*gradientIsoValues)[densityGridIndex4++];
+            D3DXVECTOR3* gradientIsoValue5 = &(*gradientIsoValues)[densityGridIndex5++];
+            D3DXVECTOR3* gradientIsoValue6 = &(*gradientIsoValues)[densityGridIndex6++];
+            D3DXVECTOR3* gradientIsoValue7 = &(*gradientIsoValues)[densityGridIndex7++];
             int vertexIndizes[12] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
             D3DXVECTOR3 corner0(volumeStart + D3DXVECTOR3(volumeOffset.x * cubeX, 
                 volumeOffset.y * cubeY, 0.0f ));
@@ -447,14 +447,14 @@ void fp_RenderMarchingCubes::ConstructMesh() {
                 gradientIsoValue2 = gradientIsoValue6;
                 gradientIsoValue3 = gradientIsoValue7;
 
-                isoValue4 = (*isoValues)[isoVolumeIndex4];
-                isoValue5 = (*isoValues)[isoVolumeIndex5];
-                isoValue6 = (*isoValues)[isoVolumeIndex6];
-                isoValue7 = (*isoValues)[isoVolumeIndex7];
-                gradientIsoValue4 = &(*gradientIsoValues)[isoVolumeIndex4++];
-                gradientIsoValue5 = &(*gradientIsoValues)[isoVolumeIndex5++];
-                gradientIsoValue6 = &(*gradientIsoValues)[isoVolumeIndex6++];
-                gradientIsoValue7 = &(*gradientIsoValues)[isoVolumeIndex7++];
+                isoValue4 = (*isoValues)[densityGridIndex4];
+                isoValue5 = (*isoValues)[densityGridIndex5];
+                isoValue6 = (*isoValues)[densityGridIndex6];
+                isoValue7 = (*isoValues)[densityGridIndex7];
+                gradientIsoValue4 = &(*gradientIsoValues)[densityGridIndex4++];
+                gradientIsoValue5 = &(*gradientIsoValues)[densityGridIndex5++];
+                gradientIsoValue6 = &(*gradientIsoValues)[densityGridIndex6++];
+                gradientIsoValue7 = &(*gradientIsoValues)[densityGridIndex7++];
 
                 byte cubeType=0;
                 if(isoValue0 < m_IsoLevel) cubeType |= 1;
@@ -618,15 +618,15 @@ HRESULT fp_RenderMarchingCubes::OnD3D10CreateDevice(
     HRESULT hr;
 
     // Read the D3DX effect file
-    m_Effect10 = fp_Util::LoadEffect(D3DDevice, FP_RENDER_ISO_VOLUME_EFFECT_FILE);
+    m_Effect10 = fp_Util::LoadEffect(D3DDevice, FP_RENDER_MARCHING_CUBES_EFFECT_FILE);
 
     // Obtain technique objects
-    m_TechRenderIsoVolume1Light = m_Effect10->GetTechniqueByName(
-        "RenderIsoVolume1Light" );
-    m_TechRenderIsoVolume2Lights = m_Effect10->GetTechniqueByName(
-        "RenderIsoVolume2Lights" );
-    m_TechRenderIsoVolume3Lights = m_Effect10->GetTechniqueByName(
-        "RenderIsoVolume3Lights" );
+    m_TechRenderMarchingCubes1Light = m_Effect10->GetTechniqueByName(
+        "RenderMarchingCubes1Light" );
+    m_TechRenderMarchingCubes2Lights = m_Effect10->GetTechniqueByName(
+        "RenderMarchingCubes2Lights" );
+    m_TechRenderMarchingCubes3Lights = m_Effect10->GetTechniqueByName(
+        "RenderMarchingCubes3Lights" );
 
     // Obtain effect variables
     m_EffectVarLightDir = m_Effect10->GetVariableByName( "g_LightDir" )->AsVector();
@@ -657,7 +657,7 @@ HRESULT fp_RenderMarchingCubes::OnD3D10CreateDevice(
     V_RETURN(D3DDevice->CreateBuffer(&bufferDesc, NULL, &m_VertexBuffer10));
 
     D3D10_PASS_DESC passDesc;
-    V_RETURN( m_TechRenderIsoVolume1Light->GetPassByIndex(0)->GetDesc(&passDesc));
+    V_RETURN( m_TechRenderMarchingCubes1Light->GetPassByIndex(0)->GetDesc(&passDesc));
     V_RETURN( D3DDevice->CreateInputLayout(fp_MCVertex::Layout, 2,
             passDesc.pIAInputSignature, passDesc.IAInputSignatureSize,
             &m_VertexLayout ) );
@@ -703,13 +703,13 @@ void fp_RenderMarchingCubes::OnD3D10FrameRender(
     // Render the scene with this technique as defined in the .fx file
     ID3D10EffectTechnique *renderTechnique;
     switch( m_NumActiveLights ) {
-    case 1: renderTechnique = m_TechRenderIsoVolume1Light;
+    case 1: renderTechnique = m_TechRenderMarchingCubes1Light;
         break;
-    case 2: renderTechnique = m_TechRenderIsoVolume2Lights;
+    case 2: renderTechnique = m_TechRenderMarchingCubes2Lights;
         break;
-    case 3: renderTechnique = m_TechRenderIsoVolume3Lights;
+    case 3: renderTechnique = m_TechRenderMarchingCubes3Lights;
         break;
-    default: renderTechnique = m_TechRenderIsoVolume1Light;
+    default: renderTechnique = m_TechRenderMarchingCubes1Light;
         break;
     }
 

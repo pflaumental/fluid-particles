@@ -106,7 +106,7 @@ private:
     ID3D10EffectShaderResourceVariable* m_EffectVarWValsMulParticleMass;
 
     ID3D10EffectScalarVariable* m_EffectVarIsoLevel;
-    ID3D10EffectShaderResourceVariable* m_EffectVarIsoVolume;
+    ID3D10EffectShaderResourceVariable* m_EffectVarDensityGrid;
     ID3D10EffectVectorVariable* m_EffectVarTexDelta;
     ID3D10EffectMatrixVariable* m_EffectVarWorld;
     ID3D10EffectMatrixVariable* m_EffectVarWorldView;
