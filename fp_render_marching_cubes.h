@@ -1,6 +1,6 @@
 #pragma once
-#ifndef FP_RENDER_ISO_VOLUME_H
-#define FP_RENDER_ISO_VOLUME_H
+#ifndef FP_RENDER_MARCHING_CUBES_H
+#define FP_RENDER_MARCHING_CUBES_H
 
 #include "DXUT.h"
 
@@ -30,7 +30,7 @@ struct fp_MCVertex
             m_Normal(Normal) {}
 };
 
-class fp_CPUIsoVolume {
+class fp_CPUDensityGrid {
 public:
     fp_Fluid* m_Fluid;
     std::vector<float> m_IsoValues;
@@ -48,14 +48,14 @@ public:
     int m_NumValues;
     float m_VoxelSize;
     float m_HalfVoxelSize;
-    float m_IsoVolumeBorder;
+    float m_DensityGridBorder;
     D3DXVECTOR3 m_VolumeStart;
     D3DXVECTOR3 m_VolumeCellOffset;
     
-    fp_CPUIsoVolume(
+    fp_CPUDensityGrid(
             fp_Fluid* Fluid, 
-            float VoxelSize = FP_MC_DEFAULT_ISOVOLUME_VOXELSIZE, 
-            float IsoVolumeBorder = FP_MC_DEFAULT_ISO_VOLUME_BORDER);
+            float VoxelSize = FP_MC_DEFAULT_DENSITY_GRID_VOXELSIZE, 
+            float DensityGridBorder = FP_MC_DEFAULT_DENSITY_GRID_BORDER);
     void UpdateSmoothingLength();
     void SetVoxelSize(float VoxelSize);
     void ConstructFromFluid();
@@ -88,7 +88,7 @@ private:
 
 class fp_RenderMarchingCubes {
 public:
-    fp_CPUIsoVolume* m_IsoVolume;    
+    fp_CPUDensityGrid* m_DensityGrid;    
     float m_IsoLevel;
     int m_NumVertices;
     int m_NumTriangles;
@@ -97,7 +97,7 @@ public:
     D3DLIGHT9* m_Lights9;
 
     fp_RenderMarchingCubes(
-            fp_CPUIsoVolume* IsoVolume,
+            fp_CPUDensityGrid* DensityGrid,
             int NumLights,
             float IsoLevel = FP_MC_DEFAULT_ISO_LEVEL);
     ~fp_RenderMarchingCubes();
@@ -144,9 +144,9 @@ private:
     ID3D10Buffer* m_VertexBuffer10;
     ID3D10Buffer* m_IndexBuffer10;
     ID3D10Effect* m_Effect10;
-    ID3D10EffectTechnique* m_TechRenderIsoVolume1Light;
-    ID3D10EffectTechnique* m_TechRenderIsoVolume2Lights;
-    ID3D10EffectTechnique* m_TechRenderIsoVolume3Lights;
+    ID3D10EffectTechnique* m_TechRenderMarchingCubes1Light;
+    ID3D10EffectTechnique* m_TechRenderMarchingCubes2Lights;
+    ID3D10EffectTechnique* m_TechRenderMarchingCubes3Lights;
     ID3D10EffectVectorVariable* m_EffectVarLightDir;
     ID3D10EffectVectorVariable* m_EffectVarLightDiffuse;
     ID3D10EffectVectorVariable* m_EffectVarLightAmbient;

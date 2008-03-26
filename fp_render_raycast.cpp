@@ -44,7 +44,7 @@ fp_RenderRaycast::fp_RenderRaycast(
     m_EffectVarWorldView(NULL),
     m_EffectVarWorldViewProjection(NULL),
     m_EffectVarInvView(NULL),
-    m_EffectVarIsoVolume(NULL),
+    m_EffectVarDensityGrid(NULL),
     m_EffectVarBBoxStart(NULL),
     m_EffectVarBBoxSize(NULL),
     m_EffectVarIsoLevel(NULL),
@@ -178,8 +178,8 @@ HRESULT fp_RenderRaycast::OnD3D10CreateDevice(
             "g_StepSize")->AsScalar();
     m_EffectVarVolumeSizeRatio = m_Effect->GetVariableByName(
             "g_VolumeSizeRatio")->AsVector();
-    m_EffectVarIsoVolume = m_Effect->GetVariableByName(
-            "g_IsoVolume")->AsShaderResource();
+    m_EffectVarDensityGrid = m_Effect->GetVariableByName(
+            "g_DensityGrid")->AsShaderResource();
     m_EffectVarIsoLevel = m_Effect->GetVariableByName(
             "g_IsoLevel")->AsScalar();
     m_EffectVarTexDelta = m_Effect->GetVariableByName(
@@ -213,7 +213,7 @@ HRESULT fp_RenderRaycast::OnD3D10CreateDevice(
     allValid |= m_EffectVarExitPoint->IsValid() != 0;
     allValid |= m_EffectVarStepSize->IsValid() != 0;
     allValid |= m_EffectVarVolumeSizeRatio->IsValid() != 0;
-    allValid |= m_EffectVarIsoVolume->IsValid() != 0;
+    allValid |= m_EffectVarDensityGrid->IsValid() != 0;
     allValid |= m_EffectVarIsoLevel->IsValid() != 0;
     allValid |= m_EffectVarTexDelta->IsValid() != 0;
     allValid |= m_EffectVarEnvironmentMap->IsValid() != 0;
@@ -340,7 +340,7 @@ void fp_RenderRaycast::SetStepScale(float StepScale) {
         V(m_EffectVarStepSize->SetFloat(m_StepScale / maxDim));
 }
 
-// Controls the size of the iso-volume in worldspace
+// Controls the size of the density-grid in worldspace
 void fp_RenderRaycast::SetVoxelSize(float VoxelSize) {
     HRESULT hr;
     m_VoxelSize = VoxelSize;
@@ -574,7 +574,7 @@ void fp_RenderRaycast::RenderVolume(
     
     // Trace the iso volume and shade intersections
     V(m_EffectVarExitPoint->SetResource(m_ExitPoint->GetSRV()));
-    V(m_EffectVarIsoVolume->SetResource(m_VolumeSRV));
+    V(m_EffectVarDensityGrid->SetResource(m_VolumeSRV));
     m_TechRenderRaycast->GetPassByIndex(m_NeedPerPixelStepSize ? 3 : 2)->Apply(0);
     m_BBox.OnD3D10FrameRenderSolid(D3DDevice, false);
 }

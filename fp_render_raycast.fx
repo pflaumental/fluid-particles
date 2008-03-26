@@ -70,7 +70,7 @@ Texture2D g_IntersectionPosition0;
 Texture2D g_IntersectionPosition1;
 Texture2D g_IntersectionNormal0;
 Texture2D g_IntersectionNormal1;
-Texture3D g_IsoVolume;
+Texture3D g_DensityGrid;
 TextureCube g_Environment;
 
 
@@ -265,7 +265,7 @@ float3 RefineIsoSurface(float3 TextureOffset, float3 SampleTexturePos, bool Find
 	SampleTexturePos -= TextureOffset;
 	for (int i = 0; i < g_NumRefineSteps; i++) {
 		TextureOffset /= 2;
-		float isoVal = g_IsoVolume.SampleLevel(LinearPointClamp, SampleTexturePos, 0).r;
+		float isoVal = g_DensityGrid.SampleLevel(LinearPointClamp, SampleTexturePos, 0).r;
 		if (FindEntry ? isoVal >= g_IsoLevel : isoVal <= g_IsoLevel)
 			SampleTexturePos = SampleTexturePos - TextureOffset;
 		else
@@ -301,7 +301,7 @@ void TraceIsoSurface(
     int numSteps = ceil(volumeRayLen / localStepsize);        
     float isoVal;
     while(numSteps-- > 0) {
-        isoVal = g_IsoVolume.SampleLevel(LinearClamp, sampleTexturePos, 0).r;
+        isoVal = g_DensityGrid.SampleLevel(LinearClamp, sampleTexturePos, 0).r;
         if (FindEntry ? isoVal >= g_IsoLevel : isoVal <= g_IsoLevel)
 			break;
         sampleTexturePos += textureOffset;
@@ -309,7 +309,7 @@ void TraceIsoSurface(
     if(numSteps <= 0) {
         float3 exitTexturePos = EndVolumePosClipDepth.xyz;
         exitTexturePos.y = 1 - exitTexturePos.y;
-        isoVal = g_IsoVolume.SampleLevel(LinearClamp, exitTexturePos, 0).r;
+        isoVal = g_DensityGrid.SampleLevel(LinearClamp, exitTexturePos, 0).r;
         if (FindEntry ? isoVal < g_IsoLevel : isoVal > g_IsoLevel)
             discard;
 		sampleTexturePos = exitTexturePos;
@@ -329,20 +329,20 @@ void TraceIsoSurface(
 	        	
 	// generate normal
 	float3 grad;
-	grad.x = g_IsoVolume.SampleLevel(LinearClamp,
+	grad.x = g_DensityGrid.SampleLevel(LinearClamp,
 	        sampleTexturePos + float3(g_TexDelta.x, 0, 0), 0)
 	        -
-            g_IsoVolume.SampleLevel(LinearClamp,
+            g_DensityGrid.SampleLevel(LinearClamp,
             sampleTexturePos - float3(g_TexDelta.x, 0, 0), 0);
-	grad.y = g_IsoVolume.SampleLevel(LinearClamp,
+	grad.y = g_DensityGrid.SampleLevel(LinearClamp,
 	        sampleTexturePos - float3(0, g_TexDelta.y, 0), 0)
 	        -
-            g_IsoVolume.SampleLevel(LinearClamp,
+            g_DensityGrid.SampleLevel(LinearClamp,
             sampleTexturePos + float3(0, g_TexDelta.y, 0), 0);
-	grad.z = g_IsoVolume.SampleLevel(LinearClamp,
+	grad.z = g_DensityGrid.SampleLevel(LinearClamp,
 	        sampleTexturePos + float3(0, 0, g_TexDelta.z), 0)
 	        -
-            g_IsoVolume.SampleLevel(LinearClamp,
+            g_DensityGrid.SampleLevel(LinearClamp,
             sampleTexturePos - float3(0, 0 ,g_TexDelta.z), 0);        
 	IntersectionVolumeNormal = -normalize(grad);    
 }

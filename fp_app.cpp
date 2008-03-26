@@ -30,7 +30,7 @@ fp_GUI                  g_GUI;
 
 fp_Fluid*               g_Sim = NULL;
 fp_RenderSprites*       g_RenderSprites = NULL;
-fp_CPUIsoVolume*        g_CPUIsoVolume = NULL;
+fp_CPUDensityGrid*        g_CPUDensityGrid = NULL;
 fp_RenderMarchingCubes* g_RenderMarchingCubes = NULL;
 fp_RenderRaycast*       g_RenderRaycast = NULL;
 fp_DepthPeeler*         g_DepthPeeler = NULL;
@@ -201,8 +201,8 @@ void FP_InitApp() {
             FP_PARTICLE_SPACING_Z, center, FP_GLASS_RADIUS, FP_GLASS_FLOOR);
     g_UpdateVis = true;
     g_RenderSprites = new fp_RenderSprites(FP_NUM_PARTICLES, g_Sim->m_Particles);
-    g_CPUIsoVolume = new fp_CPUIsoVolume(g_Sim);
-    g_RenderMarchingCubes = new fp_RenderMarchingCubes(g_CPUIsoVolume, 3);
+    g_CPUDensityGrid = new fp_CPUDensityGrid(g_Sim);
+    g_RenderMarchingCubes = new fp_RenderMarchingCubes(g_CPUDensityGrid, 3);
     g_RenderRaycast = new fp_RenderRaycast(g_Sim, FP_RAYCAST_DEFAULT_VOXEL_SIZE); 
     g_DepthPeeler = new fp_DepthPeeler(FP_DEPTH_PEELER_MAX_DEPTH_COMPLEXITY,
             FP_NUM_PARTICLES, g_Sim->m_Particles);
@@ -231,8 +231,8 @@ void FP_FinishApp() {
     g_Sim = NULL;
     delete g_RenderSprites;
     g_RenderSprites = NULL;
-    delete g_CPUIsoVolume;
-    g_CPUIsoVolume = NULL;
+    delete g_CPUDensityGrid;
+    g_CPUDensityGrid = NULL;
     delete g_RenderMarchingCubes;
     g_RenderMarchingCubes = NULL;
 }
@@ -326,7 +326,7 @@ void CALLBACK FP_OnFrameMove( double Time, float ElapsedTime, void* UserContext 
         g_UpdateVis = true;
     }
     if(g_RenderType == FP_GUI_RENDERTYPE_MARCHING_CUBES && g_UpdateVis) {
-        g_CPUIsoVolume->ConstructFromFluid();
+        g_CPUDensityGrid->ConstructFromFluid();
         g_RenderMarchingCubes->ConstructMesh();
     } else if (g_RenderType == FP_GUI_RENDERTYPE_RAYCAST && glassMoved) {
         D3DXVECTOR3 volumeStartPos = CalcRaycastVolumeStartPos(g_Sim, g_RenderRaycast);
@@ -400,23 +400,23 @@ void CALLBACK FP_OnGUIEvent(
         g_RenderRaycast->SetRefractionRatio(raycastRefractionRatio);
     if(mcIsoLevel > 0.0f)
         g_RenderMarchingCubes->m_IsoLevel = mcIsoLevel;
-    if(mcVoxelSize > 0.0f && mcVoxelSize != g_CPUIsoVolume->m_VoxelSize)
-        g_CPUIsoVolume->SetVoxelSize(mcVoxelSize);
+    if(mcVoxelSize > 0.0f && mcVoxelSize != g_CPUDensityGrid->m_VoxelSize)
+        g_CPUDensityGrid->SetVoxelSize(mcVoxelSize);
     if(timeFactor > 0.0f)
         g_TimeFactor = timeFactor;
     g_RenderMarchingCubes->m_NumActiveLights = g_NumActiveLights;
     if(resetSim) {
         g_UpdateVis = true;
-		mcVoxelSize = g_CPUIsoVolume->m_VoxelSize;
+		mcVoxelSize = g_CPUDensityGrid->m_VoxelSize;
         delete g_Sim;
-        delete g_CPUIsoVolume;
+        delete g_CPUDensityGrid;
         D3DXVECTOR3 center(0.0f, 0.0f, 0.0f);
         g_Sim = new fp_Fluid(&g_WorkerThreadMgr, FP_NUM_PARTICLES_X, FP_NUM_PARTICLES_Y,
             FP_NUM_PARTICLES_Z, FP_PARTICLE_SPACING_X, FP_PARTICLE_SPACING_Y,
             FP_PARTICLE_SPACING_Z, center, FP_GLASS_RADIUS, FP_GLASS_FLOOR);
-        g_CPUIsoVolume = new fp_CPUIsoVolume(g_Sim, mcVoxelSize);
+        g_CPUDensityGrid = new fp_CPUDensityGrid(g_Sim, mcVoxelSize);
         g_RenderSprites->m_Particles = g_Sim->m_Particles;
-        g_RenderMarchingCubes->m_IsoVolume = g_CPUIsoVolume;
+        g_RenderMarchingCubes->m_DensityGrid = g_CPUDensityGrid;
         g_RenderRaycast->SetFluid(g_Sim);
         D3DXVECTOR3 volumeStartPos = CalcRaycastVolumeStartPos(g_Sim, g_RenderRaycast);
         g_RenderRaycast->SetVolumeStartPos(&volumeStartPos);

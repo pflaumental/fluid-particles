@@ -6,17 +6,17 @@
 // Structs
 //--------------------------------------------------------------------------------------
 
-struct RenderIsoVolumeVSIn {
+struct RenderMarchingCubesVSIn {
     float3 Pos  	      : POSITION;
     float3 Normal         : NORMAL;    
 };
 
-struct RenderIsoVolumePSIn {
+struct RenderMarchingCubesPSIn {
     float4 Pos  	      : SV_POSITION;
     float4 Diffuse        : COLOR0; // vertex diffuse color
 };
 
-struct RenderIsoVolumePSOut {
+struct RenderMarchingCubesPSOut {
     float4 Color		  : SV_TARGET;
 };
 
@@ -76,10 +76,10 @@ DepthStencilState EnableDepth {
 // Output: clip space position, vertex color
 // Transforms to clipspace, calculates n dot l lighting
 //--------------------------------------------------------------------------------------
-RenderIsoVolumePSIn RenderIsoVolumeVS(
-        in RenderIsoVolumeVSIn Input,
+RenderMarchingCubesPSIn RenderMarchingCubesVS(
+        in RenderMarchingCubesVSIn Input,
         uniform int NumLights) {
-	RenderIsoVolumePSIn output;
+	RenderMarchingCubesPSIn output;
 	
 	output.Pos = mul(float4(Input.Pos,1), g_ViewProjection);
 	
@@ -102,8 +102,8 @@ RenderIsoVolumePSIn RenderIsoVolumeVS(
 // Output: pixel color
 // Does nothing
 //--------------------------------------------------------------------------------------
-RenderIsoVolumePSOut RenderIsoVolumePS(RenderIsoVolumePSIn Input)  { 
-    RenderIsoVolumePSOut output;
+RenderMarchingCubesPSOut RenderMarchingCubesPS(RenderMarchingCubesPSIn Input)  { 
+    RenderMarchingCubesPSOut output;
 	output.Color = Input.Diffuse;
     return output;
 }
@@ -112,31 +112,31 @@ RenderIsoVolumePSOut RenderIsoVolumePS(RenderIsoVolumePSIn Input)  {
 //--------------------------------------------------------------------------------------
 // Techniques
 //--------------------------------------------------------------------------------------
-technique10 RenderIsoVolume1Light {
+technique10 RenderMarchingCubes1Light {
     pass P0 {
-        SetVertexShader(CompileShader(vs_4_0, RenderIsoVolumeVS(1)));
+        SetVertexShader(CompileShader(vs_4_0, RenderMarchingCubesVS(1)));
         SetGeometryShader( NULL );
-        SetPixelShader(CompileShader(ps_4_0, RenderIsoVolumePS()));
+        SetPixelShader(CompileShader(ps_4_0, RenderMarchingCubesPS()));
                 
         SetDepthStencilState( EnableDepth, 0 );
     }
 }
 
-technique10 RenderIsoVolume2Lights {
+technique10 RenderMarchingCubes2Lights {
     pass P0 {
-        SetVertexShader(CompileShader(vs_4_0, RenderIsoVolumeVS(2)));
+        SetVertexShader(CompileShader(vs_4_0, RenderMarchingCubesVS(2)));
         SetGeometryShader( NULL );
-        SetPixelShader(CompileShader(ps_4_0, RenderIsoVolumePS()));
+        SetPixelShader(CompileShader(ps_4_0, RenderMarchingCubesPS()));
                 
         SetDepthStencilState( EnableDepth, 0 );
     }
 }
 
-technique10 RenderIsoVolume3Lights {
+technique10 RenderMarchingCubes3Lights {
     pass P0 {
-        SetVertexShader(CompileShader(vs_4_0, RenderIsoVolumeVS(3)));
+        SetVertexShader(CompileShader(vs_4_0, RenderMarchingCubesVS(3)));
         SetGeometryShader( NULL );
-        SetPixelShader(CompileShader(ps_4_0, RenderIsoVolumePS()));
+        SetPixelShader(CompileShader(ps_4_0, RenderMarchingCubesPS()));
                 
         SetDepthStencilState( EnableDepth, 0 );
     }

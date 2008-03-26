@@ -122,13 +122,13 @@ fp_GUI::fp_GUI()
     // Marching cubes controls
 
     iYMC += 24;    
-    StringCchPrintf( sz, 100, L"Voxel size: %0.1f", FP_MC_DEFAULT_ISOVOLUME_VOXELSIZE ); 
+    StringCchPrintf( sz, 100, L"Voxel size: %0.1f", FP_MC_DEFAULT_DENSITY_GRID_VOXELSIZE ); 
     m_MCSpecificControls.push_back(NULL);
     m_SampleUI.AddStatic( IDC_MC_VOXEL_SIZE_STATIC, sz, 35, iYMC += 24, 125, 22, false,
             (CDXUTStatic**)&m_MCSpecificControls.back());
     m_MCSpecificControls.push_back(NULL);
     m_SampleUI.AddSlider( IDC_MC_VOXEL_SIZE, 50, iYMC += 24, 100, 22, 1, 100,
-            (int) (FP_MC_DEFAULT_ISOVOLUME_VOXELSIZE * 10.0f), false, (CDXUTSlider**)
+            (int) (FP_MC_DEFAULT_DENSITY_GRID_VOXELSIZE * 10.0f), false, (CDXUTSlider**)
             &m_MCSpecificControls.back());
     
     iYMC += 24;
