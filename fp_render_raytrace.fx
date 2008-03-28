@@ -1,5 +1,5 @@
 //--------------------------------------------------------------------------------------
-// File: fp_render_raycast.fx
+// File: fp_render_raytrace.fx
 //--------------------------------------------------------------------------------------
 
 
@@ -102,12 +102,12 @@ struct SplatParticlePSOut {
     half IsoValue                   : SV_TARGET;
 };
 
-struct RaycastTransformVSOut {
+struct RaytraceTransformVSOut {
     float4 VolumePosClipDepth       : VOLUMEPOS_CLIPDEPTH;
     float4 Pos                      : SV_POSITION;
 };
 
-struct RaycastTraceIsoAndShadePSOut {
+struct RaytraceTraceIsoAndShadePSOut {
     float4 Color                    : SV_Target0;
     float Depth                     : SV_Depth;
 };
@@ -216,8 +216,8 @@ SplatParticlePSOut SplatParticlePS(SplatParticlePSIn Input) {
 // Output: volume space position, clip space depth, clip space position
 // -
 //--------------------------------------------------------------------------------------
-RaycastTransformVSOut RaycastTransformVS(in float3 Position : POSITION) {
-    RaycastTransformVSOut result;
+RaytraceTransformVSOut RaytraceTransformVS(in float3 Position : POSITION) {
+    RaytraceTransformVSOut result;
 	// scale to [0,1]
     result.VolumePosClipDepth.xyz = Position / g_BBoxSize;
     result.Pos = mul(float4(Position, 1), g_WorldViewProjection);
@@ -231,7 +231,7 @@ RaycastTransformVSOut RaycastTransformVS(in float3 Position : POSITION) {
 // Output: volume space position, clip space depth
 // -
 //--------------------------------------------------------------------------------------
-float4 RaycastExitPS(RaycastTransformVSOut Input) : SV_Target {
+float4 RaytraceExitPS(RaytraceTransformVSOut Input) : SV_Target {
     return Input.VolumePosClipDepth;
 }
 
@@ -274,8 +274,8 @@ float3 RefineIsoSurface(float3 TextureOffset, float3 SampleTexturePos, bool Find
 	return float3(SampleTexturePos);
 }
 
-// Function for tracing the iso surface
-void TraceIsoSurface(
+// Function for raytracing the iso surface
+void RaytraceIsoSurface(
         out float3 RayDir,
         out float3 IntersectionVolumePos,
         out float3 IntersectionVolumeNormal,
@@ -348,23 +348,26 @@ void TraceIsoSurface(
 }
 
 //--------------------------------------------------------------------------------------
-// Pixel shader for tracing and shading the iso surface
+// Pixel shader for raytracing and shading the iso surface
 // Input:  volume space position, clip space depth, screen space position
 // Output: color and depth
-// Traces the iso volume along the view ray to find the first intersection. TODO
+// Raytraces the iso volume along the view ray to find the first intersection with the
+// isosurface. Calculates reflection- and refraction ray. Find's intersection of
+// refraction ray with the isosurface. Looks up environmentmap for reflected and
+// (twotimes) refracted ray. Composes final color.
 //--------------------------------------------------------------------------------------
-RaycastTraceIsoAndShadePSOut RaycastTraceIsoAndShadePS(
-        RaycastTransformVSOut Input,
+RaytraceTraceIsoAndShadePSOut RaytraceTraceIsoAndShadePS(
+        RaytraceTransformVSOut Input,
         uniform bool PerPixelStepSize) {
-    RaycastTraceIsoAndShadePSOut result;
+    RaytraceTraceIsoAndShadePSOut result;
     
     float4 entryVolumePosClipDepth = Input.VolumePosClipDepth;
     float4 exitVolumePosClipDepth = g_ExitPoint.Load(
             int3(Input.Pos.xy, 0));            
             
-    // Trace the iso surface            
+    // Raytrace the iso surface            
 	float3 rayDir, intersection1VolumePos, intersection1VolumeNormal;
-    TraceIsoSurface(rayDir, intersection1VolumePos, intersection1VolumeNormal, result.Depth,
+    RaytraceIsoSurface(rayDir, intersection1VolumePos, intersection1VolumeNormal, result.Depth,
         PerPixelStepSize, true, entryVolumePosClipDepth, exitVolumePosClipDepth);
 
 	// Calculate reflection
@@ -384,9 +387,9 @@ RaycastTraceIsoAndShadePSOut RaycastTraceIsoAndShadePS(
     float4 refract1Start = float4(intersection1VolumePos + 0.01 * refract1Dir, 1);
     float4 refract1End = float4(intersection1VolumePos + refract1Len * refract1Dir, 1);
 
-    // Trace the refraction ray exit-intersection with the iso surface
+    // Find the exit-intersection of the refraction-ray with the iso surface
     float3 intersection2VolumePos, intersection2VolumeNormal, dummy;
-    TraceIsoSurface(dummy, intersection2VolumePos, intersection2VolumeNormal, dummy,
+    RaytraceIsoSurface(dummy, intersection2VolumePos, intersection2VolumeNormal, dummy,
         PerPixelStepSize, false, refract1Start, refract1End);
         
     // Calculate the second refraction using snells law
@@ -592,7 +595,7 @@ DepthStencilState DisableDepth {
 // Techniques
 //--------------------------------------------------------------------------------------
 
-technique10 RenderRaycast {
+technique10 RenderRaytrace {
     pass P0_SplatParticle {
         SetVertexShader(CompileShader(vs_4_0, SplatParticleVS()));
         SetGeometryShader(CompileShader(gs_4_0, SplatParticleGS()));
@@ -604,9 +607,9 @@ technique10 RenderRaycast {
     }
     
     pass P1_FindRayExit {
-        SetVertexShader(CompileShader(vs_4_0, RaycastTransformVS()));
+        SetVertexShader(CompileShader(vs_4_0, RaytraceTransformVS()));
         SetGeometryShader(NULL);
-        SetPixelShader(CompileShader(ps_4_0, RaycastExitPS()));  
+        SetPixelShader(CompileShader(ps_4_0, RaytraceExitPS()));  
           
         SetBlendState(NoBlending, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
         SetDepthStencilState(DisableDepth, 0);
@@ -614,9 +617,9 @@ technique10 RenderRaycast {
     }
 
     pass P2_TraceIsoSurfaceAndShade {
-        SetVertexShader(CompileShader( vs_4_0, RaycastTransformVS()));
+        SetVertexShader(CompileShader( vs_4_0, RaytraceTransformVS()));
         SetGeometryShader(NULL);
-        SetPixelShader(CompileShader(ps_4_0, RaycastTraceIsoAndShadePS(false)));
+        SetPixelShader(CompileShader(ps_4_0, RaytraceTraceIsoAndShadePS(false)));
         
         SetBlendState(NoBlending, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
         SetDepthStencilState(DisableDepth, 0);
@@ -624,9 +627,9 @@ technique10 RenderRaycast {
     }
     
     pass P3_TraceIsoSurfaceAndShadeWidthPerPixelStepsize {
-        SetVertexShader(CompileShader( vs_4_0, RaycastTransformVS()));
+        SetVertexShader(CompileShader( vs_4_0, RaytraceTransformVS()));
         SetGeometryShader(NULL);
-        SetPixelShader(CompileShader(ps_4_0, RaycastTraceIsoAndShadePS(true)));
+        SetPixelShader(CompileShader(ps_4_0, RaytraceTraceIsoAndShadePS(true)));
         
         SetBlendState(NoBlending, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
         SetDepthStencilState(DisableDepth, 0);

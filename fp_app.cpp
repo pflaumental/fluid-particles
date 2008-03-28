@@ -12,7 +12,7 @@
 #include "fp_cpu_sph.h"
 #include "fp_render_sprites.h"
 #include "fp_render_marching_cubes.h"
-#include "fp_render_raycast.h"
+#include "fp_render_raytrace.h"
 #include "fp_depth_peeler.h"
 #include "fp_thread.h"
 
@@ -32,7 +32,7 @@ fp_Fluid*               g_Sim = NULL;
 fp_RenderSprites*       g_RenderSprites = NULL;
 fp_CPUDensityGrid*        g_CPUDensityGrid = NULL;
 fp_RenderMarchingCubes* g_RenderMarchingCubes = NULL;
-fp_RenderRaycast*       g_RenderRaycast = NULL;
+fp_RenderRaytrace*       g_RenderRaytrace = NULL;
 fp_DepthPeeler*         g_DepthPeeler = NULL;
 
 float                   g_LightScale;
@@ -134,7 +134,7 @@ void    CALLBACK FP_OnD3D10FrameRender(
 
 void    FP_InitApp();
 void    FP_FinishApp();
-D3DXVECTOR3 CalcRaycastVolumeStartPos(fp_Fluid* Fluid, fp_RenderRaycast* RenderRaycast);
+D3DXVECTOR3 CalcRaytraceVolumeStartPos(fp_Fluid* Fluid, fp_RenderRaytrace* RenderRaytrace);
 
 //--------------------------------------------------------------------------------------
 // Entry point to the program. Initializes everything and goes into a message processing 
@@ -203,11 +203,11 @@ void FP_InitApp() {
     g_RenderSprites = new fp_RenderSprites(FP_NUM_PARTICLES, g_Sim->m_Particles);
     g_CPUDensityGrid = new fp_CPUDensityGrid(g_Sim);
     g_RenderMarchingCubes = new fp_RenderMarchingCubes(g_CPUDensityGrid, 3);
-    g_RenderRaycast = new fp_RenderRaycast(g_Sim, FP_RAYCAST_DEFAULT_VOXEL_SIZE); 
+    g_RenderRaytrace = new fp_RenderRaytrace(g_Sim, FP_RAYTRACE_DEFAULT_VOXEL_SIZE); 
     g_DepthPeeler = new fp_DepthPeeler(FP_DEPTH_PEELER_MAX_DEPTH_COMPLEXITY,
             FP_NUM_PARTICLES, g_Sim->m_Particles);
-    D3DXVECTOR3 volumeStartPos = CalcRaycastVolumeStartPos(g_Sim, g_RenderRaycast);
-    g_RenderRaycast->SetVolumeStartPos(&volumeStartPos);
+    D3DXVECTOR3 volumeStartPos = CalcRaytraceVolumeStartPos(g_Sim, g_RenderRaytrace);
+    g_RenderRaytrace->SetVolumeStartPos(&volumeStartPos);
     g_RenderMarchingCubes->m_NumActiveLights = g_NumActiveLights;
     D3DCOLORVALUE diffuse  = { g_GUI.m_LightDiffuseColor->r,
             g_GUI.m_LightDiffuseColor->g, g_GUI.m_LightDiffuseColor->b, 1.0f };
@@ -328,9 +328,9 @@ void CALLBACK FP_OnFrameMove( double Time, float ElapsedTime, void* UserContext 
     if(g_RenderType == FP_GUI_RENDERTYPE_MARCHING_CUBES && g_UpdateVis) {
         g_CPUDensityGrid->ConstructFromFluid();
         g_RenderMarchingCubes->ConstructMesh();
-    } else if (g_RenderType == FP_GUI_RENDERTYPE_RAYCAST && glassMoved) {
-        D3DXVECTOR3 volumeStartPos = CalcRaycastVolumeStartPos(g_Sim, g_RenderRaycast);
-        g_RenderRaycast->SetVolumeStartPos(&volumeStartPos);
+    } else if (g_RenderType == FP_GUI_RENDERTYPE_RAYTRACE && glassMoved) {
+        D3DXVECTOR3 volumeStartPos = CalcRaytraceVolumeStartPos(g_Sim, g_RenderRaytrace);
+        g_RenderRaytrace->SetVolumeStartPos(&volumeStartPos);
     }
 }
 
@@ -376,14 +376,14 @@ void CALLBACK FP_OnGUIEvent(
         CDXUTControl* Control, 
         void* UserContext ) {   
     bool resetSim;
-    float mcVoxelSize = -1.0f, mcIsoLevel = -1.0f, raycastIsoLevel = -1.0f, 
-            raycastStepScale = -1.0f, raycastRefractionRatio = -1.0f, timeFactor = -1.0f;
+    float mcVoxelSize = -1.0f, mcIsoLevel = -1.0f, raytraceIsoLevel = -1.0f, 
+            raytraceStepScale = -1.0f, raytraceRefractionRatio = -1.0f, timeFactor = -1.0f;
     int selectedCubeMap = -1;
     float oldSpriteSize = g_RenderSprites->GetSpriteSize();
     float newSpriteSize = oldSpriteSize;
     int oldRenderType = g_RenderType;
     g_GUI.OnGUIEvent(Event, ControlID, Control, g_ActiveLight, g_NumActiveLights,
-            raycastIsoLevel, raycastStepScale, raycastRefractionRatio, mcVoxelSize,
+            raytraceIsoLevel, raytraceStepScale, raytraceRefractionRatio, mcVoxelSize,
             mcIsoLevel, g_LightScale, newSpriteSize, resetSim, g_StopSim,
             g_MoveHorizontally, g_RenderType, selectedCubeMap, timeFactor);
     if(oldRenderType != g_RenderType)
@@ -391,13 +391,13 @@ void CALLBACK FP_OnGUIEvent(
     if(oldSpriteSize != newSpriteSize)
         g_RenderSprites->SetSpriteSize(newSpriteSize);
     if(selectedCubeMap >= 0)
-        g_RenderRaycast->m_CurrentCubeMap = selectedCubeMap;
-    if(raycastIsoLevel > 0.0f)
-        g_RenderRaycast->SetIsoLevel(raycastIsoLevel);
-    if(raycastStepScale > 0.0f)
-        g_RenderRaycast->SetStepScale(raycastStepScale);
-    if(raycastRefractionRatio > 0.0f)
-        g_RenderRaycast->SetRefractionRatio(raycastRefractionRatio);
+        g_RenderRaytrace->m_CurrentCubeMap = selectedCubeMap;
+    if(raytraceIsoLevel > 0.0f)
+        g_RenderRaytrace->SetIsoLevel(raytraceIsoLevel);
+    if(raytraceStepScale > 0.0f)
+        g_RenderRaytrace->SetStepScale(raytraceStepScale);
+    if(raytraceRefractionRatio > 0.0f)
+        g_RenderRaytrace->SetRefractionRatio(raytraceRefractionRatio);
     if(mcIsoLevel > 0.0f)
         g_RenderMarchingCubes->m_IsoLevel = mcIsoLevel;
     if(mcVoxelSize > 0.0f && mcVoxelSize != g_CPUDensityGrid->m_VoxelSize)
@@ -417,9 +417,9 @@ void CALLBACK FP_OnGUIEvent(
         g_CPUDensityGrid = new fp_CPUDensityGrid(g_Sim, mcVoxelSize);
         g_RenderSprites->m_Particles = g_Sim->m_Particles;
         g_RenderMarchingCubes->m_DensityGrid = g_CPUDensityGrid;
-        g_RenderRaycast->SetFluid(g_Sim);
-        D3DXVECTOR3 volumeStartPos = CalcRaycastVolumeStartPos(g_Sim, g_RenderRaycast);
-        g_RenderRaycast->SetVolumeStartPos(&volumeStartPos);
+        g_RenderRaytrace->SetFluid(g_Sim);
+        D3DXVECTOR3 volumeStartPos = CalcRaytraceVolumeStartPos(g_Sim, g_RenderRaytrace);
+        g_RenderRaytrace->SetVolumeStartPos(&volumeStartPos);
     }
 }
 
@@ -463,11 +463,11 @@ HRESULT CALLBACK FP_OnD3D10CreateDevice(
             UserContext);
     g_RenderMarchingCubes->OnD3D10CreateDevice(D3DDevice, BackBufferSurfaceDesc,
             UserContext);
-    g_RenderRaycast->OnD3D10CreateDevice(D3DDevice, BackBufferSurfaceDesc,
+    g_RenderRaytrace->OnD3D10CreateDevice(D3DDevice, BackBufferSurfaceDesc,
         UserContext);
     g_DepthPeeler->OnD3D10CreateDevice(D3DDevice, BackBufferSurfaceDesc, UserContext);
-    g_GUI.SetCubeMapNames(&g_RenderRaycast->m_CubeMapNames,
-            g_RenderRaycast->m_CurrentCubeMap);
+    g_GUI.SetCubeMapNames(&g_RenderRaytrace->m_CubeMapNames,
+            g_RenderRaytrace->m_CurrentCubeMap);
 
     // Setup the camera's view parameters
     D3DXVECTOR3 vecEye(0.0f, 0.0f, -15.0f);
@@ -494,7 +494,7 @@ HRESULT CALLBACK FP_OnD3D10ResizedSwapChain(
             UserContext);
     g_RenderMarchingCubes->OnD3D10ResizedSwapChain(D3DDevice, SwapChain, BackBufferSurfaceDesc,
             UserContext);
-    g_RenderRaycast->OnD3D10ResizedSwapChain(D3DDevice, SwapChain, BackBufferSurfaceDesc,
+    g_RenderRaytrace->OnD3D10ResizedSwapChain(D3DDevice, SwapChain, BackBufferSurfaceDesc,
         UserContext);
     g_DepthPeeler->OnD3D10ResizedSwapChain(D3DDevice, SwapChain, BackBufferSurfaceDesc,
         UserContext);
@@ -559,8 +559,8 @@ void CALLBACK FP_OnD3D10FrameRender(
         g_RenderSprites->OnD3D10FrameRender(D3DDevice, &viewProjection, &invView);
     else if(g_RenderType == FP_GUI_RENDERTYPE_MARCHING_CUBES)
         g_RenderMarchingCubes->OnD3D10FrameRender(D3DDevice, &viewProjection);
-    else if(g_RenderType == FP_GUI_RENDERTYPE_RAYCAST)        
-        g_RenderRaycast->OnD3D10FrameRender(D3DDevice, &view, &projection,
+    else if(g_RenderType == FP_GUI_RENDERTYPE_RAYTRACE)        
+        g_RenderRaytrace->OnD3D10FrameRender(D3DDevice, &view, &projection,
                 &viewProjection, &invView, g_UpdateVis);           
 
     g_UpdateVis = false;
@@ -580,7 +580,7 @@ void CALLBACK FP_OnD3D10ReleasingSwapChain( void* UserContext ) {
     if(g_RenderSprites) g_RenderSprites->OnD3D10ReleasingSwapChain(UserContext);
     if(g_RenderMarchingCubes) g_RenderMarchingCubes->OnD3D10ReleasingSwapChain(
             UserContext);
-    if(g_RenderRaycast) g_RenderRaycast->OnD3D10ReleasingSwapChain(UserContext);    
+    if(g_RenderRaytrace) g_RenderRaytrace->OnD3D10ReleasingSwapChain(UserContext);    
     if(g_DepthPeeler) g_DepthPeeler->OnD3D10ReleasingSwapChain(UserContext); 
 }
 
@@ -592,17 +592,17 @@ void CALLBACK FP_OnD3D10DestroyDevice( void* UserContext ) {
     g_GUI.OnD3D10DestroyDevice(UserContext);
     if(g_RenderSprites) g_RenderSprites->OnD3D10DestroyDevice(UserContext);
     if(g_RenderMarchingCubes) g_RenderMarchingCubes->OnD3D10DestroyDevice(UserContext);
-    if(g_RenderRaycast) g_RenderRaycast->OnD3D10DestroyDevice(UserContext);
+    if(g_RenderRaytrace) g_RenderRaytrace->OnD3D10DestroyDevice(UserContext);
     if(g_DepthPeeler) g_DepthPeeler->OnD3D10DestroyDevice(UserContext);
     DXUTGetGlobalResourceCache().OnDestroyDevice();
 }
 
-D3DXVECTOR3 CalcRaycastVolumeStartPos(
+D3DXVECTOR3 CalcRaytraceVolumeStartPos(
         fp_Fluid* Fluid,
-        fp_RenderRaycast* RenderRaycast) {
+        fp_RenderRaytrace* RenderRaytrace) {
     D3DXVECTOR3 result = Fluid->m_CurrentGlassPosition;
-    result.y += Fluid->m_GlassFloor - FP_RAYCAST_VOLUME_BORDER;
-    D3DXVECTOR3 volumeSize = RenderRaycast->GetVolumeSize();
+    result.y += Fluid->m_GlassFloor - FP_RAYTRACE_VOLUME_BORDER;
+    D3DXVECTOR3 volumeSize = RenderRaytrace->GetVolumeSize();
     result.x -= volumeSize.x / 2.0f;
     result.z -= volumeSize.z / 2.0f;
     return result;

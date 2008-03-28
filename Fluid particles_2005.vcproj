@@ -855,15 +855,15 @@
 			>
 		</File>
 		<File
-			RelativePath=".\fp_render_raycast.cpp"
+			RelativePath=".\fp_render_raytrace.cpp"
 			>
 		</File>
 		<File
-			RelativePath=".\fp_render_raycast.fx"
+			RelativePath=".\fp_render_raytrace.fx"
 			>
 		</File>
 		<File
-			RelativePath=".\fp_render_raycast.h"
+			RelativePath=".\fp_render_raytrace.h"
 			>
 		</File>
 		<File

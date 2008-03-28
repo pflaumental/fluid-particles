@@ -35,13 +35,13 @@
 #define IDC_MC_VOXEL_SIZE                      17
 #define IDC_MC_VOXEL_SIZE_STATIC               18
 #define IDC_MOVE_HORIZONTALLY                  19
-#define IDC_RAYCAST_ISO_LEVEL                  20
-#define IDC_RAYCAST_ISO_LEVEL_STATIC           21
-#define IDC_RAYCAST_STEP_SCALE                 22
-#define IDC_RAYCAST_STEP_SCALE_STATIC          23
-#define IDC_RAYCAST_REFRACTION_RATIO           24
-#define IDC_RAYCAST_REFRACTION_RATIO_STATIC    25
-#define IDC_RAYCAST_SELECT_CUBEMAP             26
+#define IDC_RAYTRACE_ISO_LEVEL                  20
+#define IDC_RAYTRACE_ISO_LEVEL_STATIC           21
+#define IDC_RAYTRACE_STEP_SCALE                 22
+#define IDC_RAYTRACE_STEP_SCALE_STATIC          23
+#define IDC_RAYTRACE_REFRACTION_RATIO           24
+#define IDC_RAYTRACE_REFRACTION_RATIO_STATIC    25
+#define IDC_RAYTRACE_SELECT_CUBEMAP             26
 #define IDC_STOP_SIM                           27
 #define IDC_TIME_FACTOR                        28
 #define IDC_TIME_FACTOR_STATIC                 29
@@ -53,7 +53,7 @@
 //--------------------------------------------------------------------------------------
 
 enum fp_GUIRenderType {
-    FP_GUI_RENDERTYPE_RAYCAST = 0,
+    FP_GUI_RENDERTYPE_RAYTRACE = 0,
     FP_GUI_RENDERTYPE_MARCHING_CUBES,
     FP_GUI_RENDERTYPE_SPRITE
 };
@@ -84,9 +84,9 @@ public:
             CDXUTControl* Control,
             int& ActiveLight,
             int& NumActiveLights,
-            float& RaycastIsoLevel,
-            float& RaycastStepScale,
-            float& RaycastRefractionRatio,
+            float& RaytraceIsoLevel,
+            float& RaytraceStepScale,
+            float& RaytraceRefractionRatio,
             float& MCVoxelSize,
             float& MCIsoLevel,
             float& LightScale,
@@ -157,7 +157,7 @@ private:
     ID3DX10Font*            m_Font10;       
     ID3DX10Sprite*          m_Sprite10;
 
-    std::vector<CDXUTControl*> m_RaycastSpecificControls;
+    std::vector<CDXUTControl*> m_RaytraceSpecificControls;
     std::vector<CDXUTControl*> m_MCSpecificControls;
     std::vector<CDXUTControl*> m_SpriteSpecificControls;
 

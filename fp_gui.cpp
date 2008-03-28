@@ -9,7 +9,7 @@ extern void CALLBACK FP_OnGUIEvent(
 
 
 void fp_GUI::SetCubeMapNames(fp_StringList* CubeMapNames, int CurrentCubeMap) {
-    CDXUTComboBox* comboBox = m_SampleUI.GetComboBox(IDC_RAYCAST_SELECT_CUBEMAP);
+    CDXUTComboBox* comboBox = m_SampleUI.GetComboBox(IDC_RAYTRACE_SELECT_CUBEMAP);
     for(int i=0, size=CubeMapNames->size(); i < size; i++) {
         WCHAR cubeMapName[MAX_PATH];
         StringCchPrintf(cubeMapName, MAX_PATH, L"%s (C)", (*CubeMapNames)[i].c_str());
@@ -74,50 +74,50 @@ fp_GUI::fp_GUI()
             false, &comboBox );
     if( comboBox ) {
         comboBox->SetDropHeight( 100 );
-        comboBox->AddItem( L"Raycast (T)", (LPVOID)FP_GUI_RENDERTYPE_RAYCAST );
+        comboBox->AddItem( L"Raytrace (T)", (LPVOID)FP_GUI_RENDERTYPE_RAYTRACE );
         comboBox->AddItem( L"Marching cubes (T)",
                 (LPVOID)FP_GUI_RENDERTYPE_MARCHING_CUBES );
         comboBox->AddItem( L"Point sprites (T)", (LPVOID)FP_GUI_RENDERTYPE_SPRITE );        
     }
 
-    int iYRaycast, iYMC, iYSprite;
-    iYRaycast = iYMC = iYSprite = iYCommon;
+    int iYRaytrace, iYMC, iYSprite;
+    iYRaytrace = iYMC = iYSprite = iYCommon;
 
-    // Raycast controls
-    m_RaycastSpecificControls.push_back(NULL);
-    m_SampleUI.AddComboBox( IDC_RAYCAST_SELECT_CUBEMAP, 35, iYRaycast += 24, 125, 24,
-            L'C', false, (CDXUTComboBox**) &m_RaycastSpecificControls.back() );
+    // Raytrace controls
+    m_RaytraceSpecificControls.push_back(NULL);
+    m_SampleUI.AddComboBox( IDC_RAYTRACE_SELECT_CUBEMAP, 35, iYRaytrace += 24, 125, 24,
+            L'C', false, (CDXUTComboBox**) &m_RaytraceSpecificControls.back() );
 
-    iYRaycast += 24;
-    StringCchPrintf( sz, 100, L"Iso level: %0.2f", FP_RAYCAST_DEFAULT_ISO_LEVEL ); 
-    m_RaycastSpecificControls.push_back(NULL);
-    m_SampleUI.AddStatic( IDC_RAYCAST_ISO_LEVEL_STATIC, sz, 35, iYRaycast += 24, 125, 22,
-            false, (CDXUTStatic**)&m_RaycastSpecificControls.back());
-    m_RaycastSpecificControls.push_back(NULL);
-    m_SampleUI.AddSlider( IDC_RAYCAST_ISO_LEVEL, 50, iYRaycast += 24, 100, 22, 1, 200,
-            (int) (FP_RAYCAST_DEFAULT_ISO_LEVEL * 250.0f), false, (CDXUTSlider**)
-            &m_RaycastSpecificControls.back() );
+    iYRaytrace += 24;
+    StringCchPrintf( sz, 100, L"Iso level: %0.2f", FP_RAYTRACE_DEFAULT_ISO_LEVEL ); 
+    m_RaytraceSpecificControls.push_back(NULL);
+    m_SampleUI.AddStatic( IDC_RAYTRACE_ISO_LEVEL_STATIC, sz, 35, iYRaytrace += 24, 125, 22,
+            false, (CDXUTStatic**)&m_RaytraceSpecificControls.back());
+    m_RaytraceSpecificControls.push_back(NULL);
+    m_SampleUI.AddSlider( IDC_RAYTRACE_ISO_LEVEL, 50, iYRaytrace += 24, 100, 22, 1, 200,
+            (int) (FP_RAYTRACE_DEFAULT_ISO_LEVEL * 250.0f), false, (CDXUTSlider**)
+            &m_RaytraceSpecificControls.back() );
 
-    iYRaycast += 24;
-    StringCchPrintf( sz, 100, L"Step scale: %0.1f", FP_RAYCAST_DEFAULT_STEP_SCALE ); 
-    m_RaycastSpecificControls.push_back(NULL);
-    m_SampleUI.AddStatic( IDC_RAYCAST_STEP_SCALE_STATIC, sz, 35, iYRaycast += 24, 125, 22,
-            false, (CDXUTStatic**)&m_RaycastSpecificControls.back());
-    m_RaycastSpecificControls.push_back(NULL);
-    m_SampleUI.AddSlider( IDC_RAYCAST_STEP_SCALE, 50, iYRaycast += 24, 100, 22, 8, 100,
-            (int) (FP_RAYCAST_DEFAULT_STEP_SCALE * 10.0f), false, (CDXUTSlider**)
-            &m_RaycastSpecificControls.back() );
+    iYRaytrace += 24;
+    StringCchPrintf( sz, 100, L"Step scale: %0.1f", FP_RAYTRACE_DEFAULT_STEP_SCALE ); 
+    m_RaytraceSpecificControls.push_back(NULL);
+    m_SampleUI.AddStatic( IDC_RAYTRACE_STEP_SCALE_STATIC, sz, 35, iYRaytrace += 24, 125, 22,
+            false, (CDXUTStatic**)&m_RaytraceSpecificControls.back());
+    m_RaytraceSpecificControls.push_back(NULL);
+    m_SampleUI.AddSlider( IDC_RAYTRACE_STEP_SCALE, 50, iYRaytrace += 24, 100, 22, 8, 100,
+            (int) (FP_RAYTRACE_DEFAULT_STEP_SCALE * 10.0f), false, (CDXUTSlider**)
+            &m_RaytraceSpecificControls.back() );
 
-    iYRaycast += 24;
+    iYRaytrace += 24;
     StringCchPrintf( sz, 100, L"Refraction ratio: %0.2f", 
-            FP_RAYCAST_DEFAULT_REFRACTION_RATIO); 
-    m_RaycastSpecificControls.push_back(NULL);
-    m_SampleUI.AddStatic( IDC_RAYCAST_REFRACTION_RATIO_STATIC, sz, 35, iYRaycast += 24,
-            125, 22, false, (CDXUTStatic**)&m_RaycastSpecificControls.back());
-    m_RaycastSpecificControls.push_back(NULL);
-    m_SampleUI.AddSlider( IDC_RAYCAST_REFRACTION_RATIO, 50, iYRaycast += 24, 100, 22, 1, 
-            99, (int) (FP_RAYCAST_DEFAULT_REFRACTION_RATIO * 100.0f), false,
-            (CDXUTSlider**) &m_RaycastSpecificControls.back() );
+            FP_RAYTRACE_DEFAULT_REFRACTION_RATIO); 
+    m_RaytraceSpecificControls.push_back(NULL);
+    m_SampleUI.AddStatic( IDC_RAYTRACE_REFRACTION_RATIO_STATIC, sz, 35, iYRaytrace += 24,
+            125, 22, false, (CDXUTStatic**)&m_RaytraceSpecificControls.back());
+    m_RaytraceSpecificControls.push_back(NULL);
+    m_SampleUI.AddSlider( IDC_RAYTRACE_REFRACTION_RATIO, 50, iYRaytrace += 24, 100, 22, 1, 
+            99, (int) (FP_RAYTRACE_DEFAULT_REFRACTION_RATIO * 100.0f), false,
+            (CDXUTSlider**) &m_RaytraceSpecificControls.back() );
 
     // Marching cubes controls
 
@@ -242,9 +242,9 @@ void fp_GUI::OnGUIEvent(
         CDXUTControl* Control,
         int& ActiveLight,
         int& NumActiveLights,
-        float& RaycastIsoLevel,
-        float& RaycastStepScale,
-        float& RaycastRefractionRatio,
+        float& RaytraceIsoLevel,
+        float& RaytraceStepScale,
+        float& RaytraceRefractionRatio,
         float& MCVoxelSize,
         float& MCIsoLevel,
         float& LightScale,        
@@ -292,7 +292,7 @@ void fp_GUI::OnGUIEvent(
             MoveHorizontally = m_SampleUI.GetCheckBox(IDC_MOVE_HORIZONTALLY)->GetChecked();
             break;    
 
-        case IDC_RAYCAST_SELECT_CUBEMAP: {
+        case IDC_RAYTRACE_SELECT_CUBEMAP: {
             DXUTComboBoxItem *item = ((CDXUTComboBox*)Control)->GetSelectedItem();
             if( item ) 
                 #pragma warning( disable : 4311)
@@ -301,28 +301,28 @@ void fp_GUI::OnGUIEvent(
             break;
         }
 
-        case IDC_RAYCAST_ISO_LEVEL: 
-            RaycastIsoLevel = (float) (m_SampleUI.GetSlider(
-                IDC_RAYCAST_ISO_LEVEL )->GetValue() * 0.004f);
+        case IDC_RAYTRACE_ISO_LEVEL: 
+            RaytraceIsoLevel = (float) (m_SampleUI.GetSlider(
+                IDC_RAYTRACE_ISO_LEVEL )->GetValue() * 0.004f);
 
-            StringCchPrintf( sz, 100, L"Iso level: %0.3f", RaycastIsoLevel ); 
-            m_SampleUI.GetStatic( IDC_RAYCAST_ISO_LEVEL_STATIC )->SetText( sz );
+            StringCchPrintf( sz, 100, L"Iso level: %0.3f", RaytraceIsoLevel ); 
+            m_SampleUI.GetStatic( IDC_RAYTRACE_ISO_LEVEL_STATIC )->SetText( sz );
             break;
 
-        case IDC_RAYCAST_STEP_SCALE: 
-            RaycastStepScale = (float) (m_SampleUI.GetSlider(
-                IDC_RAYCAST_STEP_SCALE)->GetValue() * 0.1f);
+        case IDC_RAYTRACE_STEP_SCALE: 
+            RaytraceStepScale = (float) (m_SampleUI.GetSlider(
+                IDC_RAYTRACE_STEP_SCALE)->GetValue() * 0.1f);
 
-            StringCchPrintf( sz, 100, L"Step scale: %0.1f", RaycastStepScale); 
-            m_SampleUI.GetStatic( IDC_RAYCAST_STEP_SCALE_STATIC )->SetText( sz );
+            StringCchPrintf( sz, 100, L"Step scale: %0.1f", RaytraceStepScale); 
+            m_SampleUI.GetStatic( IDC_RAYTRACE_STEP_SCALE_STATIC )->SetText( sz );
             break;
 
-        case IDC_RAYCAST_REFRACTION_RATIO: 
-            RaycastRefractionRatio = (float) (m_SampleUI.GetSlider(
-                    IDC_RAYCAST_REFRACTION_RATIO)->GetValue() * 0.01f);
+        case IDC_RAYTRACE_REFRACTION_RATIO: 
+            RaytraceRefractionRatio = (float) (m_SampleUI.GetSlider(
+                    IDC_RAYTRACE_REFRACTION_RATIO)->GetValue() * 0.01f);
 
-            StringCchPrintf( sz, 100, L"Refraction ratio: %0.2f", RaycastRefractionRatio); 
-            m_SampleUI.GetStatic( IDC_RAYCAST_REFRACTION_RATIO_STATIC )->SetText( sz );
+            StringCchPrintf( sz, 100, L"Refraction ratio: %0.2f", RaytraceRefractionRatio); 
+            m_SampleUI.GetStatic( IDC_RAYTRACE_REFRACTION_RATIO_STATIC )->SetText( sz );
             break;
 
         case IDC_MC_VOXEL_SIZE: 
@@ -674,9 +674,9 @@ int fp_GUI::ChooseControls() {
         #pragma warning( default : 4311)
     fp_GUIControlIterator it;
     switch(renderType) {
-        case FP_GUI_RENDERTYPE_RAYCAST:
-            for(it = m_RaycastSpecificControls.begin();
-                    it != m_RaycastSpecificControls.end(); it++)
+        case FP_GUI_RENDERTYPE_RAYTRACE:
+            for(it = m_RaytraceSpecificControls.begin();
+                    it != m_RaytraceSpecificControls.end(); it++)
                 (*it)->SetVisible(true);
             for(it = m_MCSpecificControls.begin();
                 it != m_MCSpecificControls.end(); it++)
@@ -686,8 +686,8 @@ int fp_GUI::ChooseControls() {
                 (*it)->SetVisible(false);
             break;
         case FP_GUI_RENDERTYPE_MARCHING_CUBES:
-            for(it = m_RaycastSpecificControls.begin();
-                it != m_RaycastSpecificControls.end(); it++)
+            for(it = m_RaytraceSpecificControls.begin();
+                it != m_RaytraceSpecificControls.end(); it++)
                 (*it)->SetVisible(false);
             for(it = m_MCSpecificControls.begin();
                 it != m_MCSpecificControls.end(); it++)
@@ -697,8 +697,8 @@ int fp_GUI::ChooseControls() {
                 (*it)->SetVisible(false);
             break;
         case FP_GUI_RENDERTYPE_SPRITE:
-            for(it = m_RaycastSpecificControls.begin();
-                it != m_RaycastSpecificControls.end(); it++)
+            for(it = m_RaytraceSpecificControls.begin();
+                it != m_RaytraceSpecificControls.end(); it++)
                 (*it)->SetVisible(false);
             for(it = m_MCSpecificControls.begin();
                 it != m_MCSpecificControls.end(); it++)

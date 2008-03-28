@@ -1,17 +1,17 @@
 #include "DXUT.h"
 #include "SDKmisc.h"
-#include "fp_render_raycast.h"
+#include "fp_render_raytrace.h"
 #include "fp_util.h"
 
-#define FP_RENDER_RAYCAST_EFFECT_FILE L"fp_render_raycast.fx"
-#define FP_RENDER_RAYCAST_CUBEMAP_DIR L"Media\\CubeMaps\\"
-#define FP_RENDER_RAYCAST_DEFAULT_CUBEMAP L"rnl_cross.dds"
+#define FP_RENDER_RAYTRACE_EFFECT_FILE L"fp_render_raytrace.fx"
+#define FP_RENDER_RAYTRACE_CUBEMAP_DIR L"Media\\CubeMaps\\"
+#define FP_RENDER_RAYTRACE_DEFAULT_CUBEMAP L"rnl_cross.dds"
 
 const D3D10_INPUT_ELEMENT_DESC fp_SplatParticleVertex::Layout[] = {
         {"POSITION_DENSITY",  0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0,
                 D3D10_INPUT_PER_VERTEX_DATA, 0 }};
 
-fp_RenderRaycast::fp_RenderRaycast(
+fp_RenderRaytrace::fp_RenderRaytrace(
         fp_Fluid* Fluid,
         float VoxelSize,
         float IsoLevel,
@@ -30,7 +30,7 @@ fp_RenderRaycast::fp_RenderRaycast(
     m_SplatParticleVertexLayout(NULL),
     m_SplatParticleVertexBuffer(NULL), 
     m_Effect(NULL),
-    m_TechRenderRaycast(NULL),
+    m_TechRenderRaytrace(NULL),
     m_EffectVarCornersPos(NULL),
     m_EffectVarHalfParticleVoxelDiameter(NULL),
     m_EffectVarParticleVoxelRadius(NULL),
@@ -66,10 +66,10 @@ fp_RenderRaycast::fp_RenderRaycast(
     m_EnvironmentBox.SetStart(&v);
 }
 
-fp_RenderRaycast::~fp_RenderRaycast() {
+fp_RenderRaytrace::~fp_RenderRaytrace() {
 }
 
-HRESULT fp_RenderRaycast::OnD3D9CreateDevice(
+HRESULT fp_RenderRaytrace::OnD3D9CreateDevice(
         IDirect3DDevice9* D3DDevice,
         const D3DSURFACE_DESC* BackBufferSurfaceDesc,
         void* UserContext ) {
@@ -77,25 +77,25 @@ HRESULT fp_RenderRaycast::OnD3D9CreateDevice(
     return S_OK;
 }
 
-HRESULT fp_RenderRaycast::OnD3D9ResetDevice(
+HRESULT fp_RenderRaytrace::OnD3D9ResetDevice(
         IDirect3DDevice9* D3DDevice,
         const D3DSURFACE_DESC* BackBufferSurfaceDesc,
         void* UserContext ) {
     return S_OK;
 }
 
-void fp_RenderRaycast::OnD3D9FrameRender(IDirect3DDevice9* D3DDevice) {  
+void fp_RenderRaytrace::OnD3D9FrameRender(IDirect3DDevice9* D3DDevice) {  
 }
 
-void fp_RenderRaycast::OnD3D9DestroyDevice(void* UserContext) {
+void fp_RenderRaytrace::OnD3D9DestroyDevice(void* UserContext) {
 
 }
 
-void fp_RenderRaycast::OnD3D9LostDevice(void* UserContext) {    
+void fp_RenderRaytrace::OnD3D9LostDevice(void* UserContext) {    
 }
 
 
-HRESULT fp_RenderRaycast::OnD3D10CreateDevice(
+HRESULT fp_RenderRaytrace::OnD3D10CreateDevice(
         ID3D10Device* D3DDevice,
         const DXGI_SURFACE_DESC* BackBufferSurfaceDesc,
         void* UserContext ) {
@@ -125,15 +125,15 @@ HRESULT fp_RenderRaycast::OnD3D10CreateDevice(
 
     // Create environment maps
     WCHAR absolutePath[MAX_PATH], absoluteDir[MAX_PATH], defaultCubeMapPath[MAX_PATH];
-    StringCchPrintf(defaultCubeMapPath, MAX_PATH, L"%s%s", FP_RENDER_RAYCAST_CUBEMAP_DIR,
-            FP_RENDER_RAYCAST_DEFAULT_CUBEMAP);
+    StringCchPrintf(defaultCubeMapPath, MAX_PATH, L"%s%s", FP_RENDER_RAYTRACE_CUBEMAP_DIR,
+            FP_RENDER_RAYTRACE_DEFAULT_CUBEMAP);
     V_RETURN(DXUTFindDXSDKMediaFileCch(absolutePath, MAX_PATH, defaultCubeMapPath));
     std::wstring absolutePathString = absolutePath;
     SIZE_T lastSlash = absolutePathString.find_last_of('\\');
     StringCchCopy(absoluteDir, lastSlash + 2, absolutePath);
     fp_Util::ListDirectory(&m_CubeMapNames, absoluteDir, L"dds");
     for(size_t i=0, size=m_CubeMapNames.size(); i < size; i++) {
-        if(m_CubeMapNames[i].compare(FP_RENDER_RAYCAST_DEFAULT_CUBEMAP) == 0)
+        if(m_CubeMapNames[i].compare(FP_RENDER_RAYTRACE_DEFAULT_CUBEMAP) == 0)
             m_CurrentCubeMap = (int)i;
         StringCchPrintf(absolutePath, MAX_PATH, L"%s%s", absoluteDir, 
                 m_CubeMapNames[i].c_str());
@@ -143,10 +143,10 @@ HRESULT fp_RenderRaycast::OnD3D10CreateDevice(
     }
 
     // Read the D3DX effect file
-    m_Effect = fp_Util::LoadEffect(D3DDevice, FP_RENDER_RAYCAST_EFFECT_FILE);
+    m_Effect = fp_Util::LoadEffect(D3DDevice, FP_RENDER_RAYTRACE_EFFECT_FILE);
 
     // Obtain technique objects
-    m_TechRenderRaycast = m_Effect->GetTechniqueByName("RenderRaycast");
+    m_TechRenderRaytrace = m_Effect->GetTechniqueByName("RenderRaytrace");
 
     // Obtain effect variables
     m_EffectVarCornersPos = m_Effect->GetVariableByName("g_CornersPos")
@@ -244,11 +244,11 @@ HRESULT fp_RenderRaycast::OnD3D10CreateDevice(
     texDelta.z = 1.0f / m_VolumeDimensions.z;
     V_RETURN(m_EffectVarTexDelta->SetFloatVector((float*)&texDelta));
     D3DXVECTOR3 environmentBoxSize = m_EnvironmentBox.GetSize();
-    SetRefractionRatio(FP_RAYCAST_DEFAULT_REFRACTION_RATIO);
+    SetRefractionRatio(FP_RAYTRACE_DEFAULT_REFRACTION_RATIO);
 
     // Create vertex buffer
     D3D10_PASS_DESC passDesc;
-    V_RETURN( m_TechRenderRaycast->GetPassByIndex(0)->GetDesc(&passDesc));
+    V_RETURN( m_TechRenderRaytrace->GetPassByIndex(0)->GetDesc(&passDesc));
     int numElements = sizeof(fp_SplatParticleVertex::Layout)
             / sizeof(fp_SplatParticleVertex::Layout[0]);
     V_RETURN(D3DDevice->CreateInputLayout(fp_SplatParticleVertex::Layout, numElements,
@@ -263,13 +263,13 @@ HRESULT fp_RenderRaycast::OnD3D10CreateDevice(
     bufferDesc.MiscFlags = 0;
     V_RETURN(D3DDevice->CreateBuffer(&bufferDesc, NULL, &m_SplatParticleVertexBuffer));
 
-    m_BBox.OnD3D10CreateDevice(D3DDevice, m_TechRenderRaycast);
-    m_EnvironmentBox.OnD3D10CreateDevice(D3DDevice, m_TechRenderRaycast);
+    m_BBox.OnD3D10CreateDevice(D3DDevice, m_TechRenderRaytrace);
+    m_EnvironmentBox.OnD3D10CreateDevice(D3DDevice, m_TechRenderRaytrace);
 
     return S_OK;
 }
 
-HRESULT fp_RenderRaycast::OnD3D10ResizedSwapChain(
+HRESULT fp_RenderRaytrace::OnD3D10ResizedSwapChain(
         ID3D10Device* D3DDevice,
         IDXGISwapChain *SwapChain,
         const DXGI_SURFACE_DESC* BackBufferSurfaceDesc,
@@ -280,7 +280,7 @@ HRESULT fp_RenderRaycast::OnD3D10ResizedSwapChain(
     return S_OK;
 }
 
-void fp_RenderRaycast::OnD3D10FrameRender(
+void fp_RenderRaytrace::OnD3D10FrameRender(
         ID3D10Device* D3DDevice,
         const D3DXMATRIX*  View,
         const D3DXMATRIX*  Projection,
@@ -294,10 +294,10 @@ void fp_RenderRaycast::OnD3D10FrameRender(
     RenderVolume(D3DDevice, View, ViewProjection, InvView);    
 
     // TODO: find out why things get messed up when pass does not get reseted
-    m_TechRenderRaycast->GetPassByIndex(0)->Apply(0);
+    m_TechRenderRaytrace->GetPassByIndex(0)->Apply(0);
 }
 
-void fp_RenderRaycast::OnD3D10DestroyDevice( void* UserContext ) {
+void fp_RenderRaytrace::OnD3D10DestroyDevice( void* UserContext ) {
     DestroyVolumeTexture();
     m_BBox.OnD3D10DestroyDevice();
     m_EnvironmentBox.OnD3D10DestroyDevice();
@@ -312,27 +312,27 @@ void fp_RenderRaycast::OnD3D10DestroyDevice( void* UserContext ) {
     SAFE_RELEASE(m_Effect);
 }
 
-void fp_RenderRaycast::OnD3D10ReleasingSwapChain( void* UserContext ) {
+void fp_RenderRaytrace::OnD3D10ReleasingSwapChain( void* UserContext ) {
     SAFE_DELETE(m_ExitPoint);
 }
 
 // Updates members and effect vars that depend on fluid parameters
-void fp_RenderRaycast::SetFluid(fp_Fluid* Fluid) {
+void fp_RenderRaytrace::SetFluid(fp_Fluid* Fluid) {
     m_Fluid = Fluid;
     m_Particles = Fluid->m_Particles;
     m_NumParticles = Fluid->m_NumParticles;
     SetVoxelSize(m_VoxelSize);
 }
 
-void fp_RenderRaycast::SetIsoLevel(float IsoLevel) {
+void fp_RenderRaytrace::SetIsoLevel(float IsoLevel) {
     HRESULT hr;
     m_IsoLevel = IsoLevel;
     if(m_Effect != NULL)
         V(m_EffectVarIsoLevel->SetFloat(IsoLevel));
 }
 
-// Raycast StepSize = MaxVolumeDimension / StepScale
-void fp_RenderRaycast::SetStepScale(float StepScale) {
+// Raytrace StepSize = MaxVolumeDimension / StepScale
+void fp_RenderRaytrace::SetStepScale(float StepScale) {
     HRESULT hr;
     m_StepScale = StepScale;
     float maxDim = (float)m_VolumeDimensions.Max();
@@ -341,7 +341,7 @@ void fp_RenderRaycast::SetStepScale(float StepScale) {
 }
 
 // Controls the size of the density-grid in worldspace
-void fp_RenderRaycast::SetVoxelSize(float VoxelSize) {
+void fp_RenderRaytrace::SetVoxelSize(float VoxelSize) {
     HRESULT hr;
     m_VoxelSize = VoxelSize;
     m_ParticleVoxelRadius = (int)ceil(m_Fluid->m_SmoothingLength / m_VoxelSize);
@@ -385,7 +385,7 @@ void fp_RenderRaycast::SetVoxelSize(float VoxelSize) {
 // RefractionRatio = inverse ratio of the indizes of refraction of the to particpating
 // medias (i. e. water and air); controls refraction direction and affects ratio between
 // reflection and refraction
-void fp_RenderRaycast::SetRefractionRatio(float RefractionRatio) {
+void fp_RenderRaytrace::SetRefractionRatio(float RefractionRatio) {
     m_EffectVarRefractionRatio->SetFloat(RefractionRatio);
     m_EffectVarRefractionRatioSq->SetFloat(RefractionRatio * RefractionRatio);
     float refractionRatioInv = 1.0f / RefractionRatio;
@@ -397,16 +397,16 @@ void fp_RenderRaycast::SetRefractionRatio(float RefractionRatio) {
     m_EffectVarOneMinusR0->SetFloat(1.0f - r0);
 }
 
-D3DXVECTOR3 fp_RenderRaycast::GetVolumeSize() {
+D3DXVECTOR3 fp_RenderRaytrace::GetVolumeSize() {
     return m_BBox.GetSize();
 }
 
-fp_VolumeIndex fp_RenderRaycast::GetVolumeTextureSize() {
+fp_VolumeIndex fp_RenderRaytrace::GetVolumeTextureSize() {
     return m_VolumeDimensions;
 }
 
 // Defines the volume corner with the lowest coordinate on each axis
-void fp_RenderRaycast::SetVolumeStartPos(D3DXVECTOR3* VolumeStartPos) {
+void fp_RenderRaytrace::SetVolumeStartPos(D3DXVECTOR3* VolumeStartPos) {
     HRESULT hr;
 
     m_BBox.SetStart(VolumeStartPos);
@@ -431,7 +431,7 @@ void fp_RenderRaycast::SetVolumeStartPos(D3DXVECTOR3* VolumeStartPos) {
     }
 }
 
-HRESULT fp_RenderRaycast::CreateVolumeTexture(ID3D10Device* D3DDevice) {
+HRESULT fp_RenderRaytrace::CreateVolumeTexture(ID3D10Device* D3DDevice) {
     HRESULT hr;
 
     // Create the texture
@@ -469,7 +469,7 @@ HRESULT fp_RenderRaycast::CreateVolumeTexture(ID3D10Device* D3DDevice) {
     return S_OK;
 }
 
-void fp_RenderRaycast::FillVolumeTexture(ID3D10Device* D3DDevice) {
+void fp_RenderRaytrace::FillVolumeTexture(ID3D10Device* D3DDevice) {
     HRESULT hr;
     fp_SplatParticleVertex *splatVertices;
     float* densities = m_Fluid->GetDensities();
@@ -514,7 +514,7 @@ void fp_RenderRaycast::FillVolumeTexture(ID3D10Device* D3DDevice) {
     float clearColor[4] = {0.0f, 0.0f, 0.0f, 0.0f};
     D3DDevice->ClearRenderTargetView(m_VolumeRTV, clearColor);
 
-    m_TechRenderRaycast->GetPassByIndex(0)->Apply(0);
+    m_TechRenderRaytrace->GetPassByIndex(0)->Apply(0);
     
     D3DDevice->DrawInstanced(m_NumParticles, m_ParticleVoxelDiameter, 0, 0);
 
@@ -525,13 +525,13 @@ void fp_RenderRaycast::FillVolumeTexture(ID3D10Device* D3DDevice) {
     SAFE_RELEASE(oldRTV);
 }
 
-void fp_RenderRaycast::DestroyVolumeTexture() {
+void fp_RenderRaytrace::DestroyVolumeTexture() {
     SAFE_RELEASE(m_VolumeTexture);
     SAFE_RELEASE(m_VolumeRTV);
     SAFE_RELEASE(m_VolumeSRV);
 }
 
-void fp_RenderRaycast::RenderEnvironment(
+void fp_RenderRaytrace::RenderEnvironment(
         ID3D10Device* D3DDevice,
         const D3DXMATRIX*  View,
         const D3DXMATRIX*  Projection) {
@@ -547,11 +547,11 @@ void fp_RenderRaycast::RenderEnvironment(
     V(m_EffectVarWorldViewProjection->SetMatrix((float*)worldViewProjection));
     m_EffectVarEnvironmentMap->SetResource(m_EnvironmentMapSRV[m_CurrentCubeMap]);
 
-    m_TechRenderRaycast->GetPassByIndex(4)->Apply(0);
+    m_TechRenderRaytrace->GetPassByIndex(4)->Apply(0);
     m_EnvironmentBox.OnD3D10FrameRenderSolid(D3DDevice, true);
 }
 
-void fp_RenderRaycast::RenderVolume(
+void fp_RenderRaytrace::RenderVolume(
         ID3D10Device* D3DDevice,
         const D3DXMATRIX*  View,
         const D3DXMATRIX*  ViewProjection,
@@ -568,13 +568,13 @@ void fp_RenderRaycast::RenderVolume(
     
     // Find the ray exit
     m_ExitPoint->Bind(true, false);
-    m_TechRenderRaycast->GetPassByIndex(1)->Apply(0);
+    m_TechRenderRaytrace->GetPassByIndex(1)->Apply(0);
     m_BBox.OnD3D10FrameRenderSolid(D3DDevice, true);
     m_ExitPoint->Unbind();
     
     // Trace the iso volume and shade intersections
     V(m_EffectVarExitPoint->SetResource(m_ExitPoint->GetSRV()));
     V(m_EffectVarDensityGrid->SetResource(m_VolumeSRV));
-    m_TechRenderRaycast->GetPassByIndex(m_NeedPerPixelStepSize ? 3 : 2)->Apply(0);
+    m_TechRenderRaytrace->GetPassByIndex(m_NeedPerPixelStepSize ? 3 : 2)->Apply(0);
     m_BBox.OnD3D10FrameRenderSolid(D3DDevice, false);
 }
