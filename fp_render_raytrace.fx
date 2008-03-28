@@ -107,7 +107,7 @@ struct RaytraceTransformVSOut {
     float4 Pos                      : SV_POSITION;
 };
 
-struct RaytraceTraceIsoAndShadePSOut {
+struct RaytraceFindAndShadeIsoPSOut {
     float4 Color                    : SV_Target0;
     float Depth                     : SV_Depth;
 };
@@ -356,10 +356,10 @@ void RaytraceIsoSurface(
 // refraction ray with the isosurface. Looks up environmentmap for reflected and
 // (twotimes) refracted ray. Composes final color.
 //--------------------------------------------------------------------------------------
-RaytraceTraceIsoAndShadePSOut RaytraceTraceIsoAndShadePS(
+RaytraceFindAndShadeIsoPSOut RaytraceTraceIsoAndShadePS(
         RaytraceTransformVSOut Input,
         uniform bool PerPixelStepSize) {
-    RaytraceTraceIsoAndShadePSOut result;
+    RaytraceFindAndShadeIsoPSOut result;
     
     float4 entryVolumePosClipDepth = Input.VolumePosClipDepth;
     float4 exitVolumePosClipDepth = g_ExitPoint.Load(
