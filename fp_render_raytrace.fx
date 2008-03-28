@@ -356,7 +356,7 @@ void RaytraceIsoSurface(
 // refraction ray with the isosurface. Looks up environmentmap for reflected and
 // (twotimes) refracted ray. Composes final color.
 //--------------------------------------------------------------------------------------
-RaytraceFindAndShadeIsoPSOut RaytraceTraceIsoAndShadePS(
+RaytraceFindAndShadeIsoPSOut RaytraceFindAndShadeIsoPS(
         RaytraceTransformVSOut Input,
         uniform bool PerPixelStepSize) {
     RaytraceFindAndShadeIsoPSOut result;
@@ -619,7 +619,7 @@ technique10 RenderRaytrace {
     pass P2_TraceIsoSurfaceAndShade {
         SetVertexShader(CompileShader( vs_4_0, RaytraceTransformVS()));
         SetGeometryShader(NULL);
-        SetPixelShader(CompileShader(ps_4_0, RaytraceTraceIsoAndShadePS(false)));
+        SetPixelShader(CompileShader(ps_4_0, RaytraceFindAndShadeIsoPS(false)));
         
         SetBlendState(NoBlending, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
         SetDepthStencilState(DisableDepth, 0);
@@ -629,7 +629,7 @@ technique10 RenderRaytrace {
     pass P3_TraceIsoSurfaceAndShadeWidthPerPixelStepsize {
         SetVertexShader(CompileShader( vs_4_0, RaytraceTransformVS()));
         SetGeometryShader(NULL);
-        SetPixelShader(CompileShader(ps_4_0, RaytraceTraceIsoAndShadePS(true)));
+        SetPixelShader(CompileShader(ps_4_0, RaytraceFindAndShadeIsoPS(true)));
         
         SetBlendState(NoBlending, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
         SetDepthStencilState(DisableDepth, 0);
