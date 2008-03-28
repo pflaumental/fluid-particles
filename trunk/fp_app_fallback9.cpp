@@ -11,7 +11,7 @@
 #include "fp_cpu_sph.h"
 #include "fp_render_sprites.h"
 #include "fp_render_marching_cubes.h"
-#include "fp_render_raycast.h"
+#include "fp_render_raytrace.h"
 #include "fp_depth_peeler.h"
 
 //#define DEBUG_VS   // Uncomment this line to debug D3D9 vertex shaders 
@@ -26,7 +26,7 @@ extern D3DXMATRIXA16           g_CenterMesh;
 extern fp_GUI                  g_GUI;
 extern fp_RenderSprites*       g_RenderSprites;
 extern fp_RenderMarchingCubes* g_RenderMarchingCubes;
-extern fp_RenderRaycast*       g_RenderRaycast;
+extern fp_RenderRaytrace*       g_RenderRaytrace;
 extern fp_DepthPeeler*         g_DepthPeeler;
 
 extern float                   g_LightScale;
@@ -118,7 +118,7 @@ HRESULT CALLBACK FP_OnD3D9CreateDevice(
     g_GUI.OnD3D9CreateDevice(D3DDevice, BackBufferSurfaceDesc, UserContext);
     g_RenderSprites->OnD3D9CreateDevice(D3DDevice, BackBufferSurfaceDesc, UserContext);
     g_RenderMarchingCubes->OnD3D9CreateDevice(D3DDevice, BackBufferSurfaceDesc, UserContext);
-    g_RenderRaycast->OnD3D9CreateDevice(D3DDevice, BackBufferSurfaceDesc, UserContext);
+    g_RenderRaytrace->OnD3D9CreateDevice(D3DDevice, BackBufferSurfaceDesc, UserContext);
 
     // Setup the camera's view parameters
     D3DXVECTOR3 vecEye(0.0f, 0.0f, -15.0f);
@@ -193,7 +193,7 @@ HRESULT CALLBACK FP_OnD3D9ResetDevice(
     g_GUI.OnD3D9ResetDevice(D3DDevice, BackBufferSurfaceDesc, UserContext);
     g_RenderSprites->OnD3D9ResetDevice(D3DDevice, BackBufferSurfaceDesc, UserContext);
     g_RenderMarchingCubes->OnD3D9ResetDevice(D3DDevice, BackBufferSurfaceDesc, UserContext);
-    g_RenderRaycast->OnD3D9ResetDevice(D3DDevice, BackBufferSurfaceDesc, UserContext);
+    g_RenderRaytrace->OnD3D9ResetDevice(D3DDevice, BackBufferSurfaceDesc, UserContext);
 
     if( g_Effect9 ) V_RETURN( g_Effect9->OnResetDevice() );
     // Setup the camera's projection parameters
@@ -254,8 +254,8 @@ void CALLBACK FP_OnD3D9FrameRender(
             g_RenderSprites->OnD3D9FrameRender(D3DDevice);
         else if(g_RenderType == FP_GUI_RENDERTYPE_MARCHING_CUBES)
             g_RenderMarchingCubes->OnD3D9FrameRender(D3DDevice);
-        else if(g_RenderType == FP_GUI_RENDERTYPE_RAYCAST)
-            g_RenderRaycast->OnD3D9FrameRender(D3DDevice);
+        else if(g_RenderType == FP_GUI_RENDERTYPE_RAYTRACE)
+            g_RenderRaytrace->OnD3D9FrameRender(D3DDevice);
         g_GUI.OnD3D9FrameRender(D3DDevice, ElapsedTime, g_Camera.GetEyePt(),
                 &View, &Proj, g_NumActiveLights,
                 g_ActiveLight, g_LightScale);
@@ -272,7 +272,7 @@ void CALLBACK FP_OnD3D9LostDevice( void* UserContext ) {
     g_GUI.OnD3D9LostDevice(UserContext);
     if(g_RenderSprites) g_RenderSprites->OnD3D9LostDevice(UserContext);
     if(g_RenderMarchingCubes) g_RenderMarchingCubes->OnD3D9LostDevice(UserContext);
-    if(g_RenderRaycast) g_RenderRaycast->OnD3D9LostDevice(UserContext);
+    if(g_RenderRaytrace) g_RenderRaytrace->OnD3D9LostDevice(UserContext);
     if(g_Effect9) g_Effect9->OnLostDevice();      
 }
 
@@ -285,7 +285,7 @@ void CALLBACK FP_OnD3D9DestroyDevice( void* UserContext )
     g_GUI.OnD3D9DestroyDevice(UserContext);
     if(g_RenderSprites) g_RenderSprites->OnD3D9DestroyDevice(UserContext);
     if(g_RenderMarchingCubes) g_RenderMarchingCubes->OnD3D9DestroyDevice(UserContext);
-    if(g_RenderRaycast) g_RenderRaycast->OnD3D9DestroyDevice(UserContext);
+    if(g_RenderRaytrace) g_RenderRaytrace->OnD3D9DestroyDevice(UserContext);
     SAFE_RELEASE(g_Effect9);
     SAFE_RELEASE(g_Mesh9);
     SAFE_RELEASE(g_MeshTexture9);

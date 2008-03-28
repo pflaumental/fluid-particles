@@ -1,6 +1,6 @@
 #pragma once
-#ifndef FP_RENDER_RAYCAST_H
-#define FP_RENDER_RAYCAST_H
+#ifndef FP_RENDER_RAYTRACE_H
+#define FP_RENDER_RAYTRACE_H
 
 #include "DXUT.h"
 
@@ -10,7 +10,7 @@
 #include "fp_bounding_box.h"
 
 //--------------------------------------------------------------------------------------
-// Fluid particles render technique: Iso volume via GPU raycast
+// Fluid particles render technique: Iso volume via GPU raytrace
 //--------------------------------------------------------------------------------------
 
 struct fp_SplatParticleVertex {
@@ -18,21 +18,21 @@ struct fp_SplatParticleVertex {
     static const D3D10_INPUT_ELEMENT_DESC Layout[];
 };
 
-class fp_RenderRaycast {
+class fp_RenderRaytrace {
 public:      
     fp_Fluid* m_Fluid;
     fp_FluidParticle* m_Particles;
     std::vector<std::wstring> m_CubeMapNames;
     int m_CurrentCubeMap;
 
-    fp_RenderRaycast(
+    fp_RenderRaytrace(
             fp_Fluid* Fluid,
             float VoxelSize,
-            float IsoLevel = FP_RAYCAST_DEFAULT_ISO_LEVEL,
-            float StepScale = FP_RAYCAST_DEFAULT_STEP_SCALE,
+            float IsoLevel = FP_RAYTRACE_DEFAULT_ISO_LEVEL,
+            float StepScale = FP_RAYTRACE_DEFAULT_STEP_SCALE,
             const fp_VolumeIndex& VolumeDimensions
-                    = FP_RAYCAST_VOLUME_TEXTURE_DIMENSIONS);
-    ~fp_RenderRaycast();
+                    = FP_RAYTRACE_VOLUME_TEXTURE_DIMENSIONS);
+    ~fp_RenderRaytrace();
 
     void SetFluid(fp_Fluid* Fluid);
     void SetIsoLevel(float IsoLevel);
@@ -96,7 +96,7 @@ private:
 
     ID3D10Effect* m_Effect;
 
-    ID3D10EffectTechnique* m_TechRenderRaycast;
+    ID3D10EffectTechnique* m_TechRenderRaytrace;
 
     ID3D10EffectMatrixVariable* m_EffectVarWorldToNDS;
     ID3D10EffectVectorVariable* m_EffectVarCornersPos;
