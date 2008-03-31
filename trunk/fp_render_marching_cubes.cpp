@@ -384,7 +384,7 @@ fp_RenderMarchingCubes::~fp_RenderMarchingCubes() {
 void fp_RenderMarchingCubes::ConstructMesh() {
     bool isRenderingWithD3D10 = DXUTIsAppRenderingWithD3D10();
 
-    if(!isRenderingWithD3D10 && m_VertexBuffer9 == NULL) // TODO:
+    if(!isRenderingWithD3D10 && m_VertexBuffer9 == NULL) // TODO: catch this special case
         return; 
 
     m_NumVertices = 0;

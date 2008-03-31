@@ -26,7 +26,6 @@ cbuffer Once {
     float3 g_TexDelta;
     float g_StepSize;
     int g_NumRefineSteps = 5;
-    float3 g_MaterialColor = float3(0.75, 0.75, 1.0); // TODO remove color hack
 };
 
 cbuffer Sometimes {
@@ -50,7 +49,6 @@ cbuffer Often {
     float4x4 g_WorldViewProjection;
     float4x4 g_InvView;
     float3 g_BBoxStart;
-    float3 g_LightDir = float3(0,1,0); // TODO remove light hack    
 };
 
 //*cbuffer cbEveryFrame {
