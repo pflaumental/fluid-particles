@@ -33,8 +33,8 @@ struct fp_MCVertex
 class fp_CPUDensityGrid {
 public:
     fp_Fluid* m_Fluid;
-    std::vector<float> m_IsoValues;
-    std::vector<D3DXVECTOR3> m_GradientIsoValues;
+    std::vector<float> m_DensityValues;
+    std::vector<D3DXVECTOR3> m_GradientDensityValues;
     float m_LastMinX;
     float m_LastMinY;
     float m_LastMinZ;

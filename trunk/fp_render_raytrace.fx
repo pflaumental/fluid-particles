@@ -97,7 +97,7 @@ struct SplatParticlePSIn {
 };
 
 struct SplatParticlePSOut {
-    half IsoValue                   : SV_TARGET;
+    half DensityValue               : SV_TARGET;
 };
 
 struct RaytraceTransformVSOut {
@@ -195,15 +195,15 @@ void SplatParticleGS(
 // Pixel shader for particle splatting
 // Input:  ParticleDensity, slice index inside volume (z), screen/volume space voxel
 //         position (x,y) and texture space (x,y,z) voxel position
-// Output: Isovalue
+// Output: Density value
 // Fetches the smoothing function value from a 1D texture and calculates the additive
-// isovalue for this voxel and particle
+// density value for this voxel and particle
 //--------------------------------------------------------------------------------------
 SplatParticlePSOut SplatParticlePS(SplatParticlePSIn Input) {
     SplatParticlePSOut result;
     float l = length(Input.VoxelTex);
     float wValMulParticleMass = g_WValsMulParticleMass.SampleLevel(LinearBorder, l, 0);
-    result.IsoValue = wValMulParticleMass / Input.ParticleDensity;
+    result.DensityValue = wValMulParticleMass / Input.ParticleDensity;
     return result;
 }
 
@@ -263,8 +263,8 @@ float3 RefineIsoSurface(float3 TextureOffset, float3 SampleTexturePos, bool Find
 	SampleTexturePos -= TextureOffset;
 	for (int i = 0; i < g_NumRefineSteps; i++) {
 		TextureOffset /= 2;
-		float isoVal = g_DensityGrid.SampleLevel(LinearPointClamp, SampleTexturePos, 0).r;
-		if (FindEntry ? isoVal >= g_IsoLevel : isoVal <= g_IsoLevel)
+		float densityVal = g_DensityGrid.SampleLevel(LinearPointClamp, SampleTexturePos, 0).r;
+		if (FindEntry ? densityVal >= g_IsoLevel : densityVal <= g_IsoLevel)
 			SampleTexturePos = SampleTexturePos - TextureOffset;
 		else
 			SampleTexturePos = SampleTexturePos + TextureOffset;
@@ -297,18 +297,18 @@ void RaytraceIsoSurface(
     textureOffset.y *= -1; // offset.y must therefore get flipped
     
     int numSteps = ceil(volumeRayLen / localStepsize);        
-    float isoVal;
+    float densityVal;
     while(numSteps-- > 0) {
-        isoVal = g_DensityGrid.SampleLevel(LinearClamp, sampleTexturePos, 0).r;
-        if (FindEntry ? isoVal >= g_IsoLevel : isoVal <= g_IsoLevel)
+        densityVal = g_DensityGrid.SampleLevel(LinearClamp, sampleTexturePos, 0).r;
+        if (FindEntry ? densityVal >= g_IsoLevel : densityVal <= g_IsoLevel)
 			break;
         sampleTexturePos += textureOffset;
     }
     if(numSteps <= 0) {
         float3 exitTexturePos = EndVolumePosClipDepth.xyz;
         exitTexturePos.y = 1 - exitTexturePos.y;
-        isoVal = g_DensityGrid.SampleLevel(LinearClamp, exitTexturePos, 0).r;
-        if (FindEntry ? isoVal < g_IsoLevel : isoVal > g_IsoLevel)
+        densityVal = g_DensityGrid.SampleLevel(LinearClamp, exitTexturePos, 0).r;
+        if (FindEntry ? densityVal < g_IsoLevel : densityVal > g_IsoLevel)
             discard;
 		sampleTexturePos = exitTexturePos;
     }
