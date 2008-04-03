@@ -374,15 +374,19 @@ RaytraceFindAndShadeIsoPSOut RaytraceFindAndShadeIsoPS(
 	// Reflection of a round body minifies => use lower detail mip
     float3 reflectColor = g_Environment.SampleLevel(LinearClamp, reflectDir, 2);
     
+    
+    
     // Calculate first refraction using snells law
     // sinThetaR = (ni/nr) * sinThetaI
-    // => R = ((ni/nr)*(N*V) - sqrt(1 - (ni/nr)^2*(1.0f-(N*V)^2))) * N - (ni/nr) * V  
+    // => R = ((ni/nr)*(N*V) - sqrt(1 - (ni/nr)^2*(1.0f-(N*V)^2))) * N - (ni/nr) * V
     
     //*float NV = dot(intersection1VolumeNormal, -rayDir);    
     //*float cosThetaR = sqrt(1 - g_RefractionRatioSq * (1 - NV * NV));
     //*float beforeNTerm = g_RefractionRatio * NV - cosThetaR;
     //*float3 refract1Dir = normalize(beforeNTerm * intersection1VolumeNormal
             //*+ g_RefractionRatio * rayDir);
+            
+    // The intrinsic refract function does exact the same            
     float3 refract1Dir = refract(rayDir, intersection1VolumeNormal, g_RefractionRatio);
             
     float refract1Len = LengthInBox(intersection1VolumePos, refract1Dir);
@@ -404,6 +408,8 @@ RaytraceFindAndShadeIsoPSOut RaytraceFindAndShadeIsoPS(
                 //*+ g_RefractionRatioInv * refract1Dir;
     //*} else // If formula could not be hold, reflect instead of refract
         //*refract2Dir = reflect(refract1Dir, -intersection2VolumeNormal);
+    
+    // The intrinsic refract function does exact the same        
     float3 refract2Dir = refract(refract1Dir, -intersection2VolumeNormal,
             g_RefractionRatioInv);
     if(!all(refract2Dir))
