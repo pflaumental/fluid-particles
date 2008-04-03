@@ -376,12 +376,15 @@ RaytraceFindAndShadeIsoPSOut RaytraceFindAndShadeIsoPS(
     
     // Calculate first refraction using snells law
     // sinThetaR = (ni/nr) * sinThetaI
-    // => R = ((ni/nr)*(N*V) - sqrt(1 - (ni/nr)^2*(1.0f-(N*V)^2))) * N - (ni/nr) * V    
-    float NV = dot(intersection1VolumeNormal, -rayDir);    
-    float cosThetaR = sqrt(1 - g_RefractionRatioSq * (1 - NV * NV));
-    float beforeNTerm = g_RefractionRatio * NV - cosThetaR;
-    float3 refract1Dir = normalize(beforeNTerm * intersection1VolumeNormal
-            + g_RefractionRatio * rayDir);
+    // => R = ((ni/nr)*(N*V) - sqrt(1 - (ni/nr)^2*(1.0f-(N*V)^2))) * N - (ni/nr) * V  
+    
+    //*float NV = dot(intersection1VolumeNormal, -rayDir);    
+    //*float cosThetaR = sqrt(1 - g_RefractionRatioSq * (1 - NV * NV));
+    //*float beforeNTerm = g_RefractionRatio * NV - cosThetaR;
+    //*float3 refract1Dir = normalize(beforeNTerm * intersection1VolumeNormal
+            //*+ g_RefractionRatio * rayDir);
+    float3 refract1Dir = refract(rayDir, intersection1VolumeNormal, g_RefractionRatio);
+            
     float refract1Len = LengthInBox(intersection1VolumePos, refract1Dir);
     float4 refract1Start = float4(intersection1VolumePos + 0.01 * refract1Dir, 1);
     float4 refract1End = float4(intersection1VolumePos + refract1Len * refract1Dir, 1);
@@ -392,14 +395,18 @@ RaytraceFindAndShadeIsoPSOut RaytraceFindAndShadeIsoPS(
             PerPixelStepSize, false, refract1Start, refract1End);
         
     // Calculate the second refraction using snells law
-    NV = dot(-intersection2VolumeNormal, -refract1Dir);    
-    cosThetaR = sqrt(1 - g_RefractionRatioInvSq * (1 - NV * NV));
-    float3 refract2Dir;
-    if(cosThetaR >= 0) {
-        beforeNTerm = g_RefractionRatioInv * NV - cosThetaR;
-        refract2Dir = -beforeNTerm * intersection2VolumeNormal
-                + g_RefractionRatioInv * refract1Dir;
-    } else // If formula could not be hold, reflect instead of refract
+    //*NV = dot(-intersection2VolumeNormal, -refract1Dir);    
+    //*cosThetaR = sqrt(1 - g_RefractionRatioInvSq * (1 - NV * NV));
+    //*float3 refract2Dir;
+    //*if(cosThetaR >= 0) {
+        //*beforeNTerm = g_RefractionRatioInv * NV - cosThetaR;
+        //*refract2Dir = -beforeNTerm * intersection2VolumeNormal
+                //*+ g_RefractionRatioInv * refract1Dir;
+    //*} else // If formula could not be hold, reflect instead of refract
+        //*refract2Dir = reflect(refract1Dir, -intersection2VolumeNormal);
+    float3 refract2Dir = refract(refract1Dir, -intersection2VolumeNormal,
+            g_RefractionRatioInv);
+    if(!all(refract2Dir))
         refract2Dir = reflect(refract1Dir, -intersection2VolumeNormal);
     
     // Note: Treatment of the second intersection is quite a hack, because internal
