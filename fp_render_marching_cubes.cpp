@@ -25,8 +25,8 @@ fp_CPUDensityGrid::fp_CPUDensityGrid(fp_Fluid* Fluid, float VoxelSize, float Den
         m_NumValuesX(0),
         m_NumValuesY(0),
         m_NumValuesZ(0),        
-        m_IsoValues(),
-        m_GradientIsoValues(),
+        m_DensityValues(),
+        m_GradientDensityValues(),
         m_StampRowLengths(NULL),
         m_StampRowStartOffsets(NULL),
         m_StampRowValueStarts(NULL),
@@ -36,8 +36,8 @@ fp_CPUDensityGrid::fp_CPUDensityGrid(fp_Fluid* Fluid, float VoxelSize, float Den
     m_VoxelSize = -1.0f; // Needed in SetSmoothingLength()
     UpdateSmoothingLength();
     SetVoxelSize(VoxelSize);
-    m_IsoValues.reserve(FP_MC_INITIAL_DENSITY_GRID_CAPACITY);
-    m_GradientIsoValues.reserve(FP_MC_INITIAL_DENSITY_GRID_CAPACITY);
+    m_DensityValues.reserve(FP_MC_INITIAL_DENSITY_GRID_CAPACITY);
+    m_GradientDensityValues.reserve(FP_MC_INITIAL_DENSITY_GRID_CAPACITY);
 }
 
 void fp_CPUDensityGrid::UpdateSmoothingLength() {
@@ -120,10 +120,10 @@ void fp_CPUDensityGrid::ConstructFromFluid() {
     m_NumValuesZ = (int)((maxZ - minZ + m_VoxelSize) / m_VoxelSize);
     m_NumValuesYZ = m_NumValuesY * m_NumValuesZ;
     m_NumValues = m_NumValuesYZ * m_NumValuesX;
-    m_IsoValues.clear();
-    m_IsoValues.resize(m_NumValues, 0.0f);
-    m_GradientIsoValues.clear();
-    m_GradientIsoValues.resize(m_NumValues, D3DXVECTOR3(0.0f, 0.0f, 0.0f));
+    m_DensityValues.clear();
+    m_DensityValues.resize(m_NumValues, 0.0f);
+    m_GradientDensityValues.clear();
+    m_GradientDensityValues.resize(m_NumValues, D3DXVECTOR3(0.0f, 0.0f, 0.0f));
     int NumParticles = m_Fluid->m_NumParticles;
     fp_FluidParticle* Particles = m_Fluid->m_Particles;
     float* Densities = m_Fluid->GetDensities();
@@ -184,13 +184,13 @@ inline void fp_CPUDensityGrid::DistributeParticle(
                     int destinationIndex = destinationIndexXY + destination.z;
                     //int destinationIndex = destination.x * m_NumValuesYZ + destination.y * m_NumValuesZ
                     //        + destination.z;
-                    float additionalIsoValue = ParticleMassDensityQuotient
+                    float additionalDensityValue = ParticleMassDensityQuotient
                             * m_Fluid->WPoly6(particleToCellLenSq);
-                    m_IsoValues[destinationIndex] += additionalIsoValue;
-                    D3DXVECTOR3 additionalGradientIsoValue = ParticleMassDensityQuotient
+                    m_DensityValues[destinationIndex] += additionalDensityValue;
+                    D3DXVECTOR3 additionalGradientDensityValue = ParticleMassDensityQuotient
                             * m_Fluid->GradientWPoly6(&particleToCell, 
                             particleToCellLenSq);
-                    m_GradientIsoValues[destinationIndex] += additionalGradientIsoValue;
+                    m_GradientDensityValues[destinationIndex] += additionalGradientDensityValue;
                 }
                 cellPos.z += m_VoxelSize;
             }
@@ -230,12 +230,12 @@ inline void fp_CPUDensityGrid::DistributeParticleWithStamp(
         int stampValueIndex = m_StampRowValueStarts[stampRowIndex];
 
         for(; destIndex < destEndIndex; destIndex++) {
-            float additionalIsoValue = ParticleMassDensityQuotient 
+            float additionalDensityValue = ParticleMassDensityQuotient 
                     * m_StampValues[stampValueIndex];
-            D3DXVECTOR3 additionalGradientIsoValue = ParticleMassDensityQuotient
+            D3DXVECTOR3 additionalGradientDensityValue = ParticleMassDensityQuotient
                     * m_GradientStampValues[stampValueIndex++];
-            m_IsoValues[destIndex] += additionalIsoValue;
-            m_GradientIsoValues[destIndex] += additionalGradientIsoValue;
+            m_DensityValues[destIndex] += additionalDensityValue;
+            m_GradientDensityValues[destIndex] += additionalGradientDensityValue;
         }
     }
 }
@@ -402,8 +402,8 @@ void fp_RenderMarchingCubes::ConstructMesh() {
     D3DXVECTOR3 volumeStart = m_DensityGrid->m_VolumeStart;
     float voxelSize = m_DensityGrid->m_VoxelSize;
     D3DXVECTOR3 volumeOffset = D3DXVECTOR3(voxelSize, voxelSize, voxelSize);
-    std::vector<float>* isoValues = &m_DensityGrid->m_IsoValues;
-    std::vector<D3DXVECTOR3>* gradientIsoValues = &m_DensityGrid->m_GradientIsoValues;
+    std::vector<float>* densityValues = &m_DensityGrid->m_DensityValues;
+    std::vector<D3DXVECTOR3>* gradientDensityValues = &m_DensityGrid->m_GradientDensityValues;
 
     fp_MCVertex *mcVertices;
     unsigned int* mcIndizes;
@@ -423,48 +423,48 @@ void fp_RenderMarchingCubes::ConstructMesh() {
             int densityGridIndex5 = densityGridIndex4 + NumValuesYZ; // x+1,y,z
             int densityGridIndex6 = densityGridIndex5 + NumValuesZ; // x+1,y+1,z
             int densityGridIndex7 = densityGridIndex4 + NumValuesZ; // x,y+1,z
-            float isoValue0, isoValue1, isoValue2, isoValue3;
-            float isoValue4 = (*isoValues)[densityGridIndex4];            
-            float isoValue5 = (*isoValues)[densityGridIndex5];
-            float isoValue6 = (*isoValues)[densityGridIndex6];
-            float isoValue7 = (*isoValues)[densityGridIndex7];
-            D3DXVECTOR3 *gradientIsoValue0, *gradientIsoValue1, 
-                *gradientIsoValue2, *gradientIsoValue3;
-            D3DXVECTOR3* gradientIsoValue4 = &(*gradientIsoValues)[densityGridIndex4++];
-            D3DXVECTOR3* gradientIsoValue5 = &(*gradientIsoValues)[densityGridIndex5++];
-            D3DXVECTOR3* gradientIsoValue6 = &(*gradientIsoValues)[densityGridIndex6++];
-            D3DXVECTOR3* gradientIsoValue7 = &(*gradientIsoValues)[densityGridIndex7++];
+            float densityValue0, densityValue1, densityValue2, densityValue3;
+            float densityValue4 = (*densityValues)[densityGridIndex4];            
+            float densityValue5 = (*densityValues)[densityGridIndex5];
+            float densityValue6 = (*densityValues)[densityGridIndex6];
+            float densityValue7 = (*densityValues)[densityGridIndex7];
+            D3DXVECTOR3 *gradientDensityValue0, *gradientDensityValue1, 
+                *gradientDensityValue2, *gradientDensityValue3;
+            D3DXVECTOR3* gradientDensityValue4 = &(*gradientDensityValues)[densityGridIndex4++];
+            D3DXVECTOR3* gradientDensityValue5 = &(*gradientDensityValues)[densityGridIndex5++];
+            D3DXVECTOR3* gradientDensityValue6 = &(*gradientDensityValues)[densityGridIndex6++];
+            D3DXVECTOR3* gradientDensityValue7 = &(*gradientDensityValues)[densityGridIndex7++];
             int vertexIndizes[12] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
             D3DXVECTOR3 corner0(volumeStart + D3DXVECTOR3(volumeOffset.x * cubeX, 
                 volumeOffset.y * cubeY, 0.0f ));
             for(int cubeZ=0; cubeZ < zEnd; cubeZ++) {                
-                isoValue0 = isoValue4;
-                isoValue1 = isoValue5;
-                isoValue2 = isoValue6;
-                isoValue3 = isoValue7;
-                gradientIsoValue0 = gradientIsoValue4;
-                gradientIsoValue1 = gradientIsoValue5;
-                gradientIsoValue2 = gradientIsoValue6;
-                gradientIsoValue3 = gradientIsoValue7;
+                densityValue0 = densityValue4;
+                densityValue1 = densityValue5;
+                densityValue2 = densityValue6;
+                densityValue3 = densityValue7;
+                gradientDensityValue0 = gradientDensityValue4;
+                gradientDensityValue1 = gradientDensityValue5;
+                gradientDensityValue2 = gradientDensityValue6;
+                gradientDensityValue3 = gradientDensityValue7;
 
-                isoValue4 = (*isoValues)[densityGridIndex4];
-                isoValue5 = (*isoValues)[densityGridIndex5];
-                isoValue6 = (*isoValues)[densityGridIndex6];
-                isoValue7 = (*isoValues)[densityGridIndex7];
-                gradientIsoValue4 = &(*gradientIsoValues)[densityGridIndex4++];
-                gradientIsoValue5 = &(*gradientIsoValues)[densityGridIndex5++];
-                gradientIsoValue6 = &(*gradientIsoValues)[densityGridIndex6++];
-                gradientIsoValue7 = &(*gradientIsoValues)[densityGridIndex7++];
+                densityValue4 = (*densityValues)[densityGridIndex4];
+                densityValue5 = (*densityValues)[densityGridIndex5];
+                densityValue6 = (*densityValues)[densityGridIndex6];
+                densityValue7 = (*densityValues)[densityGridIndex7];
+                gradientDensityValue4 = &(*gradientDensityValues)[densityGridIndex4++];
+                gradientDensityValue5 = &(*gradientDensityValues)[densityGridIndex5++];
+                gradientDensityValue6 = &(*gradientDensityValues)[densityGridIndex6++];
+                gradientDensityValue7 = &(*gradientDensityValues)[densityGridIndex7++];
 
                 byte cubeType=0;
-                if(isoValue0 < m_IsoLevel) cubeType |= 1;
-                if(isoValue1 < m_IsoLevel) cubeType |= 2;
-                if(isoValue2 < m_IsoLevel) cubeType |= 4;
-                if(isoValue3 < m_IsoLevel) cubeType |= 8;
-                if(isoValue4 < m_IsoLevel) cubeType |= 16;
-                if(isoValue5 < m_IsoLevel) cubeType |= 32;
-                if(isoValue6 < m_IsoLevel) cubeType |= 64;
-                if(isoValue7 < m_IsoLevel) cubeType |= 128;
+                if(densityValue0 < m_IsoLevel) cubeType |= 1;
+                if(densityValue1 < m_IsoLevel) cubeType |= 2;
+                if(densityValue2 < m_IsoLevel) cubeType |= 4;
+                if(densityValue3 < m_IsoLevel) cubeType |= 8;
+                if(densityValue4 < m_IsoLevel) cubeType |= 16;
+                if(densityValue5 < m_IsoLevel) cubeType |= 32;
+                if(densityValue6 < m_IsoLevel) cubeType |= 64;
+                if(densityValue7 < m_IsoLevel) cubeType |= 128;
 
                 int edgeValue = s_EdgeTable[cubeType];
                 if(edgeValue == 0) {
@@ -487,52 +487,52 @@ void fp_RenderMarchingCubes::ConstructMesh() {
 
                 if(edgeValue & 16) // Edge 4 between corner 4 and 5
                     mcVertices[vertexIndizes[4] = m_NumVertices++] = fp_MCVertex(
-                    D3DXVECTOR3(corner0.x + (s = (m_IsoLevel - isoValue4)
-                    / (isoValue5 - isoValue4)) * volumeOffset.x, corner0.y,
-                    corner0.z + volumeOffset.z), CalcNormal(gradientIsoValue4,
-                    gradientIsoValue5, s));
+                    D3DXVECTOR3(corner0.x + (s = (m_IsoLevel - densityValue4)
+                    / (densityValue5 - densityValue4)) * volumeOffset.x, corner0.y,
+                    corner0.z + volumeOffset.z), CalcNormal(gradientDensityValue4,
+                    gradientDensityValue5, s));
                 if(edgeValue & 32) // Edge 5 between corner 5 and 6
                     mcVertices[vertexIndizes[5] = m_NumVertices++] = fp_MCVertex(
                     D3DXVECTOR3(corner0.x + volumeOffset.x, corner0.y + (s
-                    = (m_IsoLevel - isoValue5) / (isoValue6 - isoValue5))
+                    = (m_IsoLevel - densityValue5) / (densityValue6 - densityValue5))
                     * volumeOffset.y, corner0.z + volumeOffset.z), CalcNormal(
-                    gradientIsoValue5, gradientIsoValue6, s));
+                    gradientDensityValue5, gradientDensityValue6, s));
                 if(edgeValue & 64) // Edge 6 between corner 7 and 6
                     mcVertices[vertexIndizes[6] = m_NumVertices++] = fp_MCVertex(
-                    D3DXVECTOR3(corner0.x + (s = (m_IsoLevel - isoValue7)
-                    / (isoValue6 - isoValue7)) * volumeOffset.x, corner0.y 
+                    D3DXVECTOR3(corner0.x + (s = (m_IsoLevel - densityValue7)
+                    / (densityValue6 - densityValue7)) * volumeOffset.x, corner0.y 
                     + volumeOffset.y, corner0.z+ volumeOffset.z), CalcNormal(
-                    gradientIsoValue7, gradientIsoValue6, s));
+                    gradientDensityValue7, gradientDensityValue6, s));
                 if(edgeValue & 128) // Edge 7 between corner 4 and 7
                     mcVertices[vertexIndizes[7] = m_NumVertices++] = fp_MCVertex(
                     D3DXVECTOR3(corner0.x, corner0.y + (s = (m_IsoLevel -
-                    isoValue4) / (isoValue7 - isoValue4)) * volumeOffset.y,
-                    corner0.z + volumeOffset.z), CalcNormal(gradientIsoValue4,
-                    gradientIsoValue7, s));
+                    densityValue4) / (densityValue7 - densityValue4)) * volumeOffset.y,
+                    corner0.z + volumeOffset.z), CalcNormal(gradientDensityValue4,
+                    gradientDensityValue7, s));
                 if(edgeValue & 256) // Edge 8 between corner 0 and 4
                     mcVertices[vertexIndizes[8] = m_NumVertices++] = fp_MCVertex(
                     D3DXVECTOR3(corner0.x, corner0.y, corner0.z + (s
-                    = (m_IsoLevel - isoValue0) / (isoValue4 - isoValue0))
-                    * volumeOffset.z), CalcNormal(gradientIsoValue0,
-                    gradientIsoValue4, s));
+                    = (m_IsoLevel - densityValue0) / (densityValue4 - densityValue0))
+                    * volumeOffset.z), CalcNormal(gradientDensityValue0,
+                    gradientDensityValue4, s));
                 if(edgeValue & 512) // Edge 9 between corner 1 and 5
                     mcVertices[vertexIndizes[9] = m_NumVertices++] = fp_MCVertex(
                     D3DXVECTOR3(corner0.x + volumeOffset.x, corner0.y, corner0.z
-                    + (s = (m_IsoLevel - isoValue1) / (isoValue5 - isoValue1))
-                    * volumeOffset.z), CalcNormal(gradientIsoValue1, 
-                    gradientIsoValue5, s));
+                    + (s = (m_IsoLevel - densityValue1) / (densityValue5 - densityValue1))
+                    * volumeOffset.z), CalcNormal(gradientDensityValue1, 
+                    gradientDensityValue5, s));
                 if(edgeValue & 1024) // Edge 10 between corner 2 and 6
                     mcVertices[vertexIndizes[10] = m_NumVertices++] = fp_MCVertex(
                     D3DXVECTOR3(corner0.x + volumeOffset.x, corner0.y
-                    + volumeOffset.y, corner0.z + (s = (m_IsoLevel - isoValue2)
-                    / (isoValue6 - isoValue2)) * volumeOffset.z), CalcNormal(
-                    gradientIsoValue2, gradientIsoValue6, s));
+                    + volumeOffset.y, corner0.z + (s = (m_IsoLevel - densityValue2)
+                    / (densityValue6 - densityValue2)) * volumeOffset.z), CalcNormal(
+                    gradientDensityValue2, gradientDensityValue6, s));
                 if(edgeValue & 2048) // Edge 11 between corner 3 and 7
                     mcVertices[vertexIndizes[11] = m_NumVertices++] = fp_MCVertex(
                     D3DXVECTOR3(corner0.x, corner0.y + volumeOffset.y, corner0.z
-                    + (s = (m_IsoLevel - isoValue3) / (isoValue7 - isoValue3))
-                    * volumeOffset.z), CalcNormal(gradientIsoValue3,
-                    gradientIsoValue7, s));
+                    + (s = (m_IsoLevel - densityValue3) / (densityValue7 - densityValue3))
+                    * volumeOffset.z), CalcNormal(gradientDensityValue3,
+                    gradientDensityValue7, s));
 
                 // Triangles:
                 int* triTableEntry = s_TriTable[cubeType];
