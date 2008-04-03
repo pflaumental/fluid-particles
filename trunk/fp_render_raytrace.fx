@@ -365,8 +365,9 @@ RaytraceFindAndShadeIsoPSOut RaytraceFindAndShadeIsoPS(
             
     // Raytrace the iso surface            
 	float3 rayDir, intersection1VolumePos, intersection1VolumeNormal;
-    RaytraceIsoSurface(rayDir, intersection1VolumePos, intersection1VolumeNormal, result.Depth,
-        PerPixelStepSize, true, entryVolumePosClipDepth, exitVolumePosClipDepth);
+    RaytraceIsoSurface(rayDir, intersection1VolumePos, intersection1VolumeNormal,
+            result.Depth, PerPixelStepSize, true, entryVolumePosClipDepth,
+            exitVolumePosClipDepth);
 
 	// Calculate reflection
 	float3 reflectDir = reflect(rayDir, intersection1VolumeNormal);
@@ -388,7 +389,7 @@ RaytraceFindAndShadeIsoPSOut RaytraceFindAndShadeIsoPS(
     // Find the exit-intersection of the refraction-ray with the iso surface
     float3 intersection2VolumePos, intersection2VolumeNormal, dummy;
     RaytraceIsoSurface(dummy, intersection2VolumePos, intersection2VolumeNormal, dummy,
-        PerPixelStepSize, false, refract1Start, refract1End);
+            PerPixelStepSize, false, refract1Start, refract1End);
         
     // Calculate the second refraction using snells law
     NV = dot(-intersection2VolumeNormal, -refract1Dir);    
@@ -400,8 +401,10 @@ RaytraceFindAndShadeIsoPSOut RaytraceFindAndShadeIsoPS(
                 + g_RefractionRatioInv * refract1Dir;
     } else // If formula could not be hold, reflect instead of refract
         refract2Dir = reflect(refract1Dir, -intersection2VolumeNormal);
-    // Note: this is quite a hack (because when reflected there would be more
-    // inner intersections), but it provides a good optical effect
+    
+    // Note: Treatment of the second intersection is quite a hack, because internal
+    // reflections are not handled physical plausible.
+    // But it provides a relativley good optical effect.
     
     // Refraction of a round body magnifies => use most detailed mip
     float3 refractColor = g_Environment.SampleLevel(LinearClamp, refract2Dir, 0);    
