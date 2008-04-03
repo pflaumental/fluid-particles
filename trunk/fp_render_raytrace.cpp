@@ -572,7 +572,7 @@ void fp_RenderRaytrace::RenderVolume(
     m_BBox.OnD3D10FrameRenderSolid(D3DDevice, true);
     m_ExitPoint->Unbind();
     
-    // Trace the iso volume and shade intersections
+    // Raytrace the iso surface and shade intersections
     V(m_EffectVarExitPoint->SetResource(m_ExitPoint->GetSRV()));
     V(m_EffectVarDensityGrid->SetResource(m_VolumeSRV));
     m_TechRenderRaytrace->GetPassByIndex(m_NeedPerPixelStepSize ? 3 : 2)->Apply(0);
