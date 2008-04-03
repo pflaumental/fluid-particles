@@ -349,7 +349,7 @@ void RaytraceIsoSurface(
 // Pixel shader for raytracing and shading the iso surface
 // Input:  volume space position, clip space depth, screen space position
 // Output: color and depth
-// Raytraces the iso volume along the view ray to find the first intersection with the
+// Raytraces the density grid along the view ray to find the first intersection with the
 // isosurface. Calculates reflection- and refraction ray. Find's intersection of
 // refraction ray with the isosurface. Looks up environmentmap for reflected and
 // (twotimes) refracted ray. Composes final color.

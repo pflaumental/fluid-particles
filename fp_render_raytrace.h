@@ -10,7 +10,7 @@
 #include "fp_bounding_box.h"
 
 //--------------------------------------------------------------------------------------
-// Fluid particles render technique: Iso volume via GPU raytrace
+// Fluid particles render technique: Isosurface via GPU raytrace
 //--------------------------------------------------------------------------------------
 
 struct fp_SplatParticleVertex {

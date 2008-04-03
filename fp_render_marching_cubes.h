@@ -10,7 +10,7 @@
 
 //--------------------------------------------------------------------------------------
 // Fluid particles render technique: (CPU generated) iso volume via (CPU generated)
-// marching cubes
+// marching cubes mesh
 //--------------------------------------------------------------------------------------
 
 struct fp_MCVertex
