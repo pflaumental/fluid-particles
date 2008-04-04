@@ -36,10 +36,12 @@ cbuffer Sometimes {
     float g_IsoLevel;
     float g_RefractionRatio;
     float g_RefractionRatioSq;
-    float g_RefractionRatioInv;
-    float g_RefractionRatioInvSq;
+    float g_RefractionRatio_2;
+    float g_RefractionRatioSq_2;
     float g_R0; // (1 - refractionRatio)^2 / (1 + refreactionRatio)^2
+    float g_R0_2;
     float g_OneMinusR0;
+    float g_OneMinusR0_2;
 };
 
 cbuffer Often {
@@ -370,9 +372,9 @@ RaytraceFindAndShadeIsoPSOut RaytraceFindAndShadeIsoPS(
             exitVolumePosClipDepth);
 
 	// Calculate reflection
-	float3 reflectDir = reflect(rayDir, intersection1VolumeNormal);
+	float3 reflect1Dir = reflect(rayDir, intersection1VolumeNormal);
 	// Reflection of a round body minifies => use lower detail mip
-    float3 reflectColor = g_Environment.SampleLevel(LinearClamp, reflectDir, 2);        
+    float3 reflectColor = g_Environment.SampleLevel(LinearClamp, reflect1Dir, 2);        
     
     // Calculate first refraction using snells law
     // sinThetaR = (ni/nr) * sinThetaI
@@ -395,36 +397,42 @@ RaytraceFindAndShadeIsoPSOut RaytraceFindAndShadeIsoPS(
     float3 intersection2VolumePos, intersection2VolumeNormal, dummy;
     RaytraceIsoSurface(dummy, intersection2VolumePos, intersection2VolumeNormal, dummy,
             PerPixelStepSize, false, refract1Start, refract1End);
-        
-    // Calculate the second refraction using snells law
-    //*NV = dot(-intersection2VolumeNormal, -refract1Dir);    
-    //*cosThetaR = sqrt(1 - g_RefractionRatioInvSq * (1 - NV * NV));
-    //*float3 refract2Dir;
-    //*if(cosThetaR >= 0) {
-        //*beforeNTerm = g_RefractionRatioInv * NV - cosThetaR;
-        //*refract2Dir = -beforeNTerm * intersection2VolumeNormal
-                //*+ g_RefractionRatioInv * refract1Dir;
-    //*} else // If formula could not be hold, reflect instead of refract
-        //*refract2Dir = reflect(refract1Dir, -intersection2VolumeNormal);
+            
+    // Calculate second (internal) reflection
+    float3 reflect2Dir = reflect(refract1Dir, -intersection2VolumeNormal);
+    float3 reflect2Color = g_Environment.SampleLevel(LinearClamp, reflect2Dir, 2);
     
-    // The intrinsic refract function does exact the same        
+    // Note: This is quite a hack because the internal reflection ray would hit the
+    // surface again.
+    // But it looks good anyhow.
+
+    // Calculate second refraction
     float3 refract2Dir = refract(refract1Dir, -intersection2VolumeNormal,
-            g_RefractionRatioInv);
-    if(!any(refract2Dir))
-        refract2Dir = reflect(refract1Dir, -intersection2VolumeNormal);
+            g_RefractionRatio_2);
+
+    // Calculate fresnel term for second intersection
+    // This time the approximation doesn't work
+    float c = dot(intersection2VolumeNormal, refract1Dir) * g_RefractionRatio_2;
+    float g = sqrt(1 + c * c - g_RefractionRatioSq_2);
+    float gmc = g - c;
+    float gpc = g + c;
+    float gmc_gpcQuotient = gmc / gpc;
+    float tmpTerm = (c * gpc - g_RefractionRatioSq_2) / (c * gmc + g_RefractionRatioSq_2);
+    float fresnel2 = 0.5 * gmc_gpcQuotient * gmc_gpcQuotient * (1 + tmpTerm * tmpTerm);
     
-    // Note: Treatment of the second intersection is quite a hack, because internal
-    // reflections are not handled physical plausible.
-    // But it provides a relativley good optical effect.
+    float3 refractColor;
+    if(any(refract2Dir)) {
+        // Refraction of a round body magnifies => use most detailed mip
+        float3 refract2Color = g_Environment.SampleLevel(LinearClamp, refract2Dir, 0);
+        refractColor = fresnel2 * reflect2Color + (1 - fresnel2) * refract2Color;
+    } else // Total internal reflection
+        refractColor = reflect2Color;
     
-    // Refraction of a round body magnifies => use most detailed mip
-    float3 refractColor = g_Environment.SampleLevel(LinearClamp, refract2Dir, 0);    
+    // Calculate fresnel term for first intersection
+    float fresnel1 = g_R0 + g_OneMinusR0
+            * pow(1 - dot(-rayDir, intersection1VolumeNormal), 5);
     
-    // Calculate fresnel term
-    float fresnel = g_R0 + g_OneMinusR0 * pow(1 - dot(-rayDir, intersection1VolumeNormal),
-            5);
-    
-    result.Color = float4(fresnel * reflectColor + (1 - fresnel) * refractColor, 1);
+    result.Color = float4(fresnel1 * reflectColor + (1 - fresnel1) * refractColor, 1);
   
     return result;
 }
