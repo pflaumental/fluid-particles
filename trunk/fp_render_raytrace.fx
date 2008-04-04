@@ -411,7 +411,7 @@ RaytraceFindAndShadeIsoPSOut RaytraceFindAndShadeIsoPS(
             g_RefractionRatio_2);
 
     // Calculate fresnel term for second intersection
-    // This time the approximation doesn't work
+    // The approximation doesn't work here
     float c = dot(intersection2VolumeNormal, refract1Dir) * g_RefractionRatio_2;
     float g = sqrt(1 + c * c - g_RefractionRatioSq_2);
     float gmc = g - c;
