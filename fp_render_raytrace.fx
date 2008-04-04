@@ -372,9 +372,7 @@ RaytraceFindAndShadeIsoPSOut RaytraceFindAndShadeIsoPS(
 	// Calculate reflection
 	float3 reflectDir = reflect(rayDir, intersection1VolumeNormal);
 	// Reflection of a round body minifies => use lower detail mip
-    float3 reflectColor = g_Environment.SampleLevel(LinearClamp, reflectDir, 2);
-    
-    
+    float3 reflectColor = g_Environment.SampleLevel(LinearClamp, reflectDir, 2);        
     
     // Calculate first refraction using snells law
     // sinThetaR = (ni/nr) * sinThetaI
@@ -412,7 +410,7 @@ RaytraceFindAndShadeIsoPSOut RaytraceFindAndShadeIsoPS(
     // The intrinsic refract function does exact the same        
     float3 refract2Dir = refract(refract1Dir, -intersection2VolumeNormal,
             g_RefractionRatioInv);
-    if(!all(refract2Dir))
+    if(!any(refract2Dir))
         refract2Dir = reflect(refract1Dir, -intersection2VolumeNormal);
     
     // Note: Treatment of the second intersection is quite a hack, because internal
