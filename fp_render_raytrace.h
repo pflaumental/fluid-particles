@@ -121,10 +121,12 @@ private:
     ID3D10EffectShaderResourceVariable* m_EffectVarEnvironmentMap;
     ID3D10EffectScalarVariable* m_EffectVarRefractionRatio;
     ID3D10EffectScalarVariable* m_EffectVarRefractionRatioSq;
-    ID3D10EffectScalarVariable* m_EffectVarRefractionRatioInv;
-    ID3D10EffectScalarVariable* m_EffectVarRefractionRatioInvSq;
     ID3D10EffectScalarVariable* m_EffectVarR0;
     ID3D10EffectScalarVariable* m_EffectVarOneMinusR0;
+    ID3D10EffectScalarVariable* m_EffectVarRefractionRatio_2;
+    ID3D10EffectScalarVariable* m_EffectVarRefractionRatioSq_2;
+    ID3D10EffectScalarVariable* m_EffectVarR0_2;
+    ID3D10EffectScalarVariable* m_EffectVarOneMinusR0_2;
 
     fp_VolumeIndex m_VolumeDimensions;
     

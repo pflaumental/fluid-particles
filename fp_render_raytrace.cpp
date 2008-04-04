@@ -51,11 +51,13 @@ fp_RenderRaytrace::fp_RenderRaytrace(
     m_EffectVarTexDelta(NULL),
     m_EnvironmentMapSRV(NULL),
     m_EffectVarRefractionRatio(NULL),
-    m_EffectVarRefractionRatioSq(NULL),    
-    m_EffectVarRefractionRatioInv(NULL),
-    m_EffectVarRefractionRatioInvSq(NULL),
+    m_EffectVarRefractionRatioSq(NULL),
     m_EffectVarR0(NULL),
     m_EffectVarOneMinusR0(NULL),
+    m_EffectVarRefractionRatio_2(NULL),
+    m_EffectVarRefractionRatioSq_2(NULL),
+    m_EffectVarR0_2(NULL),
+    m_EffectVarOneMinusR0_2(NULL),
     m_CurrentCubeMap(0) {
     SetFluid(Fluid);
     D3DXVECTOR3 volumeSize = GetVolumeSize();
@@ -190,14 +192,18 @@ HRESULT fp_RenderRaytrace::OnD3D10CreateDevice(
             "g_RefractionRatio")->AsScalar();
     m_EffectVarRefractionRatioSq = m_Effect->GetVariableByName(
             "g_RefractionRatioSq")->AsScalar();
-    m_EffectVarRefractionRatioInv = m_Effect->GetVariableByName(
-            "g_RefractionRatioInv")->AsScalar();
-    m_EffectVarRefractionRatioInvSq = m_Effect->GetVariableByName(
-            "g_RefractionRatioInvSq")->AsScalar();
     m_EffectVarR0 = m_Effect->GetVariableByName(
             "g_R0")->AsScalar();
     m_EffectVarOneMinusR0 = m_Effect->GetVariableByName(
             "g_OneMinusR0")->AsScalar();
+    m_EffectVarRefractionRatio_2 = m_Effect->GetVariableByName(
+            "g_RefractionRatio_2")->AsScalar();
+    m_EffectVarRefractionRatioSq_2 = m_Effect->GetVariableByName(
+            "g_RefractionRatioSq_2")->AsScalar();
+    m_EffectVarR0_2 = m_Effect->GetVariableByName(
+            "g_R0_2")->AsScalar();
+    m_EffectVarOneMinusR0_2 = m_Effect->GetVariableByName(
+            "g_OneMinusR0_2")->AsScalar();
     BOOL allValid = m_EffectVarCornersPos->IsValid() != 0;
     allValid |= m_EffectVarHalfParticleVoxelDiameter->IsValid() != 0;
     allValid |= m_EffectVarParticleVoxelRadius->IsValid() != 0;
@@ -219,10 +225,12 @@ HRESULT fp_RenderRaytrace::OnD3D10CreateDevice(
     allValid |= m_EffectVarEnvironmentMap->IsValid() != 0;
     allValid |= m_EffectVarRefractionRatio->IsValid() != 0;
     allValid |= m_EffectVarRefractionRatioSq->IsValid() != 0;
-    allValid |= m_EffectVarRefractionRatioInv->IsValid() != 0;
-    allValid |= m_EffectVarRefractionRatioInvSq->IsValid() != 0;
     allValid |= m_EffectVarR0->IsValid() != 0;
     allValid |= m_EffectVarOneMinusR0->IsValid() != 0;
+    allValid |= m_EffectVarRefractionRatio_2->IsValid() != 0;
+    allValid |= m_EffectVarRefractionRatioSq_2->IsValid() != 0;
+    allValid |= m_EffectVarR0_2->IsValid() != 0;
+    allValid |= m_EffectVarOneMinusR0_2->IsValid() != 0;
     if(!allValid) return E_FAIL;
 
     // Set effect variables as needed
@@ -386,15 +394,18 @@ void fp_RenderRaytrace::SetVoxelSize(float VoxelSize) {
 // medias (i. e. water and air); controls refraction direction and affects ratio between
 // reflection and refraction
 void fp_RenderRaytrace::SetRefractionRatio(float RefractionRatio) {
+    float r0 = pow(1.0f - RefractionRatio, 2) / pow(1.0f + RefractionRatio, 2);
     m_EffectVarRefractionRatio->SetFloat(RefractionRatio);
     m_EffectVarRefractionRatioSq->SetFloat(RefractionRatio * RefractionRatio);
-    float refractionRatioInv = 1.0f / RefractionRatio;
-    m_EffectVarRefractionRatioInv->SetFloat(refractionRatioInv);
-    m_EffectVarRefractionRatioInvSq->SetFloat(refractionRatioInv * refractionRatioInv);
-    float r0 = pow(1.0f - RefractionRatio, 2)
-            / pow(1.0f + RefractionRatio, 2);
     m_EffectVarR0->SetFloat(r0);
     m_EffectVarOneMinusR0->SetFloat(1.0f - r0);
+
+    float refractionRatio_2 = 1.0f / RefractionRatio;
+    float r0_2 = pow(1.0f - refractionRatio_2, 2) / pow(1.0f + refractionRatio_2, 2);
+    m_EffectVarRefractionRatio_2->SetFloat(refractionRatio_2);
+    m_EffectVarRefractionRatioSq_2->SetFloat(refractionRatio_2 * refractionRatio_2);
+    m_EffectVarR0_2->SetFloat(r0_2);
+    m_EffectVarOneMinusR0_2->SetFloat(1.0f - r0_2);
 }
 
 D3DXVECTOR3 fp_RenderRaytrace::GetVolumeSize() {
