@@ -409,21 +409,23 @@ RaytraceFindAndShadeIsoPSOut RaytraceFindAndShadeIsoPS(
     // Calculate second refraction
     float3 refract2Dir = refract(refract1Dir, -intersection2VolumeNormal,
             g_RefractionRatio_2);
-
-    // Calculate fresnel term for second intersection
-    // The approximation doesn't work here
-    float c = dot(intersection2VolumeNormal, refract1Dir) * g_RefractionRatio_2;
-    float g = sqrt(1 + c * c - g_RefractionRatioSq_2);
-    float gmc = g - c;
-    float gpc = g + c;
-    float gmc_gpcQuotient = gmc / gpc;
-    float tmpTerm = (c * gpc - g_RefractionRatioSq_2) / (c * gmc + g_RefractionRatioSq_2);
-    float fresnel2 = 0.5 * gmc_gpcQuotient * gmc_gpcQuotient * (1 + tmpTerm * tmpTerm);
     
     float3 refractColor;
-    if(any(refract2Dir)) {
+    if(any(refract2Dir)) { // Refraction exists
+        // Calculate fresnel term for second intersection
+        // The approximation doesn't work here
+        float c = dot(intersection2VolumeNormal, refract1Dir) * g_RefractionRatio_2;
+        float g = sqrt(1 + c * c - g_RefractionRatioSq_2);
+        float gmc = g - c;
+        float gpc = g + c;
+        float gmc_gpcQuotient = gmc / gpc;
+        float tmpTerm = (c * gpc - g_RefractionRatioSq_2) / (c * gmc + g_RefractionRatioSq_2);
+        float fresnel2 = 0.5 * gmc_gpcQuotient * gmc_gpcQuotient * (1 + tmpTerm * tmpTerm);
+        
         // Refraction of a round body magnifies => use most detailed mip
         float3 refract2Color = g_Environment.SampleLevel(LinearClamp, refract2Dir, 0);
+        
+        // Calculate color at second intersection according to the Fresnel equations
         refractColor = fresnel2 * reflect2Color + (1 - fresnel2) * refract2Color;
     } else // Total internal reflection
         refractColor = reflect2Color;
@@ -432,6 +434,7 @@ RaytraceFindAndShadeIsoPSOut RaytraceFindAndShadeIsoPS(
     float fresnel1 = g_R0 + g_OneMinusR0
             * pow(1 - dot(-rayDir, intersection1VolumeNormal), 5);
     
+    // Calculate color at first intersection according to the Fresnel equations
     result.Color = float4(fresnel1 * reflectColor + (1 - fresnel1) * refractColor, 1);
   
     return result;
