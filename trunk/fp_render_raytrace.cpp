@@ -5,7 +5,7 @@
 
 #define FP_RENDER_RAYTRACE_EFFECT_FILE L"fp_render_raytrace.fx"
 #define FP_RENDER_RAYTRACE_CUBEMAP_DIR L"Media\\CubeMaps\\"
-#define FP_RENDER_RAYTRACE_DEFAULT_CUBEMAP L"rnl_cross.dds"
+#define FP_RENDER_RAYTRACE_DEFAULT_CUBEMAP L"Park.dds"
 
 const D3D10_INPUT_ELEMENT_DESC fp_SplatParticleVertex::Layout[] = {
         {"POSITION_DENSITY",  0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0,
