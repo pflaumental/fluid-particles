@@ -352,9 +352,9 @@ void RaytraceIsoSurface(
 // Input:  volume space position, clip space depth, screen space position
 // Output: color and depth
 // Raytraces the density grid along the view ray to find the first intersection with the
-// isosurface. Calculates reflection- and refraction ray. Find's intersection of
-// refraction ray with the isosurface. Looks up environmentmap for reflected and
-// (twotimes) refracted ray. Composes final color.
+// isosurface. Calculates reflection- and refraction rays. Find's intersection of
+// refraction ray with the isosurface. Looks up environment-map for reflected and
+// (two-times) refracted rays. Uses Fresnel terms to compose the final color.
 //--------------------------------------------------------------------------------------
 RaytraceFindAndShadeIsoPSOut RaytraceFindAndShadeIsoPS(
         RaytraceTransformVSOut Input,
@@ -371,8 +371,13 @@ RaytraceFindAndShadeIsoPSOut RaytraceFindAndShadeIsoPS(
             result.Depth, PerPixelStepSize, true, entryVolumePosClipDepth,
             exitVolumePosClipDepth);
 
+    // Calculate fresnel term for first intersection
+    float fresnel1 = g_R0 + g_OneMinusR0
+            * pow(1 - dot(-rayDir, intersection1VolumeNormal), 5);
+
 	// Calculate reflection
-	float3 reflect1Dir = reflect(rayDir, intersection1VolumeNormal);
+	float3 reflect1Dir = reflect(rayDir, intersection1VolumeNormal);		
+	
 	// Reflection of a round body minifies => use lower detail mip
     float3 reflectColor = g_Environment.SampleLevel(LinearClamp, reflect1Dir, 2);        
     
@@ -400,15 +405,16 @@ RaytraceFindAndShadeIsoPSOut RaytraceFindAndShadeIsoPS(
             
     // Calculate second (internal) reflection
     float3 reflect2Dir = reflect(refract1Dir, -intersection2VolumeNormal);
+    
+    // Calculate second refraction
+    float3 refract2Dir = refract(refract1Dir, -intersection2VolumeNormal,
+            g_RefractionRatio_2);    
+
     float3 reflect2Color = g_Environment.SampleLevel(LinearClamp, reflect2Dir, 2);
     
     // Note: This is quite a hack because the internal reflection ray would hit the
     // surface again.
     // But it looks good anyhow.
-
-    // Calculate second refraction
-    float3 refract2Dir = refract(refract1Dir, -intersection2VolumeNormal,
-            g_RefractionRatio_2);
     
     float3 refractColor;
     if(any(refract2Dir)) { // Refraction exists
@@ -428,11 +434,7 @@ RaytraceFindAndShadeIsoPSOut RaytraceFindAndShadeIsoPS(
         // Calculate color at second intersection according to the Fresnel equations
         refractColor = fresnel2 * reflect2Color + (1 - fresnel2) * refract2Color;
     } else // Total internal reflection
-        refractColor = reflect2Color;
-    
-    // Calculate fresnel term for first intersection
-    float fresnel1 = g_R0 + g_OneMinusR0
-            * pow(1 - dot(-rayDir, intersection1VolumeNormal), 5);
+        refractColor = reflect2Color;    
     
     // Calculate color at first intersection according to the Fresnel equations
     result.Color = float4(fresnel1 * reflectColor + (1 - fresnel1) * refractColor, 1);
