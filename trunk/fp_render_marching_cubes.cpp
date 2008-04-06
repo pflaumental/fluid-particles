@@ -106,6 +106,13 @@ void fp_CPUDensityGrid::ConstructFromFluid() {
             * FP_MC_DENSITY_GRID_SHRINK_BORDER) // Shrink?
         maxZ = partMaxZ + (partMaxZ - partMinZ) * FP_MC_DENSITY_GRID_GROW_FACTOR;
 
+    if((maxX - minX) > FP_MC_MAX_DENSITY_GRID_SIDELENGTH)
+        maxX = minX + FP_MC_MAX_DENSITY_GRID_SIDELENGTH;
+    if((maxY - minY) > FP_MC_MAX_DENSITY_GRID_SIDELENGTH)
+        maxY = minY + FP_MC_MAX_DENSITY_GRID_SIDELENGTH;
+    if((maxZ - minZ) > FP_MC_MAX_DENSITY_GRID_SIDELENGTH)
+        maxZ = minZ + FP_MC_MAX_DENSITY_GRID_SIDELENGTH;
+
     m_LastMinX = minX;
     m_LastMinY = minY;
     m_LastMinZ = minZ;
