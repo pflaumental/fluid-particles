@@ -375,11 +375,8 @@ RaytraceFindAndShadeIsoPSOut RaytraceFindAndShadeIsoPS(
     float fresnel1 = g_R0 + g_OneMinusR0
             * pow(1 - dot(-rayDir, intersection1VolumeNormal), 5);
 
-	// Calculate reflection
-	float3 reflect1Dir = reflect(rayDir, intersection1VolumeNormal);		
-	
-	// Reflection of a round body minifies => use lower detail mip
-    float3 reflectColor = g_Environment.SampleLevel(LinearClamp, reflect1Dir, 2);        
+	// Calculate external reflection
+	float3 reflect1Dir = reflect(rayDir, intersection1VolumeNormal);			    
     
     // Calculate first refraction using snells law
     // sinThetaR = (ni/nr) * sinThetaI
@@ -408,13 +405,18 @@ RaytraceFindAndShadeIsoPSOut RaytraceFindAndShadeIsoPS(
     
     // Calculate second refraction
     float3 refract2Dir = refract(refract1Dir, -intersection2VolumeNormal,
-            g_RefractionRatio_2);    
-
-    float3 reflect2Color = g_Environment.SampleLevel(LinearClamp, reflect2Dir, 2);
+            g_RefractionRatio_2);
+            
+    // Sample external and internal reflections
+    // Sharp external reflections look best => use high detail mip
+    float3 reflectColor = g_Environment.SampleLevel(LinearClamp, reflect1Dir, 0);
+    // Smooth internal reflections look better => use lower detail mip
+    // Perhaps this is a good replace for subsequent internal reflections
+    float3 reflect2Color = g_Environment.SampleLevel(LinearClamp, reflect2Dir, 3);
     
     // Note: This is quite a hack because the internal reflection ray would hit the
     // surface again.
-    // But it looks good anyhow.
+    // But it looks good anyhow.        
     
     float3 refractColor;
     if(any(refract2Dir)) { // Refraction exists
@@ -428,7 +430,7 @@ RaytraceFindAndShadeIsoPSOut RaytraceFindAndShadeIsoPS(
         float tmpTerm = (c * gpc - g_RefractionRatioSq_2) / (c * gmc + g_RefractionRatioSq_2);
         float fresnel2 = 0.5 * gmc_gpcQuotient * gmc_gpcQuotient * (1 + tmpTerm * tmpTerm);
         
-        // Refraction of a round body magnifies => use most detailed mip
+        // Refraction of a round body magnifies => use high detail mip
         float3 refract2Color = g_Environment.SampleLevel(LinearClamp, refract2Dir, 0);
         
         // Calculate color at second intersection according to the Fresnel equations
