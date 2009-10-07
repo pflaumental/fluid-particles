@@ -204,8 +204,8 @@ void SplatParticleGS(
 SplatParticlePSOut SplatParticlePS(SplatParticlePSIn Input) {
     SplatParticlePSOut result;
     float l = length(Input.VoxelTex);
-    float wValMulParticleMass = g_WValsMulParticleMass.SampleLevel(LinearBorder, l, 0);
-    result.DensityValue = wValMulParticleMass / Input.ParticleDensity;
+    float wValMulParticleMass = g_WValsMulParticleMass.SampleLevel(LinearBorder, l, 0).x;
+    result.DensityValue = half(wValMulParticleMass / Input.ParticleDensity);
     return result;
 }
 
@@ -330,20 +330,20 @@ void RaytraceIsoSurface(
 	// generate normal
 	float3 grad;
 	grad.x = g_DensityGrid.SampleLevel(LinearClamp,
-	        sampleTexturePos + float3(g_TexDelta.x, 0, 0), 0)
+	        sampleTexturePos + float3(g_TexDelta.x, 0, 0), 0).x
 	        -
             g_DensityGrid.SampleLevel(LinearClamp,
-            sampleTexturePos - float3(g_TexDelta.x, 0, 0), 0);
+            sampleTexturePos - float3(g_TexDelta.x, 0, 0), 0).x;
 	grad.y = g_DensityGrid.SampleLevel(LinearClamp,
-	        sampleTexturePos - float3(0, g_TexDelta.y, 0), 0)
+	        sampleTexturePos - float3(0, g_TexDelta.y, 0), 0).x
 	        -
             g_DensityGrid.SampleLevel(LinearClamp,
-            sampleTexturePos + float3(0, g_TexDelta.y, 0), 0);
+            sampleTexturePos + float3(0, g_TexDelta.y, 0), 0).x;
 	grad.z = g_DensityGrid.SampleLevel(LinearClamp,
-	        sampleTexturePos + float3(0, 0, g_TexDelta.z), 0)
+	        sampleTexturePos + float3(0, 0, g_TexDelta.z), 0).x
 	        -
             g_DensityGrid.SampleLevel(LinearClamp,
-            sampleTexturePos - float3(0, 0 ,g_TexDelta.z), 0);        
+            sampleTexturePos - float3(0, 0 ,g_TexDelta.z), 0).x;        
 	IntersectionVolumeNormal = -normalize(grad);    
 }
 
@@ -397,7 +397,7 @@ RaytraceFindAndShadeIsoPSOut RaytraceFindAndShadeIsoPS(
 
     // Find the exit-intersection of the refraction-ray with the iso surface
     float3 intersection2VolumePos, intersection2VolumeNormal, dummy;
-    RaytraceIsoSurface(dummy, intersection2VolumePos, intersection2VolumeNormal, dummy,
+    RaytraceIsoSurface(dummy, intersection2VolumePos, intersection2VolumeNormal, dummy.x,
             PerPixelStepSize, false, refract1Start, refract1End);
             
     // Calculate second (internal) reflection
