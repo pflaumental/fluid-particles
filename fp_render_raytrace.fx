@@ -18,6 +18,7 @@ cbuffer Immutable {
         float2( 1,-1),
     };
     float FLOATMAX = 1000000000;
+    float g_DensityScale = 10000;
 };
 
 cbuffer Once {
@@ -205,7 +206,7 @@ SplatParticlePSOut SplatParticlePS(SplatParticlePSIn Input) {
     SplatParticlePSOut result;
     float l = length(Input.VoxelTex);
     float wValMulParticleMass = g_WValsMulParticleMass.SampleLevel(LinearBorder, l, 0).x;
-    result.DensityValue = half(wValMulParticleMass / Input.ParticleDensity);
+    result.DensityValue = half(g_DensityScale * wValMulParticleMass);
     return result;
 }
 
