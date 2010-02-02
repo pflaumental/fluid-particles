@@ -302,7 +302,7 @@ void fp_RenderRaytrace::OnD3D10FrameRender(
     RenderVolume(D3DDevice, View, ViewProjection, InvView);    
 
     // TODO: find out why things get messed up when pass does not get reseted
-    m_TechRenderRaytrace->GetPassByIndex(0)->Apply(0);
+    //m_TechRenderRaytrace->GetPassByIndex(0)->Apply(0);
 }
 
 void fp_RenderRaytrace::OnD3D10DestroyDevice( void* UserContext ) {
